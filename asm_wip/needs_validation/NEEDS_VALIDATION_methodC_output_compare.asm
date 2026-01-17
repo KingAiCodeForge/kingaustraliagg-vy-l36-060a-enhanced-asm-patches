@@ -87,12 +87,13 @@ OC3M_SET        EQU %00110000   ; 11 = set on compare (force HIGH)
 OC3M_MASK       EQU %11001111   ; Mask to clear OC3 mode bits
 
 ; RPM Variables
-RPM_ADDR        EQU $00A2       ; 16-bit RPM
+RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
+                                ; KNOWN BUG: Code below incorrectly uses LDD
 LIMITER_FLAG    EQU $77F4       ; Runtime flags
 
-; Thresholds
-RPM_HIGH        EQU $1770       ; 6000 RPM
-RPM_LOW         EQU $1724       ; 5924 RPM
+; Thresholds - CORRECTED to 8-bit scaled
+RPM_HIGH        EQU $F0         ; 240 × 25 = 6000 RPM
+RPM_LOW         EQU $EB         ; 235 × 25 = 5875 RPM
 
 ; Special Constants
 TOC_NEVER       EQU $FFFF       ; A value that TCNT rarely matches
@@ -109,15 +110,18 @@ TOC_NEVER       EQU $FFFF       ; A value that TCNT rarely matches
 ;==============================================================================
 
 SPARK_CUT_OC:
-        ; Read 16-bit RPM
-        LDD     RPM_ADDR
+        ; Read 8-bit RPM/25 (CORRECTED from 16-bit)
+        LDAA    RPM_ADDR        ; 96 A2 - Load RPM/25
         
         ; Check current state
+        PSHA                    ; Save RPM value
         LDAA    LIMITER_FLAG
         BITA    #$01
+        PULA                    ; Restore RPM to A
         BNE     OC_CHECK_DEACT
         
 OC_CHECK_ACT:
+        CMPA    #RPM_HIGH       ; Compare with 240 (6000 RPM)
         ; Not cutting - should we start?
         CPD     #RPM_HIGH
         BLO     OC_EXIT

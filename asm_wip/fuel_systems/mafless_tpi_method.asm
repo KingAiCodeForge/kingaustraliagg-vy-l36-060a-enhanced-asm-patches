@@ -40,7 +40,7 @@
 ;
 ; ============================================================================
 
-        ORG     $0C468          ; Verified free space region
+        ORG     $14468          ; Verified free space region
 
 ; ============================================================================
 ; Constants and Addresses
@@ -56,8 +56,11 @@ TPS_VOLTAGE_RAM EQU     $00B0   ; Scaled TPS voltage (0-5V, example address)
 TPS_PERCENT_RAM EQU     $00B1   ; TPS percentage (0-100%, calculated)
 
 ; RPM Input
-ENGINE_RPM_HI   EQU     $00A2   ; RPM high byte (verified, 82 references)
-ENGINE_RPM_LO   EQU     $00A3   ; RPM low byte
+; ⚠️ IMPORTANT: $00A2 stores RPM/25 as 8-bit! NOT 16-bit RPM!
+;    Actual RPM = value × 25. Max = 255 × 25 = 6375 RPM
+;    $00A3 = Engine State 2 (12 accesses) - NOT RPM low byte!
+ENGINE_RPM      EQU     $00A2   ; RPM/25 (8-bit, verified, 82 references)
+; ENGINE_RPM_LO   EQU     $00A3   ; ❌ WRONG! This is Engine State 2!
 
 ; Airflow Output
 CALCULATED_AIRFLOW EQU  $0180   ; Calculated airflow (G/S) output to fuel calc
@@ -68,7 +71,7 @@ IAT_TEMP_RAM    EQU     $00C0   ; Intake air temperature (example)
 BARO_PRESSURE   EQU     $00C1   ; Barometric pressure (example)
 
 ; Alpha-N Table Pointer
-ALPHA_N_TABLE   EQU     $1A300  ; TPS vs RPM load table (needs allocation)
+ALPHA_N_TABLE   EQU     $22300  ; TPS vs RPM load table (needs allocation)
 
 ; Table Dimensions
 TPS_AXIS_COUNT  EQU     11      ; 0%, 10%, 20%, ... 100% TPS
@@ -130,8 +133,8 @@ calculate_alpha_n_load:
         JSR     read_tps
         LDAA    TPS_PERCENT_RAM ; Load TPS%
         
-        ; Step 2: Read RPM
-        LDAB    ENGINE_RPM_HI   ; Load RPM high byte
+        ; Step 2: Read RPM/25 (8-bit value, actual RPM = value × 25)
+        LDAB    ENGINE_RPM      ; Load RPM/25 (8-bit)
         
         ; Step 3: Lookup in 2D table (TPS% vs RPM)
         ; Table structure: 11 TPS rows × 17 RPM columns
@@ -139,7 +142,7 @@ calculate_alpha_n_load:
         
         ; Calculate table index: (TPS_row * 17) + RPM_col
         ; TPS_row = TPS% / 10 (0-10)
-        ; RPM_col = RPM / 400 (0-16)
+        ; RPM_col = RPM/25 / 16 = (RPM/400) roughly (0-16)
         
         ; Get TPS row
         LDAA    TPS_PERCENT_RAM
@@ -152,12 +155,14 @@ calculate_alpha_n_load:
         MUL                     ; D = row * 17
         PSHD                    ; Save row offset
         
-        ; Get RPM column
-        LDAA    ENGINE_RPM_HI   ; Load RPM high byte
-        LDAB    #25             ; RPM scaling factor (×25)
-        MUL                     ; D = RPM in actual units
-        LDX     #400            ; Divide by 400 for column index
-        IDIV                    ; X = RPM column (0-16)
+        ; Get RPM column (RPM/25 ÷ 16 ≈ RPM/400)
+        LDAA    ENGINE_RPM      ; Load RPM/25 (8-bit)
+        LSRA                    ; Divide by 2
+        LSRA                    ; Divide by 4  
+        LSRA                    ; Divide by 8
+        LSRA                    ; Divide by 16 → A = RPM/400 (column 0-16)
+        CLRB                    ; Clear B for indexing
+        XGDX                    ; X = RPM column (0-16)
         
         ; Add row offset + column offset
         PULD                    ; Restore row offset
@@ -251,7 +256,7 @@ override_maf_airflow:
 ; This table must be calibrated on dyno with wideband O2 sensor
 ; Initial values based on L36 3.8L V6 displacement and VE estimates
 
-        ORG     $1A300          ; Alpha-N table storage
+        ORG     $22300          ; Alpha-N table storage
 
 alpha_n_table:
         ; Columns: RPM (500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000)
@@ -295,7 +300,7 @@ alpha_n_table:
 ; TPS Calibration Constants
 ; ============================================================================
 
-        ORG     $1A400          ; TPS calibration data
+        ORG     $22400          ; TPS calibration data
 
 tps_cal_min_voltage:
         FCB     $05             ; 0.5V = 0% TPS (closed throttle)

@@ -103,7 +103,7 @@ VE_BASE             EQU $64     ; 100% VE (0x64 = 100 decimal)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18800 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18800 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18800 WRONG!)
 
 ;==============================================================================
 ; SPEED-DENSITY AIRFLOW CALCULATION

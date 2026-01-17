@@ -48,14 +48,17 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM address
-PERIOD_3X_RAM       EQU $017B       ; 3X period storage (spark control)
-INJECTOR_PW_RAM     EQU $0150       ; Injector pulse width (UNVALIDATED!)
-FUEL_ENRICHMENT     EQU $0160       ; Fuel enrichment multiplier (UNVALIDATED!)
+; ⚠️ UPDATED Jan 17 2026: Changed to 8-bit RPM since 6000 RPM < 6375 limit
+;    For turbo builds needing >6375 RPM, need dwell patches too!
+;
+RPM_ADDR            EQU $00A2       ; RPM/25 (8-bit!) - max 255 = 6375 RPM
+PERIOD_3X_RAM       EQU $017B       ; 3X period storage (spark control) - VERIFIED
+INJECTOR_PW_RAM     EQU $0150       ; ⚠️ UNVALIDATED - Injector pulse width guess
+FUEL_ENRICHMENT     EQU $0160       ; ⚠️ UNVALIDATED - Fuel enrichment multiplier guess
 
-; SAFE DEFAULT - 6000 RPM
-RPM_HIGH            EQU $1770       ; 6000 RPM activation
-RPM_LOW             EQU $175C       ; 5980 RPM deactivation
+; SAFE DEFAULT - 6000 RPM (8-BIT VALUES - FIXED Jan 17 2026)
+RPM_HIGH            EQU $F0         ; 240 × 25 = 6000 RPM activation
+RPM_LOW             EQU $EF         ; 239 × 25 = 5975 RPM deactivation
 
 FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
 LIMITER_FLAG        EQU $01A0       ; State flag
@@ -67,8 +70,11 @@ ENRICHED_FUEL_MULT  EQU $0133       ; 1.2x fuel multiplier (307 decimal = 120%)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18156 WRONG!)
-theres other free space to but we need to check the isr and timers and add x and y linking to xdf if even possible.
+;
+; TODO: Check ISR and timer addresses for conflicts. Consider X/Y axis linking
+;       in XDF if TunerPro supports it for calibration constants.
+;
+            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
 ;==============================================================================
 ; ANTI-LAG STYLE LIMITER HANDLER
 ;==============================================================================
@@ -78,12 +84,12 @@ ANTILAG_CUT_HANDLER:
     PSHA
     PSHX
     
-    ; Check RPM against threshold
-    LDD     RPM_ADDR
-    CPD     #RPM_HIGH
+    ; Check RPM against threshold (8-bit comparison - FIXED Jan 17 2026)
+    LDAA    RPM_ADDR            ; Load 8-bit RPM/25
+    CMPA    #RPM_HIGH           ; Compare to 240 (6000 RPM)
     BHI     ACTIVATE_ANTILAG
     
-    CPD     #RPM_LOW
+    CMPA    #RPM_LOW            ; Compare to 239 (5975 RPM)
     BLS     DEACTIVATE_ANTILAG
     
     ; Hysteresis zone - maintain current state

@@ -1,9 +1,13 @@
 ;==============================================================================
-; VY V6 IGNITION CUT LIMITER - VERIFIED VERSION
+; VY V6 IGNITION CUT LIMITER - VERIFIED VERSION (16-BIT TEST TEMPLATE)
 ;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: January 14, 2026
+; Updated: January 17, 2026
 ; Status: ✅ ALL ADDRESSES VERIFIED AGAINST BINARY
+;
+; ⚠️ THIS IS A TEST FILE WITH 3000 RPM THRESHOLD - NOT FOR PRODUCTION!
+;    For production 6000 RPM limiter, use: spark_cut_6000rpm_v32.asm
 ;
 ; Method: 3X Period Injection (Chr0m3 validated)
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
@@ -16,6 +20,11 @@
 ;   ✅ ORG address verified as unused space (all zeros)
 ;   ✅ Timing constants verified by Chr0m3 Motorsport
 ;
+; ⚠️ 8-BIT VS 16-BIT RPM:
+;   This file uses 16-bit comparison for testing (any RPM works)
+;   For ≤6375 RPM: Use spark_cut_6000rpm_v32.asm (8-bit LDAA/CMPA)
+;   For >6375 RPM: Need dwell patches (Min Dwell 0xA2→0x9A, Min Burn 0x24→0x1C)
+;
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
@@ -23,11 +32,19 @@
 ;------------------------------------------------------------------------------
 ; Address    Name           Verification
 ; --------   ----           ------------
-; $00A2      RPM            82 reads in code
+; $00A2      RPM/25 (8-bit) 82 reads in code
+; $00A3      ENGINE_STATE   NOT part of RPM! (12 accesses)
 ; $017B      3X_PERIOD      STD at file offset 0x101E1
 ; $0199      DWELL_RAM      LDD at file offset 0x1007C
 ;
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads in code
+; ⚠️ WARNING: This file uses 16-bit RPM comparison (LDD $00A2 + CPD)
+;    which loads RPM/25 into A and Engine State into B!
+;    This is the Chr0m3 method for >6375 RPM limiters.
+;    
+;    FOR 6000 RPM LIMITER: Use 8-bit comparison instead:
+;      LDAA $00A2; CMPA #$F0  (240 × 25 = 6000 RPM)
+;
+RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads in code (8-bit RPM/25!)
 PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: STD at 0x101E1 (FD 01 7B)
 DWELL_RAM       EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99)
 
@@ -187,3 +204,157 @@ STORE_DONE:
 ;==============================================================================
 
             END
+
+;##############################################################################
+;#                                                                            #
+;#                    ═══ CONFIRMED ADDRESSES & FINDINGS ═══                  #
+;#                                                                            #
+;##############################################################################
+
+;------------------------------------------------------------------------------
+; ✅ BINARY VERIFIED ADDRESSES (Tested on VX-VY_V6_$060A_Enhanced_v1.0a.bin)
+;------------------------------------------------------------------------------
+;
+; Address      | File Bytes | Instruction    | Purpose
+; -------------|------------|----------------|----------------------------------
+; 0x101E1      | FD 01 7B   | STD $017B      | 3X period storage - HOOK POINT
+; 0x1007C      | FC 01 99   | LDD $0199      | Dwell RAM read
+; 0x19812      | 86 24      | LDAA #$24      | Min Burn = 36 (stock)
+; 0x3631       | BD 37 1A   | JSR $371A      | Dwell calc call from TIC3 ISR
+; 0x37B1       | FD 10 16   | STD $1016      | TOC1 write (NOT spark timing!)
+; 0x0C500      | 00 00 00...| All zeros      | FREE SPACE - safe to use
+;
+;------------------------------------------------------------------------------
+; ✅ RAM ADDRESSES (Code reference count verified)
+;------------------------------------------------------------------------------
+;
+; RAM Addr | References | Verified Pattern | Purpose
+; ---------|------------|------------------|------------------------------------
+; $00A2    | 73× LDAA   | 96 A2            | RPM/25 (8-bit! Max 255=6375 RPM)
+; $00A3    | 12× access | NOT RPM!         | Engine State 2 register
+; $017B    | STD at TIC3| FD 01 7B         | 3X Crank Period (16-bit timer)
+; $0199    | LDD reads  | FC 01 99         | Dwell calculation RAM
+; $016D    | 8× access  | -                | Cylinder index (0-5)
+;
+;------------------------------------------------------------------------------
+; 📐 RPM CALCULATION MATH
+;------------------------------------------------------------------------------
+;
+; 8-bit RPM stored at $00A2:
+;   Formula: Actual_RPM = RAM_Value × 25
+;   Maximum: 255 × 25 = 6375 RPM (8-bit limit!)
+;
+; Common conversions:
+;   3000 RPM = 120 = $78     | Test threshold
+;   5900 RPM = 236 = $EC     | Stock fuel cut
+;   6000 RPM = 240 = $F0     | User preferred limit
+;   6350 RPM = 254 = $FE     | Chr0m3 max safe
+;   6375 RPM = 255 = $FF     | Absolute 8-bit max
+;
+; Hysteresis (100 RPM recommended):
+;   100 RPM ÷ 25 = 4 steps
+;   Example: 6000 ON = $F0, 5900 OFF = $EC (4 step difference)
+;
+;------------------------------------------------------------------------------
+; 📐 3X PERIOD MATH
+;------------------------------------------------------------------------------
+;
+; 3X Crank Period = time between crank teeth edges
+;   At 6000 RPM: 60000ms ÷ 6000 RPM = 10ms per revolution
+;   V6 has 6 teeth (1 per 60°), so: 10ms ÷ 6 = 1.67ms per tooth
+;   Timer count: 1.67ms × 2MHz = 3,333 counts ($0D05)
+;
+; Fake Period Calculation:
+;   Fake = 16000 ($3E80) = 8ms apparent period
+;   ECU thinks: 8ms × 6 × 60 = ~125 RPM (impossible speed)
+;   Result: Dwell calculation gives ~100µs → insufficient coil charge
+;
+; Alternative fake periods:
+;   $2000 (8192) = ~61 RPM apparent → less aggressive cut
+;   $5000 (20480) = ~49 RPM apparent → harder cut
+;   $7FFF (32767) = ~30 RPM apparent → maximum cut
+;
+;------------------------------------------------------------------------------
+; 🔧 HOOK POINT PATCH DETAILS
+;------------------------------------------------------------------------------
+;
+; File Offset: 0x101E1 (verified in TIC3 ISR area)
+;
+; Original bytes:  FD 01 7B = STD $017B (store D to 3X period RAM)
+; Patched bytes:   BD C5 00 = JSR $C500 (call our handler)
+;
+; Our handler at $C500:
+;   1. Receives D = calculated period from stock code
+;   2. Checks RPM against thresholds
+;   3. Either stores real period OR fake period to $017B
+;   4. Returns to caller
+;
+; Why this works:
+;   - Stock code calculates period, puts in D
+;   - We intercept BEFORE it's stored
+;   - We can modify D before storing
+;   - Stock code continues normally, using our value
+;
+;------------------------------------------------------------------------------
+; ⚠️ THINGS STILL TO FIND OUT
+;------------------------------------------------------------------------------
+;
+; 1. LIMITER_FLAG RAM ($01A0 - UNVERIFIED)
+;    - Need to confirm this RAM location is free
+;    - Check XDF for any mappings at $01A0
+;    - Alternative: use a bit in existing status register
+;
+; 2. VY Min Dwell Address
+;    - VT V6 uses 0x14735, VY is DIFFERENT
+;    - Need to search for LDAA #$A2 pattern in VY binary
+;    - Or disassemble dwell calc at $371A fully
+;
+; 3. Free RAM Candidates:
+;    - $01A0-$01AF: Likely unused (needs verification)
+;    - $00FB-$00FF: May have unused bits
+;    - Check OSE 11P documentation for RAM map
+;
+;------------------------------------------------------------------------------
+; 🔄 ALTERNATIVE METHODS (Pros/Cons)
+;------------------------------------------------------------------------------
+;
+; METHOD A: 3X Period Injection (THIS FILE) ⭐ RECOMMENDED
+;   Hook: 0x101E1 (STD $017B)
+;   Pros: Proven by Chr0m3, simple hook, minimal code
+;   Cons: Still some dwell calculated (not true zero)
+;   Best for: ≤6375 RPM hard cut limiter
+;
+; METHOD B: TOC3 Skip (Schedule Blocking)
+;   Hook: TIC2 ISR before STD $101A
+;   Pros: Completely skips dwell start scheduling
+;   Cons: More complex, affects timing chain
+;   Best for: Research/experimentation
+;
+; METHOD C: Dwell Offset Zero
+;   Write $0000 to RAM $1C33
+;   Pros: No hook needed, just RAM write
+;   Cons: Need main loop integration, timing sensitive
+;   Best for: Combined fuel+spark cut
+;
+; METHOD D: Port A Direct (EST Output)
+;   Clear PA3/PA4 bits at $1000
+;   Pros: Immediate spark kill
+;   Cons: May trigger bypass mode, hardware dependent
+;   Best for: Emergency cut only
+;
+; METHOD E: Timing Retard (Soft Cut)
+;   Modify timing RAM before TOC scheduling
+;   Pros: Smooth power reduction, no harsh cut
+;   Cons: Engine still fires (not true cut), less flames
+;   Best for: Two-stage progressive limiter
+;
+;------------------------------------------------------------------------------
+; 🔗 RELATED FILES
+;------------------------------------------------------------------------------
+;
+; spark_cut_6000rpm_v32.asm    - Production 6000 RPM (8-bit, recommended)
+; spark_cut_rolling_v34.asm    - Speeduino-style random cut (flames!)
+; spark_cut_dwell_patch_v37.asm - High RPM dwell fix (HEX patch)
+; trace_jsr_371a_and_all_isrs.py - Disassembly tool for ISRs
+;
+;##############################################################################

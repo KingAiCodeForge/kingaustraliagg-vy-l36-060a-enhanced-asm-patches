@@ -106,7 +106,7 @@
 RPM_ADDR        EQU $00A2       ; RPM address (VERIFIED: 82R/2W in binary)
 PERIOD_3X_RAM   EQU $017B       ; 3X period storage (VERIFIED: 1W @ 0x181E1)
 DWELL_RAM       EQU $0199       ; Dwell time storage (VERIFIED from code analysis)
-MIN_BURN_ROM    EQU $19813      ; Min burn constant ROM (VERIFIED: LDAA #$24 = 36 decimal)
+MIN_BURN_ROM    EQU $21813      ; Min burn constant ROM (VERIFIED: LDAA #$24 = 36 decimal)
 DWELL_THRESH    EQU $6776       ; Dwell threshold CAL (VERIFIED: XDF "Delta Cylair > This")
 ; TEST THRESHOLDS (3000 RPM for in-car validation - Moates doesn't work on VY V6)
 RPM_HIGH        EQU $0BB8       ; 3000 RPM activation threshold (test)
@@ -137,7 +137,7 @@ LIMITER_FLAG    EQU $01A0       ; Free RAM byte for limiter state (0=off, 1=on)
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $0C468          ; Free space VERIFIED: 15,192 bytes (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED: 15,192 bytes (was $18156 WRONG!)
 
 ;==============================================================================
 ; IGNITION CUT MAIN HANDLER

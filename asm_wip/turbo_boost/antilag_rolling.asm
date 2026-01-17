@@ -36,13 +36,14 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM address
+RPM_ADDR            EQU $00A2       ; RPM/25 (8-bit!) - max 255 = 6375 RPM
 PERIOD_3X_RAM       EQU $017B       ; 3X period storage
 CYCLE_COUNTER       EQU $01A0       ; Event counter (0-1)
 
-; SAFE DEFAULT - 6000 RPM
-RPM_HIGH            EQU $1770       ; 6000 RPM activation
-RPM_LOW             EQU $175C       ; 5980 RPM deactivation
+; SAFE DEFAULT - 6000 RPM (8-BIT VALUES - FIXED Jan 17 2026)
+; ⚠️ Changed from 16-bit ($1770) to 8-bit ($F0 = 240 × 25 = 6000 RPM)
+RPM_HIGH            EQU $F0         ; 240 × 25 = 6000 RPM activation
+RPM_LOW             EQU $EF         ; 239 × 25 = 5975 RPM deactivation
 
 FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
 
@@ -51,7 +52,7 @@ FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
 
 ;==============================================================================
 ; ROLLING ANTI-LAG HANDLER
@@ -67,9 +68,9 @@ ROLLING_ANTILAG_HANDLER:
     EORA    #$01                ; XOR with 1 (toggles 0↔1)
     STAA    CYCLE_COUNTER
     
-    ; Check RPM
-    LDD     RPM_ADDR
-    CPD     #RPM_HIGH
+    ; Check RPM (8-bit comparison - FIXED Jan 17 2026)
+    LDAA    RPM_ADDR            ; Load 8-bit RPM/25
+    CMPA    #RPM_HIGH           ; Compare to 240 (6000 RPM)
     BLO     DEACTIVATE_CUT      ; Below threshold
     
     ; At/above threshold - apply rolling cut

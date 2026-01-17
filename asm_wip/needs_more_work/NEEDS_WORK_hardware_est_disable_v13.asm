@@ -71,7 +71,7 @@ OC3M_MASK           EQU %11001111   ; Mask for OC3M bits
 ;==============================================================================
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
 
 EST_DISABLE_HANDLER:
     PSHA

@@ -109,7 +109,7 @@ DELAY_TEST      EQU $05         ; 5 × 20ms = 0.1 sec (VL V8 timing)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18700 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18700 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18700 WRONG!)
 
 ;==============================================================================
 ; MAIN TWO-STAGE LIMITER - VL V8 STATE MACHINE
@@ -389,3 +389,206 @@ TWO_STAGE_CAL_DATA:
 ;==============================================================================
 ; END OF v23 - TWO-STAGE HYSTERESIS LIMITER
 ;==============================================================================
+
+;##############################################################################
+;#                                                                            #
+;#                    ═══ CONFIRMED ADDRESSES & FINDINGS ═══                  #
+;#                                                                            #
+;##############################################################################
+
+;------------------------------------------------------------------------------
+; ✅ BINARY VERIFIED ADDRESSES (January 17, 2026)
+;------------------------------------------------------------------------------
+;
+; Verified on: VX-VY_V6_$060A_Enhanced_v1.0a - Copy.bin (131,072 bytes)
+;
+; File Offset | Bytes      | Verified      | Purpose
+; ------------|------------|---------------|-------------------------------
+; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x0C500     | 00 00 00...| ✅ zeros      | FREE SPACE for code
+;
+; CALIBRATION ADDRESSES (proposed - not in stock binary):
+; Address     | Proposed Use        | Default Value
+; ------------|---------------------|---------------
+; $77FC       | KFCORPMH (RPM High) | $78 (3000 RPM test)
+; $77FD       | KFCORPML (RPM Low)  | $74 (2900 RPM test)
+; $77FE       | KFCOTIME (Delay)    | $05 (0.1 sec)
+; $77FF       | Enable Flag         | $01 (enabled)
+;
+; NOTE: These calibration addresses are UNUSED in stock.
+; We repurpose them for two-stage limiter configuration.
+;
+;------------------------------------------------------------------------------
+; 📐 VL V8 WALKINSHAW COMPARISON
+;------------------------------------------------------------------------------
+;
+; VL V8 ($5D mask) Original Addresses:
+;   0x27E = KFCORPMH = $AF = 5617 RPM (activate)
+;   0x27C = KFCORPML = $B2 = 5523 RPM (deactivate)
+;   0x282 = KFCOTIME = $08 = 0.1 sec delay
+;   Hysteresis: 5617 - 5523 = 94 RPM
+;
+; VY V6 Adaptation (this file):
+;   $77FC = RPM High = configurable
+;   $77FD = RPM Low = configurable
+;   $77FE = Delay = configurable
+;   Recommended hysteresis: 75-100 RPM
+;
+; Translation formula:
+;   VL 16-bit RPM → VY 8-bit RPM/25
+;   Example: 5617 RPM ÷ 25 = 225 = $E1
+;            5523 RPM ÷ 25 = 221 = $DD
+;
+;------------------------------------------------------------------------------
+; 📐 DELAY TIMER MATH
+;------------------------------------------------------------------------------
+;
+; KFCOTIME = number of main loop iterations before activating
+;
+; Main loop frequency varies with RPM:
+;   At 3000 RPM: ~50 Hz (20ms per loop)
+;   At 6000 RPM: ~100 Hz (10ms per loop)
+;
+; Delay calculation:
+;   delay_time = KFCOTIME × loop_period
+;   At 3000 RPM: 5 × 20ms = 100ms = 0.1 sec
+;   At 6000 RPM: 5 × 10ms = 50ms = 0.05 sec
+;
+; Why delay?
+;   - Prevents false activation from RPM noise
+;   - Allows driver reaction time
+;   - VL V8 factory uses 0.1 sec delay
+;
+; Tuning:
+;   Shorter delay (2-3): More responsive, may false trigger
+;   Longer delay (10+): Slower activation, may overshoot
+;
+;------------------------------------------------------------------------------
+; 📐 STATE MACHINE LOGIC
+;------------------------------------------------------------------------------
+;
+; States (stored in LIMITER_FLAGS $00FB):
+;   Bit 0: lv_fuel_cut (cut active)
+;   Bit 1: lv_limiter_active (engaged)
+;   Bit 2: delay_active (counting)
+;
+; State Transitions:
+;
+;   IDLE (bits = 000):
+;     - RPM < HIGH: Stay IDLE
+;     - RPM >= HIGH: → DELAY (bits = 100)
+;
+;   DELAY (bits = 100):
+;     - RPM < HIGH: → IDLE (reset)
+;     - Counter < KFCOTIME: Stay DELAY (increment)
+;     - Counter >= KFCOTIME: → ACTIVE (bits = 011)
+;
+;   ACTIVE (bits = 011):
+;     - RPM >= LOW: Stay ACTIVE (cutting)
+;     - RPM < LOW: → IDLE (immediate, no delay!)
+;
+; Key insight: Deactivation is IMMEDIATE (no delay)
+;   - This prevents RPM from dropping too far
+;   - VL V8 behavior confirmed
+;
+;------------------------------------------------------------------------------
+; ⚠️ THINGS STILL TO FIND OUT
+;------------------------------------------------------------------------------
+;
+; 1. RAM flag location ($00FB)
+;    Status: UNVERIFIED - chosen for page zero speed
+;    Alternative: $0050 area, $01A0 area
+;    Need: RAM dump analysis to confirm free
+;
+; 2. Calibration space ($77FC-$77FF)
+;    Status: ASSUMED free in Enhanced binary
+;    Need: Verify these bytes are unused
+;    Alternative: Use $78xx area or spare RAM
+;
+; 3. Main loop frequency
+;    Assumption: ~50-100 Hz depending on RPM
+;    Need: Measure actual loop time
+;    Method: Toggle test pin in main loop, scope measure
+;
+; 4. Integration with existing fuel cut
+;    Stock fuel cut at 0x77DE still active
+;    May conflict with our limiter
+;    Consider: Disable stock fuel cut by setting 0x77DE=$FF
+;
+;------------------------------------------------------------------------------
+; 🔄 ALTERNATIVE: TIMER-BASED DELAY
+;------------------------------------------------------------------------------
+;
+; Instead of counting main loop iterations, use hardware timer:
+;
+; Method:
+;   1. On HIGH threshold, capture TCNT value
+;   2. Each loop, compare current TCNT to captured
+;   3. If difference >= delay_ticks, activate
+;
+; Formula:
+;   delay_ticks = delay_ms × timer_freq / 1000
+;   100ms delay: 100 × 2000 = 200,000 ticks
+;   (Timer wraps at 65535, need multi-byte counter)
+;
+; Pros:
+;   - Consistent timing regardless of loop speed
+;   - More accurate
+;
+; Cons:
+;   - More complex code
+;   - Needs 32-bit comparison for >32ms delays
+;
+;------------------------------------------------------------------------------
+; 🔄 ALTERNATIVE: INTERRUPT-BASED STATE MACHINE
+;------------------------------------------------------------------------------
+;
+; Run state machine in TOC interrupt instead of main loop:
+;
+; Pros:
+;   - Faster response
+;   - Consistent timing
+;   - Doesn't depend on main loop speed
+;
+; Cons:
+;   - More complex integration
+;   - Risk of interrupt collision
+;   - Harder to debug
+;
+; When to use:
+;   - If main loop is too slow
+;   - If precision timing is critical
+;   - For racing applications
+;
+;------------------------------------------------------------------------------
+; 💡 SOUND TUNING
+;------------------------------------------------------------------------------
+;
+; VL V8 Walkinshaw is known for "best limiter sound"
+;
+; Key factors for good sound:
+;   1. Hysteresis band = 75-100 RPM (not too narrow)
+;   2. No delay on deactivation (immediate resume)
+;   3. Consistent cut method (all or nothing)
+;   4. Fuel continues during cut (for exhaust pops)
+;
+; For MORE POPS:
+;   - Wider hysteresis band (e.g., 150 RPM)
+;   - Disable fuel cut (fuel keeps flowing)
+;   - Random element (see v34 rolling cut)
+;
+; For SMOOTHER SOUND:
+;   - Narrower hysteresis (e.g., 50 RPM)
+;   - Faster delay (2-3 loops)
+;   - Combine with soft cut (v9)
+;
+;------------------------------------------------------------------------------
+; 🔗 RELATED FILES
+;------------------------------------------------------------------------------
+;
+; VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md - VL V8 research
+; spark_cut_6000rpm_v32.asm - Simple single-stage (compare)
+; spark_cut_progressive_soft_v9.asm - Progressive power reduction
+; spark_cut_rolling_v34.asm - Random cut for flames
+;
+;##############################################################################

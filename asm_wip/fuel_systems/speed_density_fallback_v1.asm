@@ -134,7 +134,7 @@ ADR7                EQU $1037   ; A/D Result Register 7 (PE7/AN7)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
 
 ;==============================================================================
 ; SPEED-DENSITY AIRFLOW CALCULATION ROUTINE

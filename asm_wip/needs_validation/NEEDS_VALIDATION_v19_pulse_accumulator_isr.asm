@@ -64,14 +64,14 @@ PAOVF           EQU $20         ; Bit 5: PA Overflow Flag
 TCTL1           EQU $1020       ; Timer Control Register 1 (OC modes)
 
 ; RPM and Flag Variables
-RPM_ADDR        EQU $00A2       ; 16-bit RPM
+RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
 LIMITER_FLAG    EQU $77F4       ; Runtime flags byte
 PA5_MASK        EQU $20         ; Bit 5 = PA5 (EST output)
 OC3M_MASK       EQU %11001111   ; Mask for TCTL1 OC3 bits
 
-; Threshold Constants
-RPM_HIGH        EQU $1770       ; 6000 RPM activation
-RPM_LOW         EQU $1724       ; 5924 RPM deactivation
+; Threshold Constants - CORRECTED to 8-bit scaled
+RPM_HIGH        EQU $F0         ; 240 × 25 = 6000 RPM activation
+RPM_LOW         EQU $EB         ; 235 × 25 = 5875 RPM deactivation
 
 ; Interrupt Vectors (stock locations - MAY NEED ADJUSTMENT)
 PAOV_VECTOR     EQU $FFDA       ; Pulse Accumulator Overflow Vector
@@ -116,8 +116,8 @@ PAOV_ISR:
         LDAA    #PAOVF
         STAA    TFLG2               ; Clear PAOVF by writing 1
         
-        ; Read 16-bit RPM
-        LDD     RPM_ADDR
+        ; Read 8-bit RPM/25 (CORRECTED from 16-bit)
+        LDAA    RPM_ADDR            ; A = current RPM/25
         
         ; Check current state
         TST     LIMITER_FLAG        ; Quick check - any flags set?

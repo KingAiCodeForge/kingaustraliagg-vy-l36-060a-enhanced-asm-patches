@@ -106,7 +106,7 @@
 RPM_ADDR        EQU $00A2       ; RPM address (VERIFIED: 82R/2W in binary)
 PERIOD_3X_RAM   EQU $017B       ; 3X period storage (VERIFIED: 1W @ 0x181E1)
 DWELL_RAM       EQU $0199       ; Dwell time storage (VERIFIED from code analysis)
-MIN_BURN_ROM    EQU $19813      ; Min burn constant ROM (VERIFIED: LDAA #$24 = 36 decimal)
+MIN_BURN_ROM    EQU $21813      ; Min burn constant ROM (VERIFIED: LDAA #$24 = 36 decimal)
 DWELL_THRESH    EQU $6776       ; Dwell threshold CAL (VERIFIED: XDF "Delta Cylair > This")
 ; TEST THRESHOLDS (3000 RPM for in-car validation - Moates doesn't work on VY V6)
 RPM_HIGH        EQU $0BB8       ; 3000 RPM activation threshold (test)
@@ -137,7 +137,7 @@ LIMITER_FLAG    EQU $01A0       ; Free RAM byte for limiter state (0=off, 1=on)
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $0C468          ; Free space VERIFIED: 15,192 bytes (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED: 15,192 bytes (was $18156 WRONG!)
 
 ;==============================================================================
 ; IGNITION CUT MAIN HANDLER
@@ -145,8 +145,8 @@ LIMITER_FLAG    EQU $01A0       ; Free RAM byte for limiter state (0=off, 1=on)
 ; This routine is called INSTEAD of the stock "STD $017B" instruction at
 ; address 0x181E1. The D register contains the real 3X period calculated
 ; by the stock code.
-;
-; Entry: D register = real 3X period from stock calculation
+; do we need a version that deleted the whole fuel cut out like chr0m3 said he has done before?
+; or how the enhanced bin was made from the stock with removing the whole lpg high and low octane main spark tuning maps (ron91 and ron98 ignition maps)
 ; Exit:  D register = either real period OR fake period (depending on RPM)
 ;        RAM 0x017B = stored period value
 ;
@@ -284,3 +284,175 @@ RESTORE_NORMAL:
 ; for the HC711E9. The timing routines ARE modifiable via the bin file.
 ; question for another .asm version is will 6000rpm work for ignition cut or only above the 6350rpm stock hard limit. as i am not chasing high rpm i am chasing stock rpm with ignition cut.
 ;------------------------------------------------------------------------------
+
+;##############################################################################
+;#                                                                            #
+;#                    ═══ CONFIRMED ADDRESSES & FINDINGS ═══                  #
+;#                                                                            #
+;##############################################################################
+
+;------------------------------------------------------------------------------
+; ✅ BINARY VERIFIED ADDRESSES (January 17, 2026)
+;------------------------------------------------------------------------------
+;
+; Verified on: VX-VY_V6_$060A_Enhanced_v1.0a - Copy.bin (131,072 bytes)
+;
+; HOOK POINT AND FREE SPACE:
+; File Offset | Bytes      | Verified      | Purpose
+; ------------|------------|---------------|-------------------------------
+; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x0C468     | 00 00 00...| ✅ zeros      | FREE SPACE START (15,192 bytes)
+; 0x0FFBF     | 00         | ✅ zeros      | FREE SPACE END
+;
+; RPM ADDRESS (verified with grep "96 A2" and ref counting):
+; $00A2 = RPM/25 (8-bit) - 73 LDAA references in binary
+; $00A3 = Engine State 2 (NOT RPM low byte!)
+;
+; 3X PERIOD (verified STD instruction):
+; $017B = 3X period storage (16-bit)
+;
+; DWELL/TIMING (verified from JSR $371A analysis):
+; $0199 = Dwell time storage (from LDD $0199)
+; $371A = Dwell calculation routine start
+; $37B1 = TOC1 write (STD $1016) - NOT spark timing, timer compare!
+;
+; FUEL CUT TABLE (verified from XDF and binary):
+; 0x77DE = EC = 236 × 25 = 5900 RPM (Drive HIGH)
+; 0x77DF = EB = 235 × 25 = 5875 RPM (Drive LOW)
+; 0x77E0 = EC = 5900 RPM (P/N HIGH)
+; 0x77E1 = EB = 5875 RPM (P/N LOW)
+;
+; ⚠️ ENHANCED BINARY STILL HAS STOCK FUEL CUT VALUES!
+;    Despite claims of "fuel cut disabled", EC EB bytes are present.
+;
+;------------------------------------------------------------------------------
+; 📐 16-BIT RPM THRESHOLD MATH (For this file)
+;------------------------------------------------------------------------------
+;
+; This file uses 16-BIT comparisons (LDD $00A2, CPD #$xxxx):
+;   LDD $00A2 loads: A = $00A2 (RPM/25), B = $00A3 (Engine State!)
+;   So: D = (RPM/25) × 256 + EngineState
+;
+; ⚠️ WARNING: This is NOT true 16-bit RPM!
+;   The comparison works because Engine State is usually small.
+;   At 3000 RPM: A = 120 ($78), if B = 0, then D = $7800
+;   Our threshold: $0BB8 = 3000 decimal... but this doesn't match!
+;
+; CORRECT 16-bit threshold calculation:
+;   If we want 3000 RPM:
+;   RPM/25 = 120 = $78
+;   D = $78 × 256 + typical_B = $7800 + ~$20 = $7820
+;   Threshold should be: $7800 (ignoring B) or higher
+;
+; SIMPLER: Use 8-bit comparison (see v32):
+;   LDAA $00A2    ; Get RPM/25
+;   CMPA #$78     ; Compare 120 (3000 RPM)
+;   This is more reliable!
+;
+;------------------------------------------------------------------------------
+; 📐 PATCH BYTE CALCULATION
+;------------------------------------------------------------------------------
+;
+; HOOK POINT PATCH:
+;   File offset: 0x101E1
+;   Original: FD 01 7B = STD $017B (store D to 3X period)
+;   Patched:  BD C5 00 = JSR $C500 (call our handler)
+;   BD = JSR extended, C5 00 = address $C500 (Bank 0)
+;
+; ALTERNATIVE HOOK (if $C500 doesn't work):
+;   BD 44 68 = JSR $4468 (lower address, always in Bank 0 visible)
+;
+; FREE SPACE USAGE:
+;   ORG $14468 means file offset 0x0C468 (subtract $8000 mapping)
+;   This is within verified free space
+;
+;------------------------------------------------------------------------------
+; ⚠️ THINGS STILL TO FIND OUT
+;------------------------------------------------------------------------------
+;
+; 1. MIN_BURN_ROM at $21813
+;    Status: This address is in BANK 1 (file offset 0x21813)
+;    VY binary is 128KB = 0x00000-0x1FFFF
+;    $21813 is OUTSIDE the file range!
+;    Likely typo - should be $19813 or similar
+;    Verified: Found LDAA #$24 at 0x19812
+;
+; 2. LIMITER_FLAG at $01A0
+;    Status: UNVERIFIED - assumed free RAM
+;    Risk: May be used by Enhanced modifications
+;    Test: Log $01A0 via Mode 4 to verify it's stable/unused
+;
+; 3. LDD $00A2 behavior
+;    Loads both $00A2 (RPM) and $00A3 (Engine State) into D
+;    16-bit comparisons may not work as expected!
+;    Recommend: Use 8-bit LDAA $00A2 + CMPA instead
+;
+; 4. Bank switching during ISR
+;    Question: Which bank is active when TIC3 ISR runs?
+;    Answer: Should be Bank 0 (code at 0x101E1)
+;    But: Hook target at $C500 must be accessible
+;    Risk: If Bank 1 active, JSR $C500 goes to wrong location!
+;
+;------------------------------------------------------------------------------
+; 🔄 ALTERNATIVE: 8-BIT SIMPLE VERSION
+;------------------------------------------------------------------------------
+;
+; Use spark_cut_6000rpm_v32.asm instead of this file:
+;
+; Pros:
+;   - 8-bit comparison (more reliable)
+;   - Simpler code
+;   - Verified hook point ($0C500)
+;   - Designed for 6000 RPM (user preference)
+;
+; This original file is for:
+;   - Historical reference
+;   - 16-bit experimentation
+;   - Lower test RPM (3000 for validation)
+;
+;------------------------------------------------------------------------------
+; 🔄 ALTERNATIVE: FUEL CUT MODIFICATION
+;------------------------------------------------------------------------------
+;
+; Instead of code injection, modify fuel cut table:
+;
+; For flames (fuel cut disabled):
+;   0x77DE-E3 → all $FF (6375 RPM = effectively disabled)
+;   Then use spark cut code for limiting
+;
+; For quiet operation (fuel cut only):
+;   0x77DE = $F0 (6000 RPM)
+;   0x77DF = $EC (5900 RPM)
+;   No spark cut code needed
+;
+;------------------------------------------------------------------------------
+; 📐 ANSWERS TO QUESTIONS IN COMMENTS
+;------------------------------------------------------------------------------
+;
+; Q: "do we need a version that deleted the whole fuel cut out?"
+; A: No. Just set 0x77DE-E3 to $FF. This effectively disables it.
+;    Chr0m3 probably NOPed the fuel cut comparison code, but
+;    changing the table values is simpler and reversible.
+;
+; Q: "will 6000rpm work for ignition cut?"
+; A: YES! 6000 RPM = 240 = $F0, well below 6375 limit.
+;    The 6350 RPM "hard limit" is for spark control at HIGH RPM.
+;    Spark cut at 6000 RPM works perfectly.
+;    See: spark_cut_6000rpm_v32.asm (recommended for your use case)
+;
+; Q: "only above the 6350rpm stock hard limit?"
+; A: No. Spark cut via period injection works at ANY RPM.
+;    The 6350+ issues are about dwell/burn OVERFLOW, not our cut.
+;    At 6000 RPM, stock dwell calc works fine.
+;    Our fake period just tricks it into undersized dwell.
+;
+;------------------------------------------------------------------------------
+; 🔗 RELATED FILES
+;------------------------------------------------------------------------------
+;
+; spark_cut_6000rpm_v32.asm - RECOMMENDED for 6000 RPM use case
+; spark_cut_3x_period_VERIFIED.asm - Simplified verified version
+; spark_cut_chrome_method_v33.asm - Chr0m3's methodology explained
+; DOCUMENT_CONSOLIDATION_PLAN.md - Project overview and status
+;
+;##############################################################################

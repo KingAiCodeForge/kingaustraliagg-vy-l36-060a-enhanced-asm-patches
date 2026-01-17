@@ -1,6 +1,10 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT LIMITER v4 - COIL SATURATION PREVENTION METHOD
 ;==============================================================================
+; ⚠️ DEPRECATED: This file is archived in old_versions/ for reference only
+; ⚠️ Use spark_cut_6000rpm_v32.asm or spark_cut_chrome_method_v33.asm instead
+; ⚠️ KNOWN BUG: Uses 16-bit RPM compare (LDD/CMPD) but $00A2 is 8-bit RPM/25!
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: November 26, 2025
 ; Method: Alternative - Prevent Coil Saturation (THEORETICAL - UNTESTED)
@@ -66,7 +70,7 @@
 RPM_ADDR        EQU $00A2       ; RPM address (VERIFIED: 82R/2W in binary)
 DWELL_RAM       EQU $0199       ; Dwell time storage (VERIFIED from code analysis)
 DWELL_TARGET    EQU $019A       ; Target dwell calculation (suspected)
-MIN_BURN_ROM    EQU $19813      ; Min burn constant ROM location (VERIFIED: LDAA #$24)
+MIN_BURN_ROM    EQU $21813      ; Min burn constant ROM location (VERIFIED: LDAA #$24)
 DWELL_THRESH    EQU $6776       ; "If Delta Cylair > This - Then Max Dwell" (XDF VERIFIED)
 
 ; TEST THRESHOLDS
@@ -95,7 +99,7 @@ LIMITER_FLAG    EQU $01A0       ; Free RAM byte for limiter state (0=off, 1=on)
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $0C468          ; Free space VERIFIED: 15,192 bytes of 0x00 (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED: 15,192 bytes of 0x00 (was $18156 WRONG!)
 
 ignition_cut_handler:
     ; Read current RPM

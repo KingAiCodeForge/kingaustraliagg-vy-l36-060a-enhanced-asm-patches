@@ -59,7 +59,7 @@ LIMITER_STATE       EQU $01A0       ; State flag (0=off, 1=launch, 2=main)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
 
 ;==============================================================================
 ; TWO-STEP LAUNCH CONTROL HANDLER

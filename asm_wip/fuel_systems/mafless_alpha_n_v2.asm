@@ -224,7 +224,7 @@ EEI_MAP_INPUT       EQU $xxxx   ; C16 spare analog input (address TBD)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
 
 ;==============================================================================
 ; MAF FAILURE FORCE ROUTINE
@@ -285,13 +285,14 @@ ALPHA_N_AIRFLOW_CALC:
     ; Load TPS% (0-255 where 255 = 100%)
     LDAB TPS_ADDR               ; B = TPS% (from RAM - address TBD)
     
-    ; Load RPM (16-bit)
-    LDD  RPM_ADDR               ; D = RPM
+    ; Load RPM/25 (8-BIT! $00A2 stores RPM/25, NOT 16-bit RPM!)
+    ; ⚠️ WARNING: $00A3 = Engine State 2, NOT RPM low byte!
+    LDAA RPM_ADDR               ; A = RPM/25 (actual RPM = A × 25)
     
-    ; Multiply TPS × RPM (simplified - needs 16x8 multiply routine)
+    ; Multiply TPS × (RPM/25) (simplified - needs 8x8 multiply routine)
     ; This is a PLACEHOLDER - actual implementation requires:
-    ;   1. 16-bit × 8-bit multiply subroutine
-    ;   2. Divide by 500 (0.002 coefficient)
+    ;   1. 8-bit × 8-bit multiply (MUL instruction)
+    ;   2. Scale result appropriately
     ;   3. Add minimum airflow base
     
     ; For now, use lookup table approach (recommended)

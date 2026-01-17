@@ -72,12 +72,12 @@ OC3M_SET        EQU %00110000   ; Bits 5-4 = 11 (force HIGH)
 OC3M_MASK       EQU %11001111   ; Mask to clear bits 5-4
 
 ; RPM Variables
-RPM_ADDR        EQU $00A2       ; 16-bit RPM (validated)
+RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
 LIMITER_FLAG    EQU $77F4       ; Runtime flags byte
 
-; Threshold Constants (6000 RPM target)
-RPM_HIGH        EQU $1770       ; 6000 RPM activation (0x1770 = 6000)
-RPM_LOW         EQU $1724       ; 5924 RPM deactivation (76 RPM hysteresis)
+; Threshold Constants - CORRECTED to 8-bit scaled
+RPM_HIGH        EQU $F0         ; 240 × 25 = 6000 RPM activation
+RPM_LOW         EQU $EB         ; 235 × 25 = 5875 RPM deactivation
 
 ;==============================================================================
 ; SPARK CUT PATCH - TCTL1 METHOD
@@ -91,13 +91,18 @@ RPM_LOW         EQU $1724       ; 5924 RPM deactivation (76 RPM hysteresis)
 ;==============================================================================
 
 SPARK_CUT_CHECK:
-        ; Read 16-bit RPM
-        LDD     RPM_ADDR            ; D = current RPM (16-bit)
+        ; Read 8-bit RPM/25 (CORRECTED from 16-bit)
+        LDAA    RPM_ADDR            ; A = current RPM/25 (8-bit)
+        TAB                         ; Save to B for later
         
         ; Check if already cutting
         LDAA    LIMITER_FLAG
         BITA    #$01                ; Test bit 0 (spark cut active)
+        TBA                         ; Restore RPM to A
         BNE     CHECK_DEACTIVATE    ; If active, check for deactivation
+
+CHECK_ACTIVATE:
+        CMPA    #RPM_HIGH           ; Compare with 240 (6000 RPM)
         
 CHECK_ACTIVATE:
         ; Not cutting - check if we should start

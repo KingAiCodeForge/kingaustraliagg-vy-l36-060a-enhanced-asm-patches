@@ -64,12 +64,12 @@ PA4_MASK        EQU $10         ; Bit 4 - OC4 (low speed fan)
 PA3_MASK        EQU $08         ; Bit 3 - OC5/IC4
 
 ; RPM Variables
-RPM_ADDR        EQU $00A2       ; 16-bit RPM (validated)
+RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
 LIMITER_FLAG    EQU $77F4       ; Runtime flags byte
 
-; Threshold Constants (6000 RPM target)
-RPM_HIGH        EQU $1770       ; 6000 RPM activation
-RPM_LOW         EQU $1724       ; 5924 RPM deactivation
+; Threshold Constants - CORRECTED to 8-bit scaled
+RPM_HIGH        EQU $F0         ; 240 × 25 = 6000 RPM activation
+RPM_LOW         EQU $EB         ; 235 × 25 = 5875 RPM deactivation
 
 ;==============================================================================
 ; SPARK CUT PATCH - OC1D FORCED OUTPUT METHOD
@@ -88,17 +88,19 @@ RPM_LOW         EQU $1724       ; 5924 RPM deactivation
 ;==============================================================================
 
 SPARK_CUT_CHECK:
-        ; Read 16-bit RPM
-        LDD     RPM_ADDR            ; D = current RPM (16-bit)
+        ; Read 8-bit RPM/25 (CORRECTED from 16-bit)
+        LDAA    RPM_ADDR            ; A = current RPM/25 (8-bit)
+        TAB                         ; Save to B for later
         
         ; Check if already cutting
         LDAA    LIMITER_FLAG
         BITA    #$01                ; Test bit 0 (spark cut active)
+        TBA                         ; Restore RPM to A
         BNE     CHECK_DEACTIVATE    ; If active, check for deactivation
         
 CHECK_ACTIVATE:
         ; Not cutting - check if we should start
-        CPD     #RPM_HIGH           ; Compare RPM to high threshold
+        CMPA    #RPM_HIGH           ; Compare RPM/25 to high threshold
         BLO     EXIT_NO_CHANGE      ; RPM < 6000, no action
         
         ; RPM >= 6000 - activate spark cut

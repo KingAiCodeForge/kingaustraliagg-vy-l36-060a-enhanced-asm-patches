@@ -38,7 +38,7 @@
 ; Disadvantages:
 ;   ❌ NOT validated (theoretical approach)
 ;   ❌ Unbalanced firing may cause vibration
-;   ❌ Catalyst damage risk (unburned fuel from dead cylinders)
+;   ❌ Catalyst damage risk (unburned fuel from dead cylinders) (so potential flames and bangs ✅)
 ;   ❌ Requires mapping individual coil driver outputs
 ;
 ; Technical Notes:
@@ -83,7 +83,8 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; RPM address (confirmed 82R/2W)
+RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM)
+                                ; NOTE: $00A3 = Engine State, NOT RPM!
 
 ; Coil driver control - IMPOSSIBLE without hardware mod (see notes above)
 ; ECU sends SINGLE EST signal to DFI module - no individual coil control
@@ -98,48 +99,48 @@ COIL3_ENABLE    EQU $FFFF       ; N/A - DFI controls coils internally
 ; COIL2_BIT      EQU #$02        ; Bit 1 = Coil 2 (example)
 ; COIL3_BIT      EQU #$04        ; Bit 2 = Coil 3 (example)
 
-; TEST THRESHOLDS
-RPM_HIGH_SOFT   EQU $0BB8       ; 3000 RPM soft cut (66% power - disable 1 coil)
-RPM_HIGH_HARD   EQU $0BCC       ; 3020 RPM hard cut (33% power - disable 2 coils)
-RPM_LOW         EQU $0B54       ; 2900 RPM deactivation (all coils enabled)
+; TEST THRESHOLDS (8-bit scaled: value × 25 = RPM)
+RPM_HIGH_SOFT   EQU $78         ; 120 × 25 = 3000 RPM soft cut
+RPM_HIGH_HARD   EQU $79         ; 121 × 25 = 3025 RPM hard cut
+RPM_LOW         EQU $74         ; 116 × 25 = 2900 RPM deactivation
 
 ; PRODUCTION THRESHOLDS (uncomment after validation)
 ; === Progressive Limiter (Two-Stage) ===
-; RPM_HIGH_SOFT   EQU $18A4       ; 6300 RPM soft cut (Stage 1: -33% power)
-; RPM_HIGH_HARD   EQU $18E7       ; 6375 RPM hard cut (Stage 2: -66% power)
-; RPM_LOW         EQU $1890       ; 6280 RPM deactivation (full power restore)
+; RPM_HIGH_SOFT   EQU $FC         ; 252 × 25 = 6300 RPM soft cut
+; RPM_HIGH_HARD   EQU $FF         ; 255 × 25 = 6375 RPM hard cut (MAX!)
+; RPM_LOW         EQU $FB         ; 251 × 25 = 6275 RPM deactivation
 
 ; === Launch Control Style (Two-Step) ===
-; RPM_HIGH_SOFT   EQU $0DAC       ; 3500 RPM soft cut (for launch control)
-; RPM_HIGH_HARD   EQU $0DC0       ; 3520 RPM hard cut (anti-lag mode)
-; RPM_LOW         EQU $0D98       ; 3480 RPM deactivation
+; RPM_HIGH_SOFT   EQU $8C         ; 140 × 25 = 3500 RPM soft cut
+; RPM_HIGH_HARD   EQU $8D         ; 141 × 25 = 3525 RPM hard cut
+; RPM_LOW         EQU $8B         ; 139 × 25 = 3475 RPM deactivation
 
 LIMITER_STATE   EQU $01A0       ; Limiter state: 0=off, 1=soft, 2=hard
 
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $0C468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
 
 ignition_cut_handler:
-    ; Read current RPM
-    LDD  RPM_ADDR               ; Load RPM (0x00A2)
+    ; Read current RPM (8-bit scaled)
+    LDAA RPM_ADDR               ; Load RPM/25 (8-bit from $00A2)
     
     ; Check limiter state
-    LDAA LIMITER_STATE          ; Load current state
-    CMPA #$00                   ; Compare with 0 (off)
+    LDAB LIMITER_STATE          ; Load state into B (preserve A for RPM)
+    CMPB #$00                   ; Compare with 0 (off)
     BEQ  check_activation
-    CMPA #$01                   ; Compare with 1 (soft cut)
+    CMPB #$01                   ; Compare with 1 (soft cut)
     BEQ  check_soft_cut
     BRA  check_hard_cut         ; State 2 (hard cut)
 
 check_activation:
-    ; Check if RPM >= RPM_HIGH_SOFT
-    CMPD RPM_HIGH_SOFT
+    ; Check if RPM >= RPM_HIGH_SOFT (A already has RPM)
+    CMPA #RPM_HIGH_SOFT         ; Compare with soft threshold
     BLO  all_coils_enabled      ; Below threshold, enable all coils
     
     ; Check if RPM >= RPM_HIGH_HARD
-    CMPD RPM_HIGH_HARD
+    CMPA #RPM_HIGH_HARD         ; Compare with hard threshold
     BHS  activate_hard_cut      ; At or above hard threshold
     
     ; Activate soft cut (RPM_HIGH_SOFT <= RPM < RPM_HIGH_HARD)

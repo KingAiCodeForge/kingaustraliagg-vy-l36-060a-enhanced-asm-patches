@@ -49,7 +49,9 @@ FUEL_CUT_TABLE      EQU $77DE   ; ✅ VERIFIED: XDF fuel cut table location
 ;------------------------------------------------------------------------------
 ; VERIFIED RAM ADDRESSES
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads in code (16-bit)
+RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads in code (8-BIT RPM/25!)
+                                ; NOTE: RPM = value × 25, max 255 = 6375 RPM
+                                ; $00A3 = Engine State 2 (NOT part of RPM!)
 PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: STD at 0x101E1 (FD 01 7B)
 DWELL_RAM       EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99)
 
@@ -69,12 +71,14 @@ DWELL_RAM       EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99)
 LIMITER_FLAG    EQU $01A0       ; ⚠️ PLACEHOLDER - verify with RAM dump
 
 ;------------------------------------------------------------------------------
-; RPM THRESHOLDS (6000 RPM USER PREFERENCE)
+; RPM THRESHOLDS (6000 RPM USER PREFERENCE - USING 8-BIT SCALED VALUES)
 ;------------------------------------------------------------------------------
-; 16-bit raw RPM value (not scaled)
+; $00A2 stores RPM/25 (8-bit), so:
+;   6000 RPM ÷ 25 = 240 = $F0
+;   5900 RPM ÷ 25 = 236 = $EC
 ;
-RPM_HIGH        EQU $1770       ; 6000 RPM - spark cut activation
-RPM_LOW         EQU $170C       ; 5900 RPM - spark resume (100 RPM hysteresis)
+RPM_HIGH        EQU $F0         ; 240 × 25 = 6000 RPM - spark cut activation
+RPM_LOW         EQU $EC         ; 236 × 25 = 5900 RPM - spark resume (100 RPM hysteresis)
 
 ;------------------------------------------------------------------------------
 ; FAKE PERIOD VALUE FOR SPARK KILL
@@ -84,7 +88,7 @@ RPM_LOW         EQU $170C       ; 5900 RPM - spark resume (100 RPM hysteresis)
 FAKE_PERIOD     EQU $3E80       ; 16000 decimal = ~100µs dwell = no spark
 
 ;==============================================================================
-; METHOD EXPLANATION - CHR0M3 STYLE
+; METHOD EXPLANATION - 6000 RPM SPARK CUT LIMITER
 ;==============================================================================
 ;
 ; STOCK FUEL CUT SYSTEM:
@@ -93,19 +97,14 @@ FAKE_PERIOD     EQU $3E80       ; 16000 decimal = ~100µs dwell = no spark
 ;   - When RPM >= threshold, cuts injector pulse width
 ;   - Maximum: 255 × 25 = 6375 RPM (8-bit limit!)
 ;
-; CHR0M3'S SOLUTION:
-;   1. Find where fuel cut routine is CALLED from main loop
-;   2. REPLACE that JSR with our spark cut JSR
-;   3. Our routine:
-;      a) Reads 16-bit RPM directly from $00A2 (bypasses 8-bit limit!)
-;      b) Compares to 16-bit threshold (can go above 6375!)
-;      c) If over: injects fake 3X period → kills dwell → kills spark
-;      d) If under: does nothing, normal operation continues
+; THIS VERSION (v33):
+;   - Uses 8-bit RPM/25 from $00A2 (max 6375 RPM is fine for 6000 target)
+;   - Compares to $F0 (240 × 25 = 6000 RPM)
+;   - If over: injects fake 3X period → kills dwell → kills spark
+;   - If under: does nothing, normal operation continues
 ;
-; WHY 16-BIT IS CRITICAL:
-;   - 8-bit × 25 = max 6375 RPM (stock limitation)
-;   - 16-bit raw = max 65535 RPM (no limit!)
-;   - Chr0m3 reached 7200 RPM by bypassing 8-bit tables
+; NOTE: Chr0m3's turbo builds needed >6375 RPM so he used 16-bit.
+; For 6000 RPM limiter, 8-bit works perfectly: 6000/25 = 240 = $F0
 ;
 ;==============================================================================
 
@@ -142,13 +141,13 @@ SPARK_CUT_HANDLER:
     PSHB                        ; 37       Save B (period low byte)
     
     ;--------------------------------------------------------------------------
-    ; LOAD CURRENT RPM (16-BIT - BYPASSES 8-BIT LIMIT!)
+    ; LOAD CURRENT RPM (8-BIT SCALED: RPM = value × 25)
     ;--------------------------------------------------------------------------
-    ; This is the key insight from Chr0m3:
-    ; Stock fuel cut reads 8-bit table value × 25 = max 6375 RPM
-    ; We read 16-bit raw RPM = can compare to ANY value
+    ; $00A2 = RPM/25 (8-bit), max 255 = 6375 RPM
+    ; $00A3 = Engine State 2 (NOT RPM low byte!)
+    ; For 6000 RPM limit: 6000/25 = 240 = $F0
     ;
-    LDD     RPM_ADDR            ; DC A2    Load 16-bit RPM from $00A2-$00A3
+    LDAA    RPM_ADDR            ; 96 A2    Load 8-bit RPM/25 from $00A2
     
     ;--------------------------------------------------------------------------
     ; CHECK LIMITER STATE FOR HYSTERESIS
@@ -159,7 +158,7 @@ SPARK_CUT_HANDLER:
     ;--------------------------------------------------------------------------
     ; LIMITER OFF - Check activation threshold
     ;--------------------------------------------------------------------------
-    CPD     #RPM_HIGH           ; 1A 83 17 70  Compare RPM to 6000
+    CMPA    #RPM_HIGH           ; 81 F0    Compare RPM/25 to 240 (6000 RPM)
     BCS     EXIT_NORMAL         ; 25 xx    RPM < 6000 → normal operation
     
     ; RPM >= 6000: ACTIVATE SPARK CUT
@@ -171,7 +170,8 @@ LIMITER_ACTIVE:
     ;--------------------------------------------------------------------------
     ; LIMITER ON - Check deactivation threshold
     ;--------------------------------------------------------------------------
-    CPD     #RPM_LOW            ; 1A 83 17 0C  Compare RPM to 5900
+    LDAA    RPM_ADDR            ; 96 A2    Reload RPM (was clobbered)
+    CMPA    #RPM_LOW            ; 81 EC    Compare RPM/25 to 236 (5900 RPM)
     BCC     DO_SPARK_CUT        ; 24 xx    RPM >= 5900 → keep cutting
     
     ; RPM < 5900: DEACTIVATE SPARK CUT
@@ -296,4 +296,138 @@ EXIT_NORMAL:
 ;   - Clear explanation of the 6375 RPM barrier breakthrough
 ;
 ;==============================================================================
+
+;##############################################################################
+;#                                                                            #
+;#                    ═══ CONFIRMED ADDRESSES & FINDINGS ═══                  #
+;#                                                                            #
+;##############################################################################
+
+;------------------------------------------------------------------------------
+; ✅ BINARY VERIFIED ADDRESSES (January 17, 2026)
+;------------------------------------------------------------------------------
+;
+; Verified on: VX-VY_V6_$060A_Enhanced_v1.0a - Copy.bin (131,072 bytes)
+;
+; ADDRESS CATEGORY: HOOK & FREE SPACE
+; File Offset | Bytes      | Instruction    | Purpose
+; ------------|------------|----------------|--------------------------------
+; 0x101E1     | FD 01 7B   | STD $017B      | ✅ HOOK - 3X period storage
+; 0x0C500     | 00 00 00...| (zeros)        | ✅ FREE - 15,040 bytes available
+; 0x3631      | BD 37 1A   | JSR $371A      | Dwell calc call in TIC3 ISR
+;
+; ADDRESS CATEGORY: FUEL CUT TABLE
+; File Offset | Bytes | Decoded
+; ------------|-------|------------------------------------
+; 0x77DE      | EC    | 236 × 25 = 5900 RPM (Drive HIGH)
+; 0x77DF      | EB    | 235 × 25 = 5875 RPM (Drive LOW)
+; 0x77E0      | EC    | 5900 RPM (P/N HIGH)
+; 0x77E1      | EB    | 5875 RPM (P/N LOW)
+;
+; ⚠️ NOTE: Enhanced binary has STOCK fuel cut values!
+;    Chr0m3's method: Set all to $FF to disable fuel cut entirely.
+;
+;------------------------------------------------------------------------------
+; 📐 CHR0M3 METHOD MATH
+;------------------------------------------------------------------------------
+;
+; THE 6375 RPM BARRIER:
+;   8-bit RPM at $00A2: Max = 255 × 25 = 6375 RPM
+;   Stock fuel cut MUST use 8-bit comparison = 6375 limit
+;
+; CHR0M3's SOLUTION:
+;   Don't use fuel cut at all!
+;   Use 3X period injection for spark cut instead.
+;   3X period is 16-bit = no practical RPM limit.
+;
+; WHY 16-BIT WORKS FOR >6375:
+;   If using 16-bit RPM threshold (like v35):
+;   LDD $00A2 loads A=$00A2 (RPM/25), B=$00A3 (Engine State)
+;   CPD #$18E7 compares 16-bit = A×256+B vs 6375
+;   Result: Can compare ANY RPM value!
+;
+; BUT FOR 6000 RPM:
+;   8-bit is fine: 6000/25 = 240 = $F0 < 255
+;   Use LDAA $00A2, CMPA #$F0 (simpler, faster)
+;
+;------------------------------------------------------------------------------
+; 🔧 FUEL CUT DISABLE PATCH
+;------------------------------------------------------------------------------
+;
+; To fully "scrap fuel cut" like Chr0m3:
+;
+; File Offset | Change From | Change To | Result
+; ------------|-------------|-----------|------------------
+; 0x77DE      | EC          | FF        | 6375 RPM (disabled)
+; 0x77DF      | EB          | FF        | 6375 RPM (disabled)
+; 0x77E0      | EC          | FF        | 6375 RPM (disabled)
+; 0x77E1      | EB          | FF        | 6375 RPM (disabled)
+;
+; Total: 4 bytes changed.
+; Effect: Stock fuel cut becomes 6375 RPM = never triggers.
+;
+;------------------------------------------------------------------------------
+; ⚠️ THINGS STILL TO FIND OUT
+;------------------------------------------------------------------------------
+;
+; 1. Chr0m3's "free bit in RAM"
+;    Quote: "used a free bit in ram"
+;    Candidates: $00FB bit 7, $0050 unused bits, $01A0 byte
+;    Need Mode 4 RAM dump to verify which are truly free.
+;
+; 2. "Moved entire dwell functions"
+;    Quote: "moved entire dwell functions to add my flag"
+;    Implies he relocated $371A routine?
+;    Or patched within it to check flag?
+;    Our method hooks BEFORE the routine, not inside it.
+;
+; 3. EST bypass mode
+;    Quote: "flipping est off turns bypass etc on"
+;    Avoid direct EST manipulation!
+;    Period injection method avoids this issue.
+;
+;------------------------------------------------------------------------------
+; 🔄 ALTERNATIVE: DIRECT EST CUT (NOT RECOMMENDED)
+;------------------------------------------------------------------------------
+;
+; Chr0m3 warning: "What is possible is shutting off EST entirely but
+;   that also comes with it's own issues...Because again, hardware
+;   controlled, flipping est off turns bypass etc on"
+;
+; EST is controlled by Port A ($1000):
+;   PA3 ($08) and PA4 ($10) are EST output bits
+;   Clearing these = no spark
+;   BUT: Also activates HEI bypass mode!
+;   Bypass mode = fixed 10° timing = BAD!
+;
+; DO NOT USE DIRECT EST CUT unless you understand bypass implications.
+;
+;------------------------------------------------------------------------------
+; 💡 IMPLEMENTATION PRIORITY
+;------------------------------------------------------------------------------
+;
+; For 6000 RPM spark cut:
+;   1. Use v32 (8-bit, simple, proven) ⭐ RECOMMENDED
+;   2. Optionally disable fuel cut (patch 0x77DE-E1)
+;
+; For >6375 RPM spark cut:
+;   1. Apply dwell patch v37 first (required!)
+;   2. Use v35 with 16-bit comparison
+;   3. Must disable fuel cut (8-bit limit)
+;
+; For maximum flames:
+;   1. Use v34 rolling cut
+;   2. Disable fuel cut entirely
+;   3. Optional: Increase injector PW at cut (more fuel = more flames)
+;
+;------------------------------------------------------------------------------
+; 🔗 RELATED FILES
+;------------------------------------------------------------------------------
+;
+; spark_cut_6000rpm_v32.asm    - Simpler 8-bit version (recommended)
+; spark_cut_rolling_v34.asm    - Random cut for flames
+; spark_cut_dwell_patch_v37.asm - Required for >6375 RPM
+; VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md - Hysteresis research
+;
+;##############################################################################
 

@@ -73,8 +73,8 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; RPM high byte
-RPM_FULL        EQU $00A2       ; RPM 16-bit word
+RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM)
+                                ; NOTE: $00A3 = Engine State 2 (NOT RPM low byte!)
 PERIOD_3X       EQU $017B       ; 3X period (for emergency cut)
 LIMITER_FLAGS   EQU $00FA       ; Runtime flags
                                 ; Bit 0: progressive_active
@@ -99,7 +99,7 @@ RPM_PROGRESSIVE_DEF EQU $FA     ; 250 × 25 = 6250 RPM (progressive start)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18500 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18500 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18500 WRONG!)
 
 ;==============================================================================
 ; MAIN SAFE MODE HANDLER
@@ -113,8 +113,8 @@ SAFE_MODE_6375:
     LDAA LIMITER_ENABLE         ; B6 77 FA
     BEQ EXIT_SAFE_MODE          ; 27 XX - Disabled, exit
     
-    ; Load current RPM
-    LDAA RPM_ADDR               ; 96 A2 - Load RPM high byte
+    ; Load current RPM (8-bit scaled: value × 25 = actual RPM)
+    LDAA RPM_ADDR               ; 96 A2 - Load RPM/25
     
     ; CRITICAL: Check for overflow danger zone
     CMPA #RPM_ABSOLUTE_MAX      ; 81 FF - Compare with 255
@@ -253,3 +253,137 @@ SAFE_MODE_CAL_DATA:
 ;==============================================================================
 ; END OF v18 - 6375 RPM SAFE MODE ENFORCER
 ;==============================================================================
+
+;##############################################################################
+;#                                                                            #
+;#                    ═══ CONFIRMED ADDRESSES & FINDINGS ═══                  #
+;#                                                                            #
+;##############################################################################
+
+;------------------------------------------------------------------------------
+; ✅ BINARY VERIFIED ADDRESSES (January 17, 2026)
+;------------------------------------------------------------------------------
+;
+; Verified on: VX-VY_V6_$060A_Enhanced_v1.0a - Copy.bin (131,072 bytes)
+;
+; File Offset | Bytes      | Verified      | Purpose
+; ------------|------------|---------------|-------------------------------
+; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x0C500     | 00 00 00...| ✅ zeros      | FREE SPACE for code
+;
+; CALIBRATION ADDRESSES (proposed for safe mode config):
+; Address     | Purpose            | Default | Range
+; ------------|--------------------|---------|-----------
+; $77F8       | Progressive start  | $FA     | 6250 RPM
+; $77F9       | Emergency cut      | $FE     | 6350 RPM
+; $77FA       | Enable flag        | $01     | enabled
+;
+;------------------------------------------------------------------------------
+; 📐 8-BIT RPM OVERFLOW MATH (Critical Safety Info)
+;------------------------------------------------------------------------------
+;
+; THE 6375 BARRIER:
+;   8-bit register can store: 0 to 255
+;   VY RPM scaling: actual_RPM = register_value × 25
+;   Maximum safe RPM: 255 × 25 = 6375 RPM
+;
+; WHAT HAPPENS AT 6376+ RPM:
+;   6376 RPM ÷ 25 = 255.04 → truncates to 255 = 6375 ✓
+;   6400 RPM ÷ 25 = 256 → WRAPS TO 0! (8-bit overflow)
+;   6500 RPM ÷ 25 = 260 → WRAPS TO 4! (100 RPM apparent)
+;
+; CONSEQUENCES OF OVERFLOW:
+;   1. RPM reads as 0-100 RPM instead of 6400+
+;   2. All RPM-based tables look up wrong values
+;   3. Fuel cut threshold checks fail (0 < threshold)
+;   4. Timing calculations become undefined
+;   5. "Spark becomes crap" - Rhysk94
+;
+; BINARY PROOF (from VY binary):
+;   Fuel cut table at 0x77DE: EC = 236 × 25 = 5900 RPM
+;   Maximum meaningful value: FF = 255 × 25 = 6375 RPM
+;   Cannot set fuel cut higher than 6375!
+;
+;------------------------------------------------------------------------------
+; 📐 SAFETY MARGIN CALCULATION
+;------------------------------------------------------------------------------
+;
+; Emergency cut at 6350 RPM ($FE = 254):
+;   Safety buffer: 6375 - 6350 = 25 RPM
+;   Time at 6350 RPM: 60/6350 = 9.45ms per revolution
+;   RPM acceleration: Typical WOT = 500-1000 RPM/sec
+;   Time to reach overflow: 25 RPM ÷ 750 RPM/sec = 33ms
+;   That's about 3.5 revolutions of safety buffer
+;
+; Emergency cut at 6375 RPM ($FF = 255):
+;   NO safety buffer! 
+;   Overflow happens on NEXT rev increment!
+;   NOT RECOMMENDED - use $FE (6350) instead.
+;
+;------------------------------------------------------------------------------
+; ⚠️ THINGS STILL TO FIND OUT
+;------------------------------------------------------------------------------
+;
+; 1. Timer calculation behavior at overflow
+;    Question: Do dwell calcs also fail when RPM overflows?
+;    Likely: Yes - they use same RPM register
+;    Test: Monitor dwell/burn times at 6500 RPM (not recommended!)
+;
+; 2. Recovery behavior
+;    Question: Does ECU recover if RPM drops back below 6375?
+;    Likely: Yes - but may require ignition cycle
+;    Test: Not worth testing (risk of damage)
+;
+; 3. Alternative 16-bit RPM location
+;    Question: Does VY have 16-bit raw RPM anywhere?
+;    Possibility: In timer capture registers
+;    Benefit: Could read true RPM >6375 for monitoring
+;
+;------------------------------------------------------------------------------
+; 🔄 ALTERNATIVE: HARDWARE RPM CALCULATION
+;------------------------------------------------------------------------------
+;
+; Instead of relying on 8-bit RPM register, calculate from 3X period:
+;
+; Formula: RPM = (timer_freq × 60) ÷ (3X_period × 6)
+;   At 6000 RPM: 3X_period ≈ 3333 counts
+;   RPM = (2,000,000 × 60) ÷ (3333 × 6) = 6001 RPM ✓
+;
+; Implementation:
+;   1. Read 3X period from $017B (16-bit)
+;   2. Divide constant by period
+;   3. Result is true 16-bit RPM (no overflow!)
+;
+; Pros:
+;   - Accurate up to any RPM
+;   - Independent of 8-bit register
+;   - Can detect overflow condition
+;
+; Cons:
+;   - Requires 16-bit division (slow on HC11)
+;   - More code space
+;   - May not be necessary if we just hard-cut at 6350
+;
+;------------------------------------------------------------------------------
+; 💡 RECOMMENDED SAFE CONFIGURATION
+;------------------------------------------------------------------------------
+;
+; For SAFE operation on unmodified engine:
+;   Progressive start: $F6 (246 × 25 = 6150 RPM)
+;   Emergency cut: $FA (250 × 25 = 6250 RPM)
+;   Buffer: 125 RPM below overflow
+;
+; For performance engine with proven >6500 RPM capability:
+;   Apply dwell patch v37 FIRST!
+;   Then use 16-bit RPM method (v35)
+;   Still risky - recommend dyno testing only
+;
+;------------------------------------------------------------------------------
+; 🔗 RELATED FILES
+;------------------------------------------------------------------------------
+;
+; spark_cut_6000rpm_v32.asm - Simple 6000 RPM cut (safer)
+; spark_cut_dwell_patch_v37.asm - Required for >6375 RPM
+; spark_cut_chrome_method_v33.asm - Chr0m3's approach documented
+;
+;##############################################################################

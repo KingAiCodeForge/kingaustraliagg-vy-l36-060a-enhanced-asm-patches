@@ -35,21 +35,21 @@
 ;------------------------------------------------------------------------------
 ; VERIFIED RAM ADDRESSES (from ignition_cut_patch_VERIFIED.asm)
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads in code
+RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads, 8-BIT RPM/25
+                                ; NOTE: RPM = value × 25, max 255 = 6375 RPM
+                                ; $00A3 = Engine State (NOT part of RPM!)
 PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: STD at 0x101E1 (FD 01 7B)
 DWELL_RAM       EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99)
 
 ;------------------------------------------------------------------------------
-; 6000 RPM THRESHOLDS (USER PREFERENCE)
+; 6000 RPM THRESHOLDS (USER PREFERENCE - 8-BIT SCALED)
 ;------------------------------------------------------------------------------
-; Calculation: RPM × 1 = hex value (no scaling for comparison)
-; Formula: RPM / 1 = decimal → convert to hex
+; $00A2 = RPM/25, so:
+;   6000 RPM ÷ 25 = 240 = $F0
+;   5900 RPM ÷ 25 = 236 = $EC
 ;
-; 6000 RPM = 0x1770 (6000 decimal)
-; 5900 RPM = 0x170C (5900 decimal)
-;
-RPM_HIGH        EQU $1770       ; 6000 RPM - spark cut activation
-RPM_LOW         EQU $170C       ; 5900 RPM - spark resume (100 RPM hysteresis)
+RPM_HIGH        EQU $F0         ; 240 × 25 = 6000 RPM - spark cut activation
+RPM_LOW         EQU $EC         ; 236 × 25 = 5900 RPM - resume (100 RPM hysteresis)
 
 ; ALTERNATIVE THRESHOLDS (commented, for reference):
 ;
@@ -150,8 +150,8 @@ IGNITION_CUT_HANDLER:
     ;--------------------------------------------------------------------------
     ; LIMITER OFF - Check if should activate
     ;--------------------------------------------------------------------------
-    LDD     RPM_ADDR            ; DC A2    Load current RPM (16-bit)
-    CPD     #RPM_HIGH           ; 1A 83 17 70  Compare with 6000 RPM
+    LDAA    RPM_ADDR            ; 96 A2    Load RPM/25 (8-bit)
+    CMPA    #RPM_HIGH           ; 81 F0    Compare with 240 (6000 RPM)
     BCS     STORE_REAL          ; 25 xx    RPM < 6000 → store real period
     
     ; RPM >= 6000 - ACTIVATE SPARK CUT
@@ -163,8 +163,8 @@ CHECK_LOW:
     ;--------------------------------------------------------------------------
     ; LIMITER ON - Check if should deactivate
     ;--------------------------------------------------------------------------
-    LDD     RPM_ADDR            ; DC A2    Load current RPM
-    CPD     #RPM_LOW            ; 1A 83 17 0C  Compare with 5900 RPM
+    LDAA    RPM_ADDR            ; 96 A2    Load RPM/25 (8-bit)
+    CMPA    #RPM_LOW            ; 81 EC    Compare with 236 (5900 RPM)
     BCC     STORE_FAKE          ; 24 xx    RPM >= 5900 → keep cutting
     
     ; RPM < 5900 - DEACTIVATE SPARK CUT
@@ -266,3 +266,169 @@ STORE_REAL:
 ;   - Comprehensive documentation and comments
 ;
 ;==============================================================================
+
+;##############################################################################
+;#                                                                            #
+;#                    ═══ CONFIRMED ADDRESSES & FINDINGS ═══                  #
+;#                                                                            #
+;##############################################################################
+
+;------------------------------------------------------------------------------
+; ✅ BINARY VERIFIED ADDRESSES (January 17, 2026)
+;------------------------------------------------------------------------------
+;
+; Verified on: VX-VY_V6_$060A_Enhanced_v1.0a - Copy.bin (131,072 bytes)
+;
+; File Offset | Bytes      | Instruction    | Status    | Purpose
+; ------------|------------|----------------|-----------|--------------------
+; 0x101E1     | FD 01 7B   | STD $017B      | ✅ HOOK   | 3X period store
+; 0x0C500     | 00 00 00...| (zeros)        | ✅ FREE   | Code space (15KB)
+; 0x77DE      | EC EB      | RPM HIGH/LOW   | ✅ TABLE  | Fuel cut (stock!)
+; 0x3631      | BD 37 1A   | JSR $371A      | ✅ REF    | Dwell calc call
+; 0x371A      | 13 67 A0   | BRCLR...       | ✅ REF    | Dwell calc start
+;
+; NOTE: Enhanced binary still has stock fuel cut values (EC EB = 5900/5875)
+;       Our spark cut at 6000 will trigger BEFORE stock fuel cut!
+;
+;------------------------------------------------------------------------------
+; 📐 6000 RPM THRESHOLD MATH
+;------------------------------------------------------------------------------
+;
+; 8-bit RPM at $00A2:
+;   RAM stores: Actual_RPM ÷ 25
+;   6000 RPM ÷ 25 = 240 = $F0 ✅
+;   5900 RPM ÷ 25 = 236 = $EC (100 RPM hysteresis)
+;
+; Why 100 RPM hysteresis?
+;   - 100 RPM = 4 × 25 = 4 byte difference ($F0 - $EC = 4)
+;   - Prevents limiter "chatter" (rapid on/off)
+;   - VL V8 Walkinshaw uses 94 RPM hysteresis
+;   - BMW MS43 uses ~100 RPM hysteresis
+;
+; Timing validation:
+;   At 6000 RPM: 6000 ÷ 60 = 100 revs/sec = 10ms per revolution
+;   6-cylinder: 10ms ÷ 6 = 1.67ms between 3X events
+;   Our code runs every 3X event = every 1.67ms at 6000 RPM
+;
+;------------------------------------------------------------------------------
+; 📐 FAKE PERIOD CALCULATION
+;------------------------------------------------------------------------------
+;
+; Stock 3X period at 6000 RPM:
+;   Period = Timer_Clock ÷ (RPM ÷ 60 × teeth_per_rev)
+;   Period = 2,000,000 ÷ (100 × 6) = 3,333 counts = $0D05
+;
+; Fake period effect:
+;   Fake = $3E80 = 16,000 counts
+;   Apparent RPM = 2,000,000 ÷ 16,000 ÷ 6 × 60 = 125 RPM
+;   At 125 apparent RPM: Dwell calc gives ~100µs dwell
+;   100µs dwell = coil cannot charge = NO SPARK
+;
+; Chr0m3 confirmed: "If you set the 3x period astronomically high 
+;   the dwell gets really really small (if I recall like 100us)"
+;
+;------------------------------------------------------------------------------
+; 🔧 INSTALLATION PATCH (Hex Editor)
+;------------------------------------------------------------------------------
+;
+; STEP 1: Backup original binary!
+;
+; STEP 2: Hook Point
+;   File offset: 0x101E1
+;   Change: FD 01 7B → BD C5 00
+;   Verify context: xx xx FD 01 7B xx xx (look for STD $017B)
+;
+; STEP 3: Code Injection
+;   File offset: 0x0C500
+;   Verify: All zeros at this location (safe to overwrite)
+;   Insert: Assembled bytes from this file
+;
+; Assembled bytes (approximately 50 bytes):
+;   36 37 96 A0 81 01 27 0B 96 A2 81 F0 25 0C 86 01
+;   97 A0 20 0F 96 A2 81 EC 24 0A 7F 01 A0 20 05 33
+;   32 CC 3E 80 FD 01 7B 39 33 32 FD 01 7B 39
+;
+; STEP 4: Checksum
+;   Open in TunerPro with XDF → Save (auto-updates checksum)
+;
+;------------------------------------------------------------------------------
+; ⚠️ THINGS STILL TO FIND OUT
+;------------------------------------------------------------------------------
+;
+; 1. LIMITER_FLAG at $01A0
+;    Status: UNVERIFIED - assumed free
+;    Risk: LOW - typical spare RAM area
+;    Action: Check XDF mappings, test with Mode 4 RAM dump
+;
+; 2. Alternative free RAM:
+;    $00FB-$00FF: Page zero end (faster access)
+;    $01A1-$01AF: Same area as $01A0
+;    $1B00-$1BFF: Extended RAM (verified unused in some areas)
+;
+; 3. Fuel cut interaction:
+;    Stock fuel cut at 5900 RPM ($EC) is LOWER than our 6000 RPM spark cut!
+;    Enhanced OS may have different fuel cut - check XDF
+;    Consider disabling fuel cut by setting 0x77DE = $FF
+;
+;------------------------------------------------------------------------------
+; 🔄 ALTERNATIVE METHODS (Comparison)
+;------------------------------------------------------------------------------
+;
+; A) 3X Period Injection (THIS FILE) ⭐ BEST FOR 6000 RPM
+;    Code: ~50 bytes at $C500
+;    Hook: 3 bytes at 0x101E1
+;    Latency: Immediate (same TIC3 interrupt)
+;    Pros: Simple, proven, minimal code
+;    Cons: Not true zero dwell (still ~100µs)
+;
+; B) Rolling Cut (v34)
+;    Code: ~80 bytes at $C500
+;    Latency: Same interrupt
+;    Pros: FLAMES! Random cut = turbo anti-lag
+;    Cons: More complex, less predictable
+;
+; C) Soft Timing Retard (v36)
+;    Hook: Timing calculation area
+;    Latency: Same cycle
+;    Pros: Progressive power reduction
+;    Cons: Engine still fires, no flames
+;
+; D) Two-Stage with Delay (v23)
+;    Code: ~120 bytes
+;    Pros: VL V8 Walkinshaw style, smooth sound
+;    Cons: More complex, needs timer integration
+;
+; E) Direct Fuel Cut Replacement
+;    Hook: Overwrite 0x77DE-0x77E1
+;    Pros: Uses existing ECU limiter logic
+;    Cons: Still fuel cut (no flames), 8-bit limit
+;
+;------------------------------------------------------------------------------
+; 💡 OPTIMIZATION OPPORTUNITIES
+;------------------------------------------------------------------------------
+;
+; 1. Combine with fuel cut disable:
+;    Set 0x77DE = $FF, 0x77DF = $FF → Fuel cut at 6375 (effectively off)
+;    Our spark cut at 6000 RPM handles limiting
+;    Result: Pure spark cut with flames!
+;
+; 2. Add Mode 4 control:
+;    Read Mode 4 RAM flag to enable/disable at runtime
+;    $01A2 could be Mode 4 controlled threshold
+;    Allows tuner adjustment without reflash
+;
+; 3. Temperature protection:
+;    Read coolant temp from RAM (typically $0049)
+;    Lower limit if engine hot (e.g., 5500 RPM if >110°C)
+;
+;------------------------------------------------------------------------------
+; 🔗 RELATED FILES
+;------------------------------------------------------------------------------
+;
+; spark_cut_3x_period_VERIFIED.asm - Base verified version (test mode)
+; spark_cut_chrome_method_v33.asm  - Chr0m3's methodology documented
+; spark_cut_rolling_v34.asm        - Random cut for flames
+; spark_cut_dwell_patch_v37.asm    - For >6375 RPM capability
+; DOCUMENT_CONSOLIDATION_PLAN.md   - Project status and TODOs
+;
+;##############################################################################

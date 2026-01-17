@@ -12,12 +12,37 @@
 ; ⚠️ WARNING: Requires strong transmission internals (servo upgrade minimum)
 ;
 ;==============================================================================
+; ⚠️⚠️⚠️ TEMPLATE FILE - PLACEHOLDER ADDRESSES ⚠️⚠️⚠️
+;==============================================================================
+;
+; THIS IS A QUICK TEMPLATE - MANY ADDRESSES ARE MADE UP AND UNVERIFIED!
+;
+; BEFORE USING:
+; 1. Verify RAM addresses $00D0-$00D5 are actually FREE (not used by ECU)
+; 2. Verify CAL addresses $7EC0-$7EC6 are in FREE ROM space
+; 3. Cross-reference with RAM_Variables_Validated.md
+; 4. Cross-reference with XDF free space analysis
+;
+; KNOWN CONFLICTS:
+; - $00D0 is used for BOTH RAM_SHIFT_ACTIVE AND SPARK_ADVANCE_VAR (line 98!)
+; - TPS_VAR at $00DA - needs verification from ADX/XDF
+; - CURRENT_GEAR at $00E2 - needs verification
+;
+; Best for: Manual transmission with ratchet shifter, manualized auto body,
+;           or diode mod at WOT. Flames/bangs on back-off work better for
+;           manual trans but CAN work with auto + above mods.
+;
+;
+;==============================================================================
 ; THEORY OF OPERATION
 ;==============================================================================
 ;
 ; Stock VY V6 has TORQUE MANAGEMENT which REDUCES torque during shifts
 ; to protect the transmission. This makes shifts feel soft/mushy.
-; 
+;
+; NOTE ON FLAMES/BANGS: Works better for manual transmissions, but CAN work
+; with auto if using: ratchet shifter, manualized body, or diode mod at WOT.
+;
 ; For "shift bangs" like a broken DFI plate (direct fire ignition), we need
 ; to either:
 ;
@@ -65,41 +90,45 @@
 ; - Upgraded 2-4 band
 ;
 ;==============================================================================
-; RAM VARIABLES
+; RAM VARIABLES - ⚠️ PLACEHOLDERS - VERIFY BEFORE USE!
 ;==============================================================================
+; These addresses are MADE UP and may conflict with ECU variables!
+; Find actual free RAM by analyzing binary with disassembler.
 
-RAM_SHIFT_ACTIVE    EQU     $00D0   ; Shift in progress flag
-RAM_SHIFT_PHASE     EQU     $00D1   ; Shift phase: 0=idle, 1=retard, 2=snap
-RAM_SHIFT_TIMER     EQU     $00D2   ; Shift phase timer
-RAM_SHIFT_RETARD    EQU     $00D3   ; Current retard amount (degrees)
-RAM_PREV_GEAR       EQU     $00D4   ; Previous gear for shift detection
-RAM_SHIFT_TYPE      EQU     $00D5   ; 0=upshift, 1=downshift
-
-;==============================================================================
-; CALIBRATION CONSTANTS
-;==============================================================================
-
-CAL_SB_ENABLE       EQU     $7EC0   ; Enable shift bang (1 = on)
-CAL_SB_MODE         EQU     $7EC1   ; Mode: 1=retard only, 2=retard+cut, 3=cut only
-CAL_SB_RETARD_DEG   EQU     $7EC2   ; Retard during shift (degrees, e.g., 15-25)
-CAL_SB_RETARD_TIME  EQU     $7EC3   ; Retard phase duration (10ms units, e.g., 10=100ms)
-CAL_SB_SNAP_TIME    EQU     $7EC4   ; Snap-back duration (10ms units, e.g., 5=50ms)
-CAL_SB_TPS_MIN      EQU     $7EC5   ; Minimum TPS to enable (e.g., 50% = firm shifts only at WOT)
-CAL_SB_CUT_PATTERN  EQU     $7EC6   ; Spark cut pattern (for mode 2/3): 0x55=alternating
+RAM_SHIFT_ACTIVE    EQU     $0180   ; ⚠️ PLACEHOLDER - Shift in progress flag
+RAM_SHIFT_PHASE     EQU     $0181   ; ⚠️ PLACEHOLDER - Shift phase: 0=idle, 1=retard, 2=snap
+RAM_SHIFT_TIMER     EQU     $0182   ; ⚠️ PLACEHOLDER - Shift phase timer
+RAM_SHIFT_RETARD    EQU     $0183   ; ⚠️ PLACEHOLDER - Current retard amount (degrees)
+RAM_PREV_GEAR       EQU     $0184   ; ⚠️ PLACEHOLDER - Previous gear for shift detection
+RAM_SHIFT_TYPE      EQU     $0185   ; ⚠️ PLACEHOLDER - 0=upshift, 1=downshift
 
 ;==============================================================================
-; EXISTING ECU ADDRESSES (verify in XDF)
+; CALIBRATION CONSTANTS - ⚠️ PLACEHOLDERS - VERIFY FREE ROM SPACE!
 ;==============================================================================
+; These ROM addresses need to be in verified FREE SPACE ($C468-$FFBF range)
 
-TPS_VAR             EQU     $00DA   ; Throttle position (0-255)
-CURRENT_GEAR        EQU     $00E2   ; Current gear (1-4, 0=park/neutral)
-SHIFT_IN_PROG       EQU     $00E3   ; Stock shift in progress flag (verify)
-SPARK_ADVANCE_VAR   EQU     $00D0   ; Current commanded spark (needs offset)
-LIMITER_ACTIVE      EQU     $00C0   ; Ignition cut flag (from v1-v23)
+CAL_SB_ENABLE       EQU     $C500   ; ⚠️ PLACEHOLDER - Enable shift bang (1 = on)
+CAL_SB_MODE         EQU     $C501   ; ⚠️ PLACEHOLDER - Mode: 1=retard, 2=retard+cut, 3=cut
+CAL_SB_RETARD_DEG   EQU     $C502   ; ⚠️ PLACEHOLDER - Retard degrees (15-25 typical)
+CAL_SB_RETARD_TIME  EQU     $C503   ; ⚠️ PLACEHOLDER - Retard phase (10ms units)
+CAL_SB_SNAP_TIME    EQU     $C504   ; ⚠️ PLACEHOLDER - Snap-back duration (10ms units)
+CAL_SB_TPS_MIN      EQU     $C505   ; ⚠️ PLACEHOLDER - Min TPS to enable (e.g., 50%)
+CAL_SB_CUT_PATTERN  EQU     $C506   ; ⚠️ PLACEHOLDER - Spark cut pattern (0x55=alt)
 
-; Transmission addresses (need verification from XDF)
-LINE_PRESSURE_VAR   EQU     $00E6   ; Current line pressure command
-SHIFT_TIME_VAR      EQU     $00E8   ; Shift time accumulator
+;==============================================================================
+; EXISTING ECU ADDRESSES - ⚠️ VERIFY IN XDF/ADX BEFORE USE!
+;==============================================================================
+; These are GUESSES based on typical GM ECU layouts. Must verify!
+
+TPS_VAR             EQU     $00DA   ; ⚠️ UNVERIFIED - Throttle position (0-255)
+CURRENT_GEAR        EQU     $00E2   ; ⚠️ UNVERIFIED - Current gear (1-4, 0=P/N)
+SHIFT_IN_PROG       EQU     $00E3   ; ⚠️ UNVERIFIED - Stock shift in progress flag
+SPARK_ADVANCE_VAR   EQU     $00C8   ; ⚠️ UNVERIFIED - Current commanded spark
+LIMITER_ACTIVE      EQU     $00C0   ; ⚠️ From v1-v23 patches (may need verify)
+
+; Transmission addresses (completely unverified)
+LINE_PRESSURE_VAR   EQU     $00E6   ; ⚠️ UNVERIFIED - Line pressure command
+SHIFT_TIME_VAR      EQU     $00E8   ; ⚠️ UNVERIFIED - Shift time accumulator
 
 ;==============================================================================
 ; SHIFT BANG MAIN ROUTINE

@@ -96,12 +96,12 @@ OC3_SET         EQU %00110000   ; 11 = Set PA5 on OC3 match (HIGH)
 OC3_MASK        EQU %11001111   ; Mask to clear OC3 mode bits
 
 ; RPM Variables
-RPM_ADDR        EQU $00A2       ; 16-bit RPM
+RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
 LIMITER_FLAG    EQU $77F4       ; Flags byte
 
-; Thresholds
-RPM_HIGH        EQU $1770       ; 6000 RPM
-RPM_LOW         EQU $1724       ; 5924 RPM
+; Thresholds - CORRECTED to 8-bit scaled
+RPM_HIGH        EQU $F0         ; 240 × 25 = 6000 RPM
+RPM_LOW         EQU $EB         ; 235 × 25 = 5875 RPM
 
 ;==============================================================================
 ; APPROACH 1: TCTL1 OC3 MODE CONTROL (Same as v16)

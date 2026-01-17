@@ -118,7 +118,7 @@ AIRFLOW_RAM         EQU $017B   ; Calculated airflow storage (g/s scaled)
 ; CODE SECTION - MINIMAL ALPHA-N ENABLER
 ;------------------------------------------------------------------------------
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED
+            ORG $14468          ; Free space VERIFIED
 
 ;==============================================================================
 ; FORCE_MAF_FAILURE - Minimal Alpha-N Enable Routine

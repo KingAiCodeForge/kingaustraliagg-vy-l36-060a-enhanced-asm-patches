@@ -69,7 +69,8 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; RPM address (confirmed 82R/2W format)
+RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM)
+                                ; NOTE: $00A3 = Engine State, NOT RPM!
 
 ; 3X Period Register (controls ignition timing reference)
 ; Setting to $FFFF blocks spark output = ignition cut
@@ -80,14 +81,14 @@ PERIOD_3X_LO    EQU $017B       ; 3X Reference Period low byte
 CYCLE_COUNT     EQU $01A0       ; Current cycle counter (0-255)
 LIMITER_ACTIVE  EQU $01A1       ; Flag: 0=normal, 1=limiting
 
-; RPM THRESHOLD (XDF-editable)
-; Default: 3000 RPM for safe testing
-RPM_THRESHOLD   EQU $0BB8       ; 3000 RPM (0x0BB8 = 3000 decimal)
+; RPM THRESHOLD (XDF-editable) - 8-bit scaled
+; Default: 3000 RPM for safe testing = 3000/25 = 120 = $78
+RPM_THRESHOLD   EQU $78         ; 120 × 25 = 3000 RPM
 
 ; PRODUCTION THRESHOLDS (uncomment for real use)
-; RPM_THRESHOLD   EQU $18A4       ; 6300 RPM 
-; RPM_THRESHOLD   EQU $1964       ; 6500 RPM (typical NA limit)
-; RPM_THRESHOLD   EQU $0DAC       ; 3500 RPM (launch control / two-step)
+; RPM_THRESHOLD   EQU $FC         ; 252 × 25 = 6300 RPM 
+; RPM_THRESHOLD   EQU $F0         ; 240 × 25 = 6000 RPM
+; RPM_THRESHOLD   EQU $8C         ; 140 × 25 = 3500 RPM (launch control)
 
 ; CUT PATTERN CONTROL
 ; Controls aggression: How many cycles to cut vs fire
@@ -102,14 +103,14 @@ CUT_CYCLES      EQU $02         ; Cut 2, fire 1 = BRRRT! (AK47 sound)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
 
 ignition_cut_handler:
     ;--------------------------------------------------------------------------
-    ; Step 1: Read current RPM and compare to threshold
+    ; Step 1: Read current RPM (8-bit) and compare to threshold
     ;--------------------------------------------------------------------------
-    LDD  RPM_ADDR               ; Load RPM (16-bit from $00A2)
-    CPD  #RPM_THRESHOLD         ; Compare with threshold
+    LDAA RPM_ADDR               ; Load RPM/25 (8-bit from $00A2)
+    CMPA #RPM_THRESHOLD         ; Compare with threshold
     BLO  limiter_off            ; Below threshold → normal operation
     
     ;--------------------------------------------------------------------------

@@ -38,7 +38,7 @@
 ;
 ; ============================================================================
 
-        ORG     $0C468          ; Verified free space region
+        ORG     $14468          ; Verified free space region
 
 ; ============================================================================
 ; Constants and Addresses
@@ -53,13 +53,13 @@ E85_FLAG_RAM    EQU     $0201   ; RAM flag: 0=Petrol, 1=E85
 
 ; Original Petrol Map Addresses (from XDF)
 VE_TABLE_PETROL         EQU     $6D1D   ; Maximum Airflow Vs RPM (petrol)
-SPARK_TABLE_PETROL      EQU     $19813  ; Base spark timing (petrol)
+SPARK_TABLE_PETROL      EQU     $21813  ; Base spark timing (petrol)
 FUEL_ENRICH_PETROL      EQU     $7F1B   ; Fuel enrichment (petrol)
 
 ; E85 Map Addresses (need to allocate in free space or upper bank)
-VE_TABLE_E85            EQU     $1A000  ; E85 VE table (to be defined)
-SPARK_TABLE_E85         EQU     $1A100  ; E85 spark table
-FUEL_ENRICH_E85         EQU     $1A200  ; E85 enrichment
+VE_TABLE_E85            EQU     $22000  ; E85 VE table (to be defined)
+SPARK_TABLE_E85         EQU     $22100  ; E85 spark table
+FUEL_ENRICH_E85         EQU     $22200  ; E85 enrichment
 
 ; Fuel Stoichiometry Constants
 PETROL_STOICH   EQU     147     ; 14.7:1 * 10
@@ -184,7 +184,7 @@ indicator_done:
 ;   - Cold start: E85 needs MORE enrichment (harder to vaporize)
 ;   - WOT: E85 can run richer safely (cooling effect)
 
-        ORG     $1A000          ; E85 map storage (example address)
+        ORG     $22000          ; E85 map storage (example address)
 
 ve_table_e85:
         ; Placeholder - copy from petrol VE and multiply by 1.3
