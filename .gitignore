@@ -1,0 +1,82 @@
+# Development Tools (local only - not for GitHub)
+tools/
+priority_analysis/
+
+# Analysis Output (generated files)
+analysis_output/
+discovery_reports/
+disassembly_output/
+ghidra_output/
+ghidra_projects/
+catalog_output/
+comparison_output/
+directory_tree_outputs/
+xdf_analysis/
+xdf_exports/
+xdf_inventory/
+limiter_analysis/
+reports/
+enhanced_v1_0a_analysis/
+cache/
+
+# Binary files (too large / copyrighted)
+*.bin
+*.rep
+*.zip
+*.pdf
+
+# Extracted/generated content
+extracted/
+wiring_diagrams_extracted/
+HC11_Reference_Manual_Extracted/
+code_files_discovered_*/
+
+# Facebook/chat exports (private)
+facebook_chats/
+
+# Ghidra processor tests (development)
+ghidra_processor_tests/
+
+# Backup folders
+asm_wip_backup/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE/editor files
+.vscode/
+*.code-workspace
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+
+# XDF/ADX/BIN working copies (keep originals in xdfs_and_adx_and_bins_related_to_project/)
+VX-VY_V6_$060A_Enhanced_v1.0a*
+92118883_STOCK.bin
+VY_V6_Enhanced.bin
+VY_V6_SparkCut_*.bin
+
+# Large data exports
+*.json
+full_output.txt
+output_test.txt
+
+# Hardware/datasheets (local reference only)
+datasheets/
+hardware/
+
+# Research notes (some may have private content)
+research/
+
+# Session-specific exports
+11P V104_3/
+11P V104_3.zip
+
+# Wiring diagrams (copyrighted content)
+wiring_diagrams/
