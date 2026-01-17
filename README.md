@@ -169,11 +169,12 @@ Primary implementation based on **3X Period Injection** (Chr0m3 validated method
 
 | Document | Description |
 |----------|-------------|
-| [`docs/FULL_TECHNICAL_REFERENCE.md`](docs/FULL_TECHNICAL_REFERENCE.md) | Complete technical reference (addresses, sources, analysis) |
-| [`RAM_Variables_Validated.md`](RAM_Variables_Validated.md) | Verified RAM variable mapping |
-| [`THE1_ENHANCED_ROM_METHODOLOGY.md`](THE1_ENHANCED_ROM_METHODOLOGY.md) | How The1's Enhanced bins work |
-| [`DOCUMENT_CONSOLIDATION_PLAN.md`](DOCUMENT_CONSOLIDATION_PLAN.md) | Project status & session notes |
-| [`68HC11_Reference/kingai_68hc11_resources/`](68HC11_Reference/kingai_68hc11_resources/) | HC11 instruction set reference |
+| [`RAM_Variables_Validated.md`](RAM_Variables_Validated.md) | Verified RAM variable mapping with cross-references |
+| [`TIC3_ISR_ANALYSIS.md`](TIC3_ISR_ANALYSIS.md) | TIC3 ISR disassembly - spark cut injection point |
+| [`MAFLESS_SPEED_DENSITY_COMPLETE_RESEARCH.md`](MAFLESS_SPEED_DENSITY_COMPLETE_RESEARCH.md) | MAFless and Speed Density implementation research |
+| [`VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md`](VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md) | VL V8 two-stage hysteresis limiter analysis |
+| [`VS_VT_VY_COMPARISON_DETAILED.md`](VS_VT_VY_COMPARISON_DETAILED.md) | VS/VT/VY platform differences and porting guide |
+| [`68HC11_Reference/kingai_68hc11_resources/`](68HC11_Reference/kingai_68hc11_resources/) | Complete HC11 instruction set reference collection |
 
 ---
 
