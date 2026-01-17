@@ -39,20 +39,22 @@ address are bank mapped for hc11 stuff we are tryna find out
 
 ## 📊 ISR Vector Analysis
 
-### VY V6 $060A ISR Vectors (ACTUAL from binary)
+### VY V6 $060A ISR Vectors (CORRECTED - January 18, 2026)
 
 ```
-VECTOR    FUNCTION              ADDRESS   NOTES
-------    --------              -------   -----
-$FFD6     TI2 (24X Crank)       $2003     ⭐ Key for spark timing
-$FFD4     TI3 (3X Crank)        $2000     ⭐ Chr0m3's injection point
-$FFE8     RESET                 $200C     Bootloader entry
-$FFC0     SCI/SPI/Timers        $2000     All point to common handler
+VECTOR    FUNCTION              TRAMPOLINE   ACTUAL CODE   NOTES
+------    --------              ----------   -----------   -----
+$1FFEC    TIC2 (24X Crank)      $2012        **$358A**     24X timing input capture
+$1FFEA    TIC3 (3X Cam)         $200F        **$35FF**     ⭐ 3X reference - SPARK CUT POINT
+$1FFE4    TOC3 (EST Output)     $2009        **$35BD**     EST output compare
+$1FFE2    TOC4 (Timer 4)        $2006        **$35DE**     General purpose timer
+$FFFE8    RESET                 -            **$C060**     ROM bootloader entry
 ```
 
-**CRITICAL:** VY TI3 ISR is at **$2000** (start of code!)
-- This is where Chr0m3 would inject his "astronomically high" 3X period
-- BennVenn's OSE12P TCTL1 method would go here too
+**CRITICAL CORRECTION:** VY vectors point to **trampolines at $2000+** which then JMP to actual code at **$35xx**.
+- The actual TIC3 handler is at **$35FF** (not $2000!)
+- $2000 is just a jump table, not the ISR code itself
+- This is where Chr0m3's period injection would hook
 
 ### VS/VT ISR Vectors (for comparison)
 
@@ -143,9 +145,9 @@ DONE:
 
 ### VY Adaptation
 
-**Step 1:** Find VY's TI3 ISR at $2000
+**Step 1:** Find VY's TIC3 ISR at **$35FF** (actual code, not trampoline)
 **Step 2:** Disassemble to understand existing logic
-**Step 3:** Find RPM variable location (likely different from VS/VT)
+**Step 3:** RPM variable at **$00A2** (verified, ×25 scaling)
 **Step 4:** Inject TCTL1 manipulation at appropriate point
 **Step 5:** Preserve original functionality
 
@@ -162,12 +164,14 @@ DONE:
 
 ### What We Need to Find in VY Binary
 
-| Item | VS/VT Location | VY Location | How to Find |
-|------|----------------|-------------|-------------|
-| **RPM variable** | $00A2 | ❓ Unknown | Search XDF, compare to VS/VT patterns |
-| **TI3 ISR code** | $6951 | ✅ **$2000** | Vector table confirmed |
-| **TCTL1 writes** | Various | ❓ 3 locations | Need disassembly |
-| **Free space** | $F000+ | ❓ Unknown | Search for 0xFF regions |
+| Item | VS/VT Location | VY Location | Status |
+|------|----------------|-------------|--------|
+| **RPM variable** | $00A2 | ✅ **$00A2** | VERIFIED (×25 scaling) |
+| **3X Period** | $017B | ✅ **$017B** | VERIFIED (16-bit) |
+| **TIC3 ISR code** | $6951 | ✅ **$35FF** | VERIFIED (via trampoline) |
+| **TCTL1 writes** | Various | ✅ 3 locations | Disassembly confirmed |
+| **Free space** | $F000+ | ✅ **$0C468-$0FFBF** | 15KB+ confirmed |
+| **Hook point** | Various | ✅ **$101E1** | STD $017B instruction |
 
 ---
 
