@@ -44,18 +44,23 @@
 3634: STAA   $017D          ; Store result
 ...
 363B: LDD    $15CA          ; <<< POSSIBLE TIC3 CAPTURE VALUE
-363E: STD    $0178          ; <<< STORE PERIOD TO RAM $0178!
+363E: STD    $0178          ; <<< STORE TO $0178 (secondary period variable)
 ```
 
-### 🎯 KEY FINDING: Period Storage Address = **$0178** (not $00C2!)
+### ⚠️ CORRECTION: Multiple Period Storage Addresses
 
-The code at:
-```asm
-363B: LDD    $15CA          ; Load TIC3 capture value  
-363E: STD    $0178          ; Store 3X period to RAM $0178
+**TWO period-related variables found:**
+- `$0178` - Found at $363E in TIC3 ISR (secondary/intermediate)
+- `$017B` - Found at 0x101E1 (file offset) = **THE HOOK POINT**
+
+### 🎯 VERIFIED HOOK POINT: `$017B` at file offset 0x101E1
+
+Binary verification:
+```
+Offset 0x101E1: FD 01 7B = STD $017B  ← THIS IS THE CORRECT HOOK POINT
 ```
 
-This means **Chr0m3's injection point should target RAM address 0x0178**, not 0x00C2!
+The code at $363E stores to $0178, but **Chr0m3's method targets the STD $017B at 0x101E1**.
 
 ---
 
@@ -63,7 +68,8 @@ This means **Chr0m3's injection point should target RAM address 0x0178**, not 0x
 
 | Address | Purpose | Confidence |
 |---------|---------|------------|
-| **$0178** | 3X Period Storage | 🟢 HIGH - STD instruction found |
+| **$017B** | 3X Period Storage (HOOK POINT) | 🟢 HIGH - STD at 0x101E1 VERIFIED |
+| $0178 | Secondary period variable | 🟡 MEDIUM - STD at $363E |
 | $017D | Period calculation result | 🟢 HIGH |
 | $0171 | Cylinder index counter | 🟢 HIGH |
 | $01B3 | Previous TIC3 capture | 🟡 MEDIUM |
@@ -77,29 +83,35 @@ This means **Chr0m3's injection point should target RAM address 0x0178**, not 0x
 
 ---
 
-## 🔧 CORRECTED SPARK CUT INJECTION POINT
+## 🔧 VERIFIED SPARK CUT INJECTION POINT
 
-### Original (Wrong) Assumption:
+### Original (Wrong) Assumption
+
 ```asm
 ; We thought period was at $00C2
 LDD    #$FFFF        ; Max period
 STD    $00C2         ; Store to wrong address
 ```
 
-### Corrected Injection:
+### ✅ VERIFIED Injection (Binary Confirmed)
+
 ```asm
-; Period is actually at $0178
+; Hook at file offset 0x101E1 - replaces STD $017B with JSR $C500
+; Period storage is at RAM $017B (NOT $0178 or $00C2!)
+
 spark_cut_check:
-    LDAA   $005F         ; Load RPM/25
-    CMPA   #$FA          ; Compare to 6250 RPM (250 * 25)
+    LDAA   $00A2         ; Load RPM/25 (82 reads confirmed)
+    CMPA   #$F0          ; Compare to 6000 RPM (240 × 25)
     BLO    normal_exit   ; Below limit, continue normal
     
-    ; ABOVE LIMIT - Force huge period to kill spark
-    LDD    #$FFFF        ; Max period value
-    STD    $0178         ; Store to CORRECT period address!
+    ; ABOVE LIMIT - Inject fake period to starve dwell
+    LDD    #$3E80        ; 16,000 = Chr0m3's recommended value
+    STD    $017B         ; Store to VERIFIED period address
+    RTS
     
 normal_exit:
-    ; Continue to original code...
+    STD    $017B         ; Store real period (original instruction)
+    RTS
 ```
 
 ---
