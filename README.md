@@ -21,7 +21,10 @@ No patched binaries included. These are reference implementations requiring manu
 ```text
 asm_wip/
 ├── spark_cut/                      # 🔥 Ignition cut limiters (Chr0m3 method)
+│   ├── spark_cut_chr0m3_method_VERIFIED_v38.asm  # ⭐⭐ BEST - Chr0m3 verified method
 │   ├── spark_cut_3x_period_VERIFIED.asm    # ⭐ VERIFIED - 16-bit test template
+│   ├── PATCH_BYTES_v38.asm                 # Raw hex bytes for v38 patch
+│   ├── spark_cut_3000rpm_TEST_v38t.asm     # Low RPM test version
 │   ├── spark_cut_6000rpm_v32.asm           # Hard cut at 6000 RPM
 │   ├── spark_cut_chrome_method_v33.asm     # Chr0m3 method (fuel cut scrapped)
 │   ├── spark_cut_progressive_soft_v9.asm   # Gradual soft limiter
@@ -29,7 +32,7 @@ asm_wip/
 │   ├── spark_cut_soft_timing_v36.asm       # Soft timing retard style
 │   ├── spark_cut_combined_fuel_v35.asm     # Fuel+Spark clean cut
 │   ├── spark_cut_dwell_patch_v37.asm       # Dwell patch for high RPM
-│   ├── spark_cut_two_stage_hysteresis_v23.asm  # Two-stage with hysteresis
+│   ├── spark_cut_two_stage_hysteresis_v23.asm  # Two-stage with hysteresis (VL style)
 │   ├── spark_cut_6375_safe_mode_v18.asm    # 6375 RPM max enforcer
 │   └── spark_cut_original.asm              # Original 3X period method
 │
