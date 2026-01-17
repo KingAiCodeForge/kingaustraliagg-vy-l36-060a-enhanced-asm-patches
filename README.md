@@ -697,8 +697,7 @@ The Holden L36/L67 **IS** the Buick 3800 (licensed from GM). Resources from Gear
 | Repository | Description |
 |------------|-------------|
 | [TunerPro-XDF-BIN-Universal-Exporter](https://github.com/KingAiCodeForge/TunerPro-XDF-BIN-Universal-Exporter) | Export XDF/BIN data to various formats |
-| *BMW MS42 Project* | Coming soon - Similar work on E46 328ci |
-| *Vident Scanner RE* | Coming soon - Diagnostic tool reverse engineering |
+
 
 ### 68HC11 Development Resources
 
@@ -745,7 +744,7 @@ After **1+ year** trying to learn ECU tuning through "official" Discord channels
 
 | Platform | My Contribution | Their Response |
 |----------|-----------------|----------------|
-| **BMW Tuning Discord** | 9MB file archives, XDF edits, Python tools, bench harness builds | *"You must have serious mental problems"* → **BANNED** |
+| **BMW Tuning Discord** | Cracked password-protected RAR with Stage 1/2/3 tunes, shared the password to help community access locked files | *"You must have serious mental problems"* → **BANNED** |
 | **Facebook Groups** | GitHub repos, offered help | Posts deleted → **BLOCKED** |
 | **Various "Experts"** | Questions about specific opcodes | Left on read, or *"that looks like GPT crap"* |
 
@@ -784,7 +783,7 @@ Someone in a Discord called my code *"GPT crap that won't even run"* and *"GPT l
 
 Here's my response:
 
-1. **Every address verified against the actual binary** - Run the Python scripts yourself. Check `0x101E1`. It's `FD 01 7B` (STD $017B). That's not a hallucination.
+1. **Every address verified against the actual binary** - check yourself. Check `0x101E1`. It's `FD 01 7B` (STD $017B). That's not a hallucination.
 
 2. **AI doesn't replace understanding** - You still need to know:
    - What bank the code executes in
@@ -798,22 +797,19 @@ Here's my response:
 
 From a chat with another tuner who gets it:
 > *"Use what ya know and get AI to help. Should be purpose-built AI. Gemini and ChatGPT love to hallucinate."*
->
-> *"That's why I made my own. Mine's not retarded."*
->
-> *"Claude Opus 4.5 in VS Code agent inbuilt is great."*
+
 
 ### The 10/90 Rule
 
 The tuning community is:
 - **10% legends** who share knowledge freely (Chr0m3, The1, Antus, Mark Mansur, BennVenn)
-- **90% gatekeepers** who hoard it, sell it, or just insult newcomers to feel powerful
+- **90% gatekeepers** who hoard it, sell it, or just insult newcomers to feel powerful, dont now how to RE or make hardware or code are the one who click the ban/delete post button.
 
 **Find the 10%. Ignore the 90%.**
 
 ### Why I'm Publishing This
 
-- These engines are **20+ years old** - Holden doesn't even exist anymore (2020)
+- These engines are **20+ years old** - Holden doesn't even exist anymore
 - **Knowledge shouldn't be gatekept** for discontinued platforms in 2026
 - **I learned from people who shared** (Chr0m3's videos, The1's forum posts, PCMHacking archives)
 - Time to pay it forward
@@ -830,7 +826,7 @@ To the people leaving jealous, spiteful comments without reviewing the actual co
 
 **Stay jealous.** Your doubt pushes me harder than you'll ever go.
 
-This repo exists because you told me I couldn't. Keep watching.
+This repo exists because you told me I couldn't. Keep watching. you will be using this code in a few months time to make off custom tuning mail order so called dyno validated tunes off ebay.
 
 ### Want To Actually Help?
 
@@ -878,9 +874,9 @@ The people who **share knowledge freely** instead of gatekeeping it:
 - The1's forum posts explaining Enhanced OS methodology
 - Mark Mansur making TunerPro free and maintaining it for decades
 - Josh Stewart (Speeduino), Andrey (rusEFI), and the open source ECU movement
-- wadim from cobra rtp - giving me the hw flash online pdf with the live tuning info near identical to moates.
-- craig moates from moates - helping me setup my ostrich 2.0 and g6 the right way round...
-**You are the 10%. Thank you.**
+- Wadim from cobra rtp - giving me the hw flash online pdf with the live tuning info near identical to moates.
+- Craig Moates from moates - helping me setup my ostrich 2.0 and g6 the right way round...
+**You are the 10%. Thank you.** - the rest need to pull ya heads out ya bums and stop using buzzwords and insults and the bullying shit. i could legit say something right and its wrong to the 90 percent of these people. you know who you are...
 
 ---
 
@@ -915,7 +911,7 @@ Copyright (c) 2026 Jason King (kingaustraliagg / KingAiCodeForge)
 | Repository | Description |
 |------------|-------------|
 | [TunerPro-XDF-BIN-Universal-Exporter](https://github.com/KingAiCodeForge/TunerPro-XDF-BIN-Universal-Exporter) | XDF/BIN export tool (Mark Mansur acknowledged this one) |
-| More coming... | BMW MS42, Vident RE work, diagnostic tools |
+
 
 ---
 
