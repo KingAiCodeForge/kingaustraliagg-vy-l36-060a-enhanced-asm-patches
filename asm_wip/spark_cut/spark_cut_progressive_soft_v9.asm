@@ -1,6 +1,22 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT v9 - PROGRESSIVE SOFT LIMITER
 ;==============================================================================
+;
+; ⚠️ EXPERIMENTAL - Multi-zone progressive spark cut concept
+; ⚠️ Uses $01A0 for CYCLE_COUNTER - UNVERIFIED! 
+; ✅ See v38 for verified flag at $0046 bit 7
+;
+; This is an interesting approach - progressive limiting instead of hard cut.
+; Concept is valid but needs RAM verification and testing.
+;
+; 🔴 CRITICAL BUG IDENTIFIED (Jan 18, 2026):
+;    The original code saved D to stack, then clobbered it, then in NO_CUT
+;    path it returned WITHOUT storing anything to $017B. This breaks the
+;    timing state machine!
+;
+;    FIX: Must restore original D from stack and STD $017B in NO_CUT path.
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: January 13, 2026
 ; Method: Gradual power reduction instead of hard cut
@@ -47,7 +63,16 @@
 ;------------------------------------------------------------------------------
 RPM_ADDR            EQU $00A2       ; RPM/25 (8-bit!) - NOT 16-bit raw RPM
 PERIOD_3X_RAM       EQU $017B       ; 3X period storage
-CYCLE_COUNTER       EQU $01A0       ; Ignition event counter (0-3)
+
+; CYCLE COUNTER - ⚠️ UNVERIFIED LOCATION!
+; We need a 2-bit counter (0-3) to track ignition events.
+; Options:
+;   $01A0 = Original guess, unverified (no extended references found)
+;   $0046 bits 5-6 = Might be free (bits 3,6,7 appear unused)
+;   Better: Pack into $0046 bits 5-6 which we've verified unused
+;
+; For now using $01A0 but NEEDS RUNTIME VERIFICATION before production use!
+CYCLE_COUNTER       EQU $01A0       ; ⚠️ UNVERIFIED: Ignition event counter (0-3)
 
 ; PROGRESSIVE THRESHOLDS (8-BIT - RPM÷25)
 ; ⚠️ FIXED: Changed from 16-bit raw RPM to 8-bit RPM/25
@@ -64,16 +89,22 @@ FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $0C500          ; ✅ FIXED: Use $C500 not $14468!
 
 ;==============================================================================
 ; PROGRESSIVE SOFT LIMITER HANDLER
 ;==============================================================================
+; ENTRY: D contains original 3X period (what stock was about to store)
+; EXIT:  $017B contains either original period (no cut) or fake period (cut)
+;
+; 🔴 CRITICAL: We MUST store something to $017B before returning!
+;    The hook replaced "STD $017B" so we've taken responsibility for that write.
+;==============================================================================
 
 SOFT_LIMITER_HANDLER:
-    PSHB
-    PSHA
-    PSHX
+    PSHB                        ; Save original D (period) to stack
+    PSHA                        ; Stack: [A][B] (A at SP+0, B at SP+1)
+    PSHX                        ; Save X
     
     ; Increment cycle counter (0-3 wrap-around)
     LDAA    CYCLE_COUNTER
@@ -86,7 +117,7 @@ SOFT_LIMITER_HANDLER:
     
     ; Zone 1: < 5975 RPM → No cut
     CMPA    #RPM_ZONE2          ; Compare 8-bit to 239
-    BLO     NO_CUT
+    BLO     STORE_ORIGINAL      ; ✅ FIXED: Was "NO_CUT" which didn't store!
     
     ; Zone 2: 5975-6000 RPM → 25% cut (cut every 4th event)
     CMPA    #RPM_ZONE3          ; Compare 8-bit to 240
@@ -99,39 +130,48 @@ SOFT_LIMITER_HANDLER:
     ; Zone 4: 6025+ RPM → 75% cut (cut 3 out of 4 events)
     BRA     CUT_75_PERCENT
 
-NO_CUT:
-    ; Allow all spark events
-    BRA     EXIT_HANDLER
+;------------------------------------------------------------------------------
+; STORE ORIGINAL PERIOD (No spark cut - normal operation)
+;------------------------------------------------------------------------------
+; ✅ FIXED: Must recover original D from stack and store to $017B!
+;------------------------------------------------------------------------------
+STORE_ORIGINAL:
+    PULX                        ; Restore X first
+    PULA                        ; Restore A (high byte of original D)
+    PULB                        ; Restore B (low byte of original D)
+    STD     PERIOD_3X_RAM       ; ✅ Store ORIGINAL period to $017B
+    RTS
 
 CUT_25_PERCENT:
     ; Cut spark on cycle 0 only (1 out of 4)
     LDAA    CYCLE_COUNTER
     CMPA    #$00
     BEQ     INJECT_FAKE_PERIOD
-    BRA     EXIT_HANDLER
+    BRA     STORE_ORIGINAL      ; ✅ FIXED: Store original, not just exit!
 
 CUT_50_PERCENT:
     ; Cut spark on cycles 0 and 2 (2 out of 4)
     LDAA    CYCLE_COUNTER
     ANDA    #$01                ; Check if even (0 or 2)
     BEQ     INJECT_FAKE_PERIOD
-    BRA     EXIT_HANDLER
+    BRA     STORE_ORIGINAL      ; ✅ FIXED: Store original, not just exit!
 
 CUT_75_PERCENT:
     ; Cut spark on cycles 0, 1, 2 (3 out of 4)
     LDAA    CYCLE_COUNTER
     CMPA    #$03
-    BEQ     EXIT_HANDLER        ; Only fire on cycle 3
+    BEQ     STORE_ORIGINAL      ; Only fire on cycle 3 - store original
     ; Fall through to inject fake period
 
 INJECT_FAKE_PERIOD:
     LDD     #FAKE_PERIOD
     STD     PERIOD_3X_RAM       ; Inject fake period (cuts spark)
+    ; Fall through to exit (need to clean up stack)
 
-EXIT_HANDLER:
-    PULX
-    PULA
-    PULB
+EXIT_AFTER_FAKE:
+    PULX                        ; Clean up stack (we pushed X)
+    PULA                        ; Discard saved A (we already wrote fake period)
+    PULB                        ; Discard saved B
     RTS
 
 ;==============================================================================

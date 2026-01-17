@@ -2,7 +2,58 @@
 
 **⚠️ WARNING: UNTESTED RESEARCH CODE FOR VEHICLE ECU MODIFICATION**
 This analysis is for educational/research purposes only. Implementation may cause ECU damage or vehicle malfunction. Requires bench testing before vehicle installation.
-Different pinouts, different I/O and timers, and ECU setup, but in theory HC11 code could be ported to VY V6 with enough work and testing. If we knew what to remove and where and how. Unsure if just copy paste.
+
+---
+
+## Why VL Walkinshaw Limiter Concepts Apply to VY V6
+
+| Aspect | VL $5D | VY $060A | Portable? |
+|--------|--------|----------|-----------|
+| **Processor** | MC68HC11 | MC68HC11 | ✅ Same instruction set |
+| **TCTL1 register** | $1020 | $1020 | ✅ Identical hardware |
+| **Output Compare** | OC1-OC5 | OC1-OC5 | ✅ Same timer system |
+| **RAM layout** | Different | Different | ⚠️ Addresses vary |
+| **ISR structure** | JMP trampolines | JMP trampolines | ✅ Same pattern |
+| **Shift light code** | Native | ❌ Not present | 🔧 Can port logic |
+| **Two-stage limiter** | Native | ❌ Simple threshold | 🔧 Can port logic |
+| **Hysteresis** | 94 RPM band | ❌ None | 🔧 Can implement |
+
+### What Can Be Ported from VL to VY
+
+1. **Two-Stage Limiter Logic** - The hysteresis state machine (`KFCORPMH`/`KFCORPML` pattern)
+2. **Shift Light Code** - Per-gear RPM thresholds, Chr0m3 found an unused pin on VX/VY for output
+3. **Delay Timer** - `KFCOTIME`-style 0.1 sec delay prevents false triggers
+4. **Sound Character** - VL's "amazing hardcut" comes from hysteresis, VY sounds harsh without it
+
+### What Needs Changing for VY
+
+| VL $5D | VY $060A | Why Different |
+|--------|----------|---------------|
+| RPM @ TBD | RPM @ $00A2 | Different RAM layout |
+| Limiter @ 0x27E | Limiter @ $77DD | Different calibration offsets |
+| Shift light pin @ Port B | **Unused pin** (Chr0m3) | Need to identify VY port |
+| 16KB MEMCAL | 128KB Flash | More free space in VY |
+| ISRs @ $B248+ | ISRs @ $2000+ | Different entry points |
+
+**Key Insight:** The **algorithm is portable**, not the addresses. Same HC11 opcodes work on both.
+
+---
+
+## OSID Naming Clarification (Added Jan 17 2026)
+
+| OSID Mask | Platform | ECU Hardware | Binary Size | Notes |
+|-----------|----------|--------------|-------------|-------|
+| **$5D** | VL/VN/VP/VR V6/V8 | Delco 808 MEMCAL | 16-32KB | Stock firmware masks |
+| **$51** | VS V6/L67 | Delco 808 MEMCAL | 32KB | Late 808, Supercharged |
+| **$11P** | VN-VS (OSE custom) | Delco "424" PCM | 64KB (128KB stacked) | OSE replacement firmware |
+| **$12P** | VN-VS (OSE custom) | Delco 808 PCM | 32KB | OSE enhanced, soft-touch limiter |
+
+**Key Distinction:**
+- **$5D/$51** = Factory OSID masks (stock GM firmware)
+- **$11P/$12P** = OSE (Open Source ECU) **complete firmware replacements**
+
+OSE replaces the ENTIRE ECU code with custom algorithms, not just calibration. That's why they have features the stock masks don't.
+
 ---
 
 ## Executive Summary
@@ -326,7 +377,88 @@ Port two-stage limiter logic to VY V6:
 
 ---
 
-## 10. Conclusion
+## 10. Linking VL Concepts to VY ASM Patches
+
+### How VL V8 Features Map to VY V6 ASM Files
+
+| VL V8 Feature | VY V6 ASM Implementation | File | Status |
+|---------------|--------------------------|------|--------|
+| **Two-Stage Hysteresis** | `spark_cut_two_stage_hysteresis_v23.asm` | `asm_wip/spark_cut/` | 🔧 WIP |
+| **Soft Timing Rolloff** | `spark_cut_soft_timing_v36.asm` | `asm_wip/spark_cut/` | 🔧 WIP |
+| **Progressive Cut** | `spark_cut_progressive_soft_v9.asm` | `asm_wip/spark_cut/` | 🔧 WIP |
+| **Shift Light** | *Not yet created* | - | ❌ Needs Chr0m3's pin |
+| **Delay Timer** | `KFCOTIME` pattern in v23 | `asm_wip/spark_cut/` | 🔧 WIP |
+
+### VL $5D vs VY $060A Algorithm Translation
+
+**VL V8 State Machine (from XDF):**
+```asm
+; VL $5D Fuel Cutoff Logic (conceptual - addresses from 2bar_5d_V2.xdf)
+; KFCORPMH = 0x27E (5617 RPM HIGH threshold)
+; KFCORPML = 0x27C (5523 RPM LOW threshold)
+; KFCOTIME = 0x282 (0.1 sec delay)
+
+FUEL_CUT_CHECK:
+    LDAA  RPM_VAR           ; Load current RPM (VL address TBD)
+    LDX   #$027E            ; Point to KFCORPMH
+    CMPA  0,X               ; Compare RPM to HIGH threshold
+    BHI   CHECK_DELAY       ; If RPM > HIGH, check delay
+    LDX   #$027C            ; Point to KFCORPML  
+    CMPA  0,X               ; Compare RPM to LOW threshold
+    BLO   CLEAR_CUT         ; If RPM < LOW, clear cut flag
+    BRA   CHECK_STATE       ; In hysteresis band, check current state
+```
+
+**VY $060A Equivalent (from spark_cut_two_stage_hysteresis_v23.asm):**
+```asm
+; VY $060A Two-Stage Logic (addresses validated)
+; RPM at $00A2 (×25 scaling, 8-bit)
+; Limiter table at $77DD-$77E3
+
+SPARK_CUT_CHECK:
+    LDAA  $00A2             ; Load RPM (VY validated address)
+    CMPA  #RPM_HIGH_LIMIT   ; Compare to HIGH threshold (e.g., $F0 = 6000 RPM)
+    BHI   CHECK_DELAY       ; If RPM > HIGH, check delay
+    CMPA  #RPM_LOW_LIMIT    ; Compare to LOW threshold (e.g., $E8 = 5800 RPM)
+    BLO   CLEAR_CUT         ; If RPM < LOW, clear cut flag
+    BRA   CHECK_STATE       ; In hysteresis band, check current state
+```
+
+**Key Difference:** VL uses **calibration table lookups** (`LDX #$027E`), VY can use **immediate values** or table lookups. Both approaches work on HC11.
+
+### Chr0m3's Unused Pin for VY Shift Light
+
+**Quote from Chr0m3 (Facebook Messenger):**
+> "I found an unused pin on VX / VY and wrote code to control it. Could do a shift light off that"
+
+**Implementation Path:**
+1. **Identify the pin** - Likely on Port G or Port A (HC11 output ports)
+2. **Find free bit** - Check DDR (Data Direction Register) configuration
+3. **Write toggle code** - Simple BSET/BCLR on port register
+4. **Add to ISR** - Check RPM threshold, toggle pin if exceeded
+
+**Hypothetical Shift Light Code (VY $060A):**
+```asm
+; Shift Light Toggle (untested - needs pin confirmation)
+; Assumes Port G bit 3 is unused (Chr0m3's finding)
+
+SHIFT_LIGHT_CHECK:
+    LDAA  $00A2             ; Load RPM
+    CMPA  #$E8              ; 5800 RPM threshold (232 × 25)
+    BLO   LIGHT_OFF
+    BSET  $1003,#$08        ; Set Port G bit 3 HIGH (light ON)
+    BRA   SHIFT_DONE
+LIGHT_OFF:
+    BCLR  $1003,#$08        ; Clear Port G bit 3 LOW (light OFF)
+SHIFT_DONE:
+    RTS
+```
+
+**⚠️ WARNING:** Pin identification requires Chr0m3's confirmation or oscilloscope probing of ECU connector during testing.
+
+---
+
+## 11. Conclusion
 
 The VL V8 Walkinshaw (1989 Delco 808) implements a **BMW MS43-style two-stage fuel cutoff limiter with 94 RPM hysteresis**, despite being 12+ years older than the VY V6 (2001-2004 HC11) which only has a simple single-threshold limiter.
 
@@ -342,11 +474,16 @@ The VL V8 Walkinshaw (1989 Delco 808) implements a **BMW MS43-style two-stage fu
 
 **User's "amazing limiter sound"** = 94 RPM hysteresis creating smooth 1.5 Hz on/off cycle (sounds like valve bounce or hardware limit).
 
-**Next Action**: Run `enhanced_isr_tracer.py` on VY V6 to find if similar patterns exist hidden in ISR handlers. If found, port VL V8 hysteresis logic to improve VY V6 limiter quality.
+**Porting Path:**
+1. ✅ VL two-stage logic → `spark_cut_two_stage_hysteresis_v23.asm` (WIP)
+2. ✅ VL soft timing → `spark_cut_soft_timing_v36.asm` (WIP)
+3. 🔧 VL shift light → Needs Chr0m3's unused pin confirmation
+4. 🔧 VL delay timer → Partially implemented in v23
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 1.1  
 **Created**: 2025-01-19  
+**Updated**: 2026-01-18 (Added ASM cross-reference, Chr0m3 shift light info)
 **Analysis Tool**: PowerShell binary extraction + XDF parsing  
 **Confidence**: 95% (awaiting disassembly confirmation)

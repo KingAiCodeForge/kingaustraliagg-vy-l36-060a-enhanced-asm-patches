@@ -1,6 +1,16 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT LIMITER - VERIFIED VERSION (16-BIT TEST TEMPLATE)
 ;==============================================================================
+;
+; ℹ️ REFERENCE FILE - Shows 16-bit RPM comparison method
+;
+; This file demonstrates the 16-bit comparison approach (LDD/CPD).
+; For production use, see v38 which uses simpler 8-bit comparison.
+;
+; NOTE: 16-bit comparison loads $00A2:$00A3 which includes Engine State!
+;       8-bit comparison (LDAA $00A2) is cleaner for ≤6375 RPM.
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: January 14, 2026
 ; Updated: January 17, 2026

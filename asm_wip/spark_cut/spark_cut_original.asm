@@ -1,6 +1,15 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT LIMITER - 3X PERIOD INJECTION METHOD
 ;==============================================================================
+;
+; 📜 HISTORICAL REFERENCE - First version, many iterations since
+;
+; This is the original research file with extensive notes and theory.
+; For PRODUCTION code, use: spark_cut_chr0m3_method_VERIFIED_v38.asm
+;
+; Kept for reference - contains valuable background information.
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: November 26, 2025 (Updated: January 14, 2026)
 ; Method: 3X Period Injection (validated on VY V6 Ecotec)

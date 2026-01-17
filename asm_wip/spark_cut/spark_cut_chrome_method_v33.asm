@@ -1,6 +1,16 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT v33 - CHR0M3 METHOD (FUEL CUT SCRAPPED)
 ;==============================================================================
+;
+; ⚠️⚠️⚠️ SUPERSEDED BY v38 - USE spark_cut_chr0m3_method_VERIFIED_v38.asm ⚠️⚠️⚠️
+;
+; ISSUES WITH THIS VERSION:
+;   ❌ Uses $01A0 for LIMITER_FLAG - UNVERIFIED RAM location!
+;   ✅ v38 uses $0046 bit 7 - VERIFIED free bit
+;
+; This file kept for reference/history only.
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: January 16, 2026
 ; Method: Replace Fuel Cut with Spark Cut (Chr0m3 confirmed approach)

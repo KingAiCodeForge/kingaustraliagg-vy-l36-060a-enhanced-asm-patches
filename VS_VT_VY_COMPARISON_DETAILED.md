@@ -172,12 +172,12 @@ DONE:
 ---
 
 ## 📋 Action Plan: Disassemble VY TI3 ISR
-
+R:\VY_V6_Assembly_Modding\VY_V6_Enhanced.bin
 ### Commands to Run
 
 ```bash
 # 1. Extract TI3 ISR region from VY binary
-dd if=92118883.BIN of=vy_ti3_isr.bin bs=1 skip=8192 count=1024
+dd if=R:\VY_V6_Assembly_Modding\VY_V6_Enhanced.bin of=vy_ti3_isr.bin bs=1 skip=8192 count=1024
 # (skip=$2000 in decimal, count=1KB)
 
 # 2. Disassemble with m68hc11 tools
@@ -195,7 +195,7 @@ m6811-elf-objdump -D -b binary -m m68hc11 vy_ti3_isr.bin
 
 ```python
 # Extract VY TI3 ISR
-with open('92118883.BIN', 'rb') as f:
+with open('R:\VY_V6_Assembly_Modding\VY_V6_Enhanced.bin', 'rb') as f:
     f.seek(0x2000)  # TI3 ISR location
     ti3_code = f.read(512)  # Read 512 bytes
     
@@ -1193,5 +1193,67 @@ Based on the research, the **11P dwell method** is most applicable to VS/VT/VY b
 - BennVenn's $3FFC method might work if VS/VT/VY have similar timer IC
 - Requires finding equivalent master timer enable bit
 - More research needed on MC68HC11/12 timer architecture
+
+---
+
+## 🔗 Cross-Reference: VL V8 Walkinshaw Features
+
+**See:** `VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md`
+
+### What VL Has That VY Doesn't
+
+| Feature | VL $5D | VY $060A | Can Port? |
+|---------|--------|----------|-----------|
+| **Two-Stage Limiter** | ✅ KFCORPMH/KFCORPML | ❌ Single threshold | ✅ Yes |
+| **94 RPM Hysteresis** | ✅ Smooth on/off | ❌ Sharp cut | ✅ Yes |
+| **0.1 sec Delay** | ✅ KFCOTIME | ❌ None | ✅ Yes |
+| **Shift Light** | ✅ Per-gear RPM/MAP | ❌ Not present | ✅ Yes (Chr0m3 pin) |
+| **F55 TPS Table** | ✅ RPM vs TPS | ❌ None | ✅ Yes |
+| **"Amazing" Sound** | ✅ Valve bounce feel | ❌ Harsh stutter | ✅ Via hysteresis |
+
+### Why VL Sounds Better at Limiter
+
+**VL V8:** Hysteresis band (94 RPM) creates smooth 1.5 Hz on/off modulation → sounds like mechanical valve bounce or hardware limit
+
+**VY V6:** Instant on/off at single threshold → RPM oscillates rapidly → sounds harsh and stuttery
+
+**Solution for VY:** Implement `spark_cut_two_stage_hysteresis_v23.asm` with:
+- HIGH threshold (e.g., 6000 RPM)
+- LOW threshold (e.g., 5900 RPM) 
+- 100 RPM hysteresis band
+- Optional delay timer
+
+### VL Shift Light → VY Shift Light
+
+**VL Implementation (XDF parameters 0x21F-0x232):**
+- Per-gear N/V ratios
+- Per-gear RPM thresholds
+- Per-gear MAP limits
+- Per-gear in-gear delays
+- F55 TPS-based table
+
+**VY Implementation Path:**
+1. Chr0m3 found unused pin on VX/VY
+2. Write simple toggle code (BSET/BCLR on port register)
+3. Check RPM threshold in background loop
+4. Toggle pin if exceeded
+
+**ASM Example (untested):**
+```asm
+; Shift Light Check - runs in main loop
+; Assumes Port G bit 3 is the unused pin
+SHIFT_LIGHT:
+    LDAA  $00A2           ; Load RPM (×25)
+    CMPA  #$E8            ; 5800 RPM threshold
+    BLO   LIGHT_OFF
+    BSET  $1003,#$08      ; Port G bit 3 = HIGH
+    BRA   DONE_SHIFT
+LIGHT_OFF:
+    BCLR  $1003,#$08      ; Port G bit 3 = LOW
+DONE_SHIFT:
+    RTS
+```
+
+⚠️ **WARNING:** Pin needs confirmation from Chr0m3 or oscilloscope probing before use.
 
 ---

@@ -1,6 +1,15 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT v35 - COMBINED FUEL+SPARK CUT (CLEAN CUT)
 ;==============================================================================
+;
+; ⚠️ EXPERIMENTAL - Combined fuel and spark cut concept
+; ⚠️ Uses $01A0 for LIMITER_FLAG - UNVERIFIED!
+; ✅ See v38 for verified production code using $0046 bit 7
+;
+; This is an advanced concept - cutting both fuel and spark simultaneously.
+; Needs more research on injector pulse width RAM locations.
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: January 17, 2026
 ; Method: Simultaneous Fuel and Spark Cut (Speeduino PROTECT_CUT_BOTH style)

@@ -91,38 +91,56 @@ STD $017B           ; Store to 3X period variable
 
 ## TIO Hardware Registers (MC68HC11)
 
-### Timer Output Compare
+### Timer I/O Registers (Per M68HC11RM Reference Manual)
 
-| Address | Register | Description |
-|---------|----------|-------------|
-| **0x1018** | TOC1 | Timer Output Compare 1 (EST primary) |
-| **0x101A** | TOC2 | Timer Output Compare 2 |
-| **0x101C** | TOC3 | Timer Output Compare 3 |
-| **0x1020** | TCTL1 | Timer Control Register 1 |
+| Address | Register | Size | Description |
+|---------|----------|------|-------------|
+| **0x100E** | TCNT | 2 bytes | Free-running Timer Counter (16-bit) |
+| **0x1010** | TIC1 | 2 bytes | Input Capture 1 |
+| **0x1012** | TIC2 | 2 bytes | Input Capture 2 (24X Crank Timing) |
+| **0x1014** | TIC3 | 2 bytes | Input Capture 3 (3X Cam Reference) |
+| **0x1016** | TOC1 | 2 bytes | Output Compare 1 |
+| **0x1018** | TOC2 | 2 bytes | Output Compare 2 (Dwell Control) |
+| **0x101A** | TOC3 | 2 bytes | Output Compare 3 (EST Output) |
+| **0x101C** | TOC4 | 2 bytes | Output Compare 4 |
+| **0x101E** | TIC4/TOC5 | 2 bytes | Input Capture 4/Output Compare 5 |
+| **0x1020** | TCTL1 | 1 byte | Timer Control 1 (OC edge selection) |
+| **0x1021** | TCTL2 | 1 byte | Timer Control 2 |
+| **0x1022** | TMSK1 | 1 byte | Timer Interrupt Mask 1 |
+| **0x1023** | TFLG1 | 1 byte | Timer Interrupt Flags 1 |
 
-**EST Control via TCTL1:**
-- Bits 5:4 (OM2:OL2) control EST output mode
-- 00 = Disconnected (triggers bypass mode - NOT recommended)
-- 01 = Toggle on compare
-- 10 = Clear on compare
-- 11 = Set on compare
+**EST Control via TCTL1 (at 0x1020):**
+- Bits 7:6 (OM1:OL1) control OC1 output mode
+- Bits 5:4 (OM2:OL2) control OC2 output mode (Dwell via TOC2)
+- Bits 3:2 (OM3:OL3) control OC3 output mode (EST via TOC3)
+- Bits 1:0 (OM4:OL4) control OC4 output mode
+
+**Output Mode Settings (per HC11 Reference):**
+- 00 = Timer disconnected from output pin
+- 01 = Toggle OCx output on compare
+- 10 = Clear OCx output to 0 on compare
+- 11 = Set OCx output to 1 on compare
 
 **Chr0m3's Warning:**
-> "Flipping EST off turns bypass on" - direct register manipulation triggers failsafe
+> "Flipping EST off turns bypass on" - Setting OC3 bits to 00 disconnects the EST signal, triggering bypass mode failsafe
 
 ---
 
 ## Spark Timing Parameters (Estimated)
 
-### Minimum Timing Constants
+### Minimum Timing Constants ✅ CONFIRMED JAN 17 2026
 
 | Address | Parameter | Stock Value | Patched Value | Effect |
 |---------|-----------|-------------|---------------|--------|
-| **TBD** | MIN_DWELL | 0xA2 (162) | 0x9A (154) | Reduces min dwell ~50µs |
-| **TBD** | MIN_BURN | 0x24 (36) | 0x1C (28) | Reduces min burn ~50µs |
+| **0x171AA** | MIN_DWELL | 0x00A2 (162) | 0x009A (154) | Reduces min dwell ~32µs |
+| **0x19813** | MIN_BURN | 0x24 (36) | 0x1C (28) | Reduces min burn ~32µs |
+
+**CONFIRMED ADDRESSES (Jan 17 2026 Binary Analysis):**
+- MIN_DWELL at file offset 0x171A9-0x171AB: CC 00 A2 = LDD #$00A2 (value at 0x171AA-0x171AB)
+- MIN_BURN at file offset 0x19812-0x19813: 86 24 = LDAA #$24 (value at 0x19813)
+- Both values IDENTICAL in stock (92118883_STOCK.bin) and Enhanced bins
 
 **Notes:**
-- Exact ROM addresses need XDF search or disassembly
 - Values from Chr0m3's testing (PCMhacking Topic 8567)
 - Required for 7,200+ RPM operation
 - Without patches, timer overflow at ~6,500 RPM
@@ -207,21 +225,30 @@ Result: dwell + burn = 0 → no spark
 
 | Item | Status | Priority |
 |------|--------|----------|
-| 3X Period Address | 0x017B assumed | HIGH |
-| MIN_DWELL Address | Unknown | HIGH |
-| MIN_BURN Address | Unknown | HIGH |
-| TIO Config Registers | Standard HC11 | MEDIUM |
+| 3X Period Address | 0x017B ✅ CONFIRMED | DONE |
+| MIN_DWELL Address | 0x171AA ✅ CONFIRMED | DONE |
+| MIN_BURN Address | 0x19813 ✅ CONFIRMED | DONE |
+| TIO Config Registers | ✅ Per HC11 Reference | DONE |
 
 ---
 
 ## Cross-Reference Documents
 
+### HC11 Reference Sources
+- `68HC11_Reference/68HC11_COMPLETE_INSTRUCTION_REFERENCE.md` - Complete opcode table
+- `68HC11_Reference/M68HC11RM_Reference_Manual.pdf` - Official Motorola reference
+- `MC68HC11_Reference.md` - Quick reference guide
+
+### Project Documents
 - `discovery_reports/RAM_Variable_Report.md` - Full map_ram_variables.py output
 - `discovery_reports/XDF_Coverage_Report.md` - XDF version comparison
 - `CHROME_RPM_LIMITER_FINDINGS.md` - Chr0m3's validated values
 - `docs/Chr0m3_Spark_Cut_Analysis_Critical_Findings.md` - Topic 8567 archive
 
+### Scripts
+- `tools/map_ram_variables.py` - RAM variable analyzer (generates this data)
+
 ---
 
-**Last Updated:** December 6, 2025  
+**Last Updated:** January 18, 2026  
 **Maintainer:** KingAI Tuning Project

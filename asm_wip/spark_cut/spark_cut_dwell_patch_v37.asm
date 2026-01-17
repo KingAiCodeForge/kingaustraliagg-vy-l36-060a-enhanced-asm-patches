@@ -1,6 +1,16 @@
 ;==============================================================================
 ; VT V6 IGNITION CUT v37 - DWELL PATCH FOR HIGH RPM (CHR0M3 VIDEO METHOD)
 ;==============================================================================
+;
+; ⚠️⚠️⚠️ THIS FILE IS FOR VT V6, NOT VY V6! ⚠️⚠️⚠️
+;
+; Contains research notes from Chr0m3's YouTube video and PCMHacking.net.
+; These are HEX PATCH values, not ASM code to inject.
+; VY V6 addresses are DIFFERENT - need separate research.
+;
+; See README for knowledge gaps - community help wanted to find VY addresses!
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: January 17, 2026
 ; Method: Patch Min Dwell/Burn Constants (NOT code injection)

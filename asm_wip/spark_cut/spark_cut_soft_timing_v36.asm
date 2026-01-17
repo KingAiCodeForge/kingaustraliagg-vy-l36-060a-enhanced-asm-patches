@@ -1,6 +1,15 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT v36 - SOFT TIMING RETARD (SPEEDUINO SOFT CUT STYLE)
 ;==============================================================================
+;
+; ⚠️ EXPERIMENTAL - Soft timing retard concept (not spark cut!)
+; ⚠️ Uses $01A0 for LIMITER_FLAG - UNVERIFIED!
+; ⚠️ Requires finding TIMING_ADVANCE RAM address (unknown)
+;
+; This is an alternative approach - retarding timing instead of cutting.
+; More research needed on where timing is stored before TIO.
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: January 17, 2026
 ; Method: Ignition Timing Retard at Limiter (Reduces power without cutting)

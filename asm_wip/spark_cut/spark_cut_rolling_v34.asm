@@ -1,6 +1,14 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT v34 - ROLLING CUT (SPEEDUINO-STYLE)
 ;==============================================================================
+;
+; ⚠️ EXPERIMENTAL - Uses concepts from Speeduino open source
+; ⚠️ Uses $01A0 for flags - UNVERIFIED! See v38 for verified $0046 bit 7
+;
+; This is an interesting approach but needs verification before use.
+; Speeduino source: https://github.com/noisymime/speeduino
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: January 17, 2026
 ; Method: Rolling Random Cylinder Cut (Based on Speeduino Open Source)

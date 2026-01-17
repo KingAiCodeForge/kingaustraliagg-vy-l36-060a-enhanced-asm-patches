@@ -1,6 +1,15 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT v18 - 6375 RPM SAFE MODE ENFORCER
 ;==============================================================================
+;
+; ℹ️ CONCEPT: Emergency protection against 8-bit RPM overflow
+;
+; This is safety research - what happens at the ECU's hard limit.
+; For normal rev limiter use, see v38 (6000 RPM, well below overflow).
+;
+; The concepts here could be useful for edge-case protection.
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg  
 ; Date: January 14, 2026
 ; Method: Software RPM Limit to Prevent Timer Overflow

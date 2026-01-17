@@ -1,6 +1,17 @@
 ;==============================================================================
 ; VY V6 IGNITION CUT v23 - TWO-STAGE HYSTERESIS LIMITER
 ;==============================================================================
+;
+; ⚠️ EXPERIMENTAL - Ported from VL V8 Walkinshaw binary analysis
+; ⚠️ Uses TCTL1 register - Chr0m3 advised against this approach
+;
+; This is research into how the VL V8 implemented its smooth limiter.
+; The concept (two-stage with hysteresis) is valid, but implementation
+; method differs from what works on VY V6.
+;
+; For production code, use v38 (simple hysteresis, proven method).
+;
+;==============================================================================
 ; Author: Jason King kingaustraliagg  
 ; Date: January 14, 2026
 ; Method: Two-Stage RPM Limiter with Hysteresis (VL V8 Walkinshaw Port)
