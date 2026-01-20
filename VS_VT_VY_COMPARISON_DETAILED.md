@@ -1340,10 +1340,18 @@ please edit this if you know more that work you have tried.
 |----------|------|------|-------|
 | **Dallas DS1230Y** | 32KB | NVRAM + Battery | Original Moates NVRAM board chip — fits 12P |
 | **Dallas DS1245Y-70+** | 128KB | NVRAM + Battery | 32-pin EDIP, integrated lithium battery — fits 11P |
-| **Moates Ostrich 2.0** | 512KB | USB Emulator | Real-time emulation, plugs into 28/32-pin socket |
-| **Moates AutoProm (APU1)** | 512KB | USB Emulator | Alternative to Ostrich, same capability |
+| **Moates Ostrich 2.0** | 512KB (4Mbit) | USB + Battery-backed SRAM | Emulates 4KB-512KB chips, lithium coin cell backup |
+| **Moates AutoProm (APU1)** | 512KB | USB Emulator | Alternative to Ostrich, same 512KB capacity |
 | **PCMHacking DIY NVRAM** | Various | DIY Board | Dallas chip on custom PCB |
-| **Cobra RTP** | N/A | USB Emulator | May work — untested on Holden |
+
+> **Ostrich 2.0 Technical Specs (Moates Official):**
+> - **Memory:** 4 Mbit (512KB) battery-backed SRAM
+> - **Battery:** Lithium ion coin cell (data retained when unplugged)
+> - **Pin modes:** 24-pin (2732), 28-pin (27C512), 32-pin (29F040)
+> - **Access time:** 65-80ns (90ns safe)
+> - **USB speed:** 921,600 bps — uploads in <2 seconds
+> - **Max stacked bins:** 4× 128KB = 512KB (for VY/VT bins)
+> - **NOT for engine bay** — max 80°C, moisture will kill it
 
 > **DS1245Y Note:** 1Mbit (128KB), 70ns access time, 5V, 32-pin EDIP. Reliable for 6+ years per PCMHacking reports (Topic 8005).
 
@@ -1384,6 +1392,7 @@ Some users have converted VX-VY flash PCMs to use Ostrich or NVRAM by desolderin
 > "I ran my L67 manual VX with the ostrich for months... I use my ostrich all the time; I like to think of it as a **memcal with a usb port on it**" (VX L67 Getrag, charlay86)
 
 > **Note:** VS/VT MEMCAL ECUs (with chip socket) work fine with Ostrich — no soldering needed. The DIY conversion above is only for VX-VZ flash PCMs.
+> it's really just a nvram 512kb? with a battery like the diy nvrams around. uses ds1245y or similar. this is why the ostrich recommends the quad stacked 128kb bin for memcal based, havent tryed personally with the ose stuff in thoery that could be stacked up to 16x but i need to find users experiences with this. looks like 4 could be max, as its 512kb nvram emulation.
 
 ### ALDL Communication Speeds
 
