@@ -1360,6 +1360,31 @@ please edit this if you know more that work you have tried.
 > 
 > **Important:** OSE Flash Tool is NOT a TunerPro plugin — it's a separate standalone application. Flash & Burn is for chip burning only (Burn1/Burn2/AutoProm), not flash PCMs.
 
+### DIY Ostrich/NVRAM on VX-VY Flash PCMs (Experimental)
+
+> **⚠️ WARNING:** This is DIY only — **no commercial product exists**. No warranty. Requires fine soldering skills.
+
+Some users have converted VX-VY flash PCMs to use Ostrich or NVRAM by desoldering the flash chip and wiring an adapter:
+
+**VX L67 Getrag (PCMHacking Topic 4671, 2016):**
+> "I had a VX-VY flash pcm converted for me a while ago with the ribbon directly soldered to the pads for the ostrich cable & worked perfectly except **it was a little unstable when going round corners or over bumps** & was told it could be due to the **ribbon length being too long**, but was a success until I let it sit for a year & then next time I tested it I couldn't get it to work again."
+
+**Key Issues:**
+- Flash chip is **hard soldered** — requires desoldering (fine pitch, risk of damage)
+- **Cable length is critical** — short cables required for stability
+- Physical vibration can cause intermittent connection
+- No commercial adapter/installer exists — purely DIY
+
+**Alternative Approaches:**
+- **29F040 DIP32 chip** instead of ribbon cable (quadstar87, Topic 4671)
+- **Socket soldered to pads** for easier chip swapping
+- Keep ribbon/cable as short as physically possible
+
+**Ostrich on VS/VT MEMCAL ECU (Topic 1090):**
+> "I ran my L67 manual VX with the ostrich for months... I use my ostrich all the time; I like to think of it as a **memcal with a usb port on it**" (VX L67 Getrag, charlay86)
+
+> **Note:** VS/VT MEMCAL ECUs (with chip socket) work fine with Ostrich — no soldering needed. The DIY conversion above is only for VX-VZ flash PCMs.
+
 ### ALDL Communication Speeds
 
 | ECU Type | Baud Rate | Protocol | Notes |
@@ -1392,6 +1417,6 @@ please edit this if you know more that work you have tried.
 3. **Install OSE 12P firmware** on the 808 ECU
 4. **Add MAP sensor** (MAF-based cars don't have one stock)
 
-> **Key Point:** MAF-based ECUs (VS-VZ) **cannot run OSE 12P directly** — the code doesn't exist. You need a complete ECU swap to older MEMCAL hardware. The MAF-based ECUs can't go backwards.
+> **Key Point:** MAF-based ECUs (VS-VZ) **cannot run OSE 12P directly** — the code doesn't exist. You need a complete ECU swap and pinout swap match to older MEMCAL pcms. The MAF-based ECUs can't go backwards.
 
 ---
