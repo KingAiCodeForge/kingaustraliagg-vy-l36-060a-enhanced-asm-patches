@@ -1447,14 +1447,74 @@ Some users have converted VX-VY flash PCMs to use Ostrich or NVRAM by desolderin
 
 | Product | Purpose | Price | Compatibility |
 |---------|---------|-------|---------------|
-| **G1 Adapter** | TPI memcal bypass | ~$25 USD | Early GM TPI |
-| **G2 Adapter (0.45"/0.60")** | 28-pin memcal upgrade | ~$25 USD | VN/VP/VR/VS long memcal |
-| **G6 Adapter** | 32-pin Holden memcal | ~$30 USD | VS S3, 128KB bins, quad-stack |
-| **HDR6 Header** | Read 32-pin memcal | ~$20 USD | Non-destructive stock read |
-| **Ostrich 2.0** | USB chip emulator | ~$140 USD | Real-time tuning |
-| **ALDU1** | USB-to-ALDL | ~$50 USD | Datalog and comms |
+| **G1 Adapter** | TPI memcal bypass | ~$53 USD | Early GM TPI |
+| **G2 Adapter (0.45"/0.60")** | 28-pin memcal upgrade | ~$46 USD | VN/VP/VR/VS long memcal |
+| **G6 Adapter** | 32-pin Holden memcal | ~$46 USD | VS S3, VT L36/L67, 128KB bins, AM29F040 chip |
+| **HDR6 Header** | Read 32-pin memcal | ~$16 USD | Non-destructive stock read |
+| **Ostrich 2.0** | USB chip emulator | ~$264 USD | Real-time tuning, 4Mbit max |
+| **ALDU1** | USB-to-ALDL | ~$76 USD | Datalog and comms |
+| **AutoProm APU1** | Ostrich + Burn2 bundle | ~$496 USD | Read, write, emulate all-in-one |
 
-> **Source:** [Moates.net GM Products](https://shop.moates.net/collections/gm), PCMHacking Topics 703, 574, 8005
+> **Source:** [Moates.net GM Products](https://shop.moates.net/collections/gm) (prices as of Jan 2026)
+
+### G6 Adapter Bank Switching (4 Tunes)
+
+**Direct from Moates:** [shop.moates.net/products/g6-adapter-for-commodore-holden](https://shop.moates.net/products/g6-adapter-for-commodore-holden)
+> "For many GM/Holden applications, this adapter will allow you to use the AM29F040 chip (C3) to contain your 128k calibrations. **Up to 4 switchable programs with separate rotary switch and cable.** Can also be used as an adapter to the Ostrich emulator. This unit REPLACES the stock memcal."
+
+**PCMHacking Topic 703 (2012):**
+> "The rotary switch will allow up to 4 different bins to be selected from a 4mBit chip. The header is for reading 32 pin chips."
+
+**How it works:**
+
+- G6 adapter holds AM29F040 (512KB = 4× 128KB banks)
+- Rotary switch selects which 128KB bank is active
+- Bank switching happens at power-on (not hot-swap)
+- Without rotary switch connected, defaults to first bank
+- Also compatible with Ostrich 2.0 via 32-pin cable
+
+**Use Cases:**
+
+- Street tune vs race fuel (bank 1 vs bank 2)
+- Stock tune vs modified tune (safe fallback)
+- LPG vs petrol dual-fuel systems
+- Staged development (progressive tune testing)
+
+### Cobra RTP — Alternative to Moates (Research Notes)
+
+**Manufacturer:** CobraRTP ([cobrartp.com](https://cobrartp.com))
+
+| Product | Memory Type | Supported | Notes |
+|---------|-------------|-----------|-------|
+| **MotronicRT R6** | 8-bit EPROM | 27C128-27C512, 28F512 | OBD1 cars ~1984-1997 |
+| **Flash Online** | 16-bit Flash | 28F200/400/800, 29F200/400/800 | BMW MS41/MS42/MS43, E38 LS |
+
+**MotronicRT R6 — Compatible with Holden MEMCAL ECUs:**
+
+GM ECUs explicitly listed: `1227727, 1227730, 1227748, 1227749, 1228321, 1227752, 1228253, 1227165, 1227277, 16195699, 16197427` (TunerPro RT compatible)
+
+> "Note: to emulate a 16 bit (2 chip) ECU, you need 2 CobraRTP emulators and an expansion board (daughterboard)."
+
+**Flash Online — For BMW MS42/MS43/E38:**
+- Emulates 29F400/29F800 (256KB–1MB)
+- Real-time map editing via TunerPro RT
+- **Dual-mode:** Upload 2 full firmwares, switch without PC (map switching!)
+- Hardware map/table tracing supported
+- Requires desoldering original flash chip and installing SOP44 adapter
+
+> **⚠️ RESEARCH TODO (Ask Wadim):**
+> - Does Flash Online have on-the-fly bank/map switching like G6 rotary?
+> - Is there a standalone map switching solution without PC?
+> - What chip is in VX/VY flash PCM? (AM29F400BB per research, 512KB)
+> - Could Flash Online work on VX/VY with adapter? (16-bit bus concern)
+
+**VX/VY Flash Chip Research:**
+
+| ECU | Flash Chip | Size | Bus | Cobra RTP Compatible? |
+|-----|-----------|------|-----|----------------------|
+| VX/VY V6 (Delco '011) | AM29F400BB | 512KB | 16-bit | ⚠️ Needs 2× MotronicRT + daughterboard |
+| BMW MS42/MS43 | 29F400/29F800 | 512KB-1MB | 16-bit | ✅ Flash Online (tested) |
+| VS/VT MEMCAL | 29F040 (G6) | 128KB per bank | 8-bit | ✅ MotronicRT R6 |
 
 ### VY/VX/VT Running OSE 12P — ECU Swap Path
 
