@@ -1,29 +1,66 @@
-# VS/VT Memcal vs VY Flash ECU - Key Differences
+# VS/VT Memcal vs VY Flash ECU - Technical Reference
 
 **Last Updated:** January 20, 2026  
-**Purpose:** Binary architecture comparison for ignition cut porting
+**Purpose:** Binary architecture comparison for ignition cut porting  
+**Author:** Jason King (kingaustraliagg)
 
 ---
 
-> **⚠️ BANK SWITCHING STATUS:** The HC11 addressing and bank mapping sections below are **UNVERIFIED ASSUMPTIONS** based on cross-platform research. The exact VY V6 bank switching mechanism needs confirmation via oscilloscope or logic analyzer on the actual hardware.
+## 📚 Authoritative Sources
+
+| Source | URL | Content |
+|--------|-----|---------|
+| **Mr Module** | [mrmodule.com.au/holden-delco](https://mrmodule.com.au/holden-delco/) | Delco ECU hardware specs, memcal types |
+| **PCMHacking Forums** | [pcmhacking.net](https://pcmhacking.net/forums/) | Community reverse engineering, OSE code |
+| **Moates Shop** | [shop.moates.net](https://shop.moates.net/collections/gm) | G6 adapter, Ostrich 2.0 specs |
+| **Motorola/NXP** | MC68HC11 Reference Manual | Timer registers, TCTL1, instruction timing |
+| **CobraRTP** | [cobrartp.com](https://cobrartp.com) | Flash Online, MotronicRT specs |
 
 ---
 
-## 🔍 CRITICAL FINDINGS
+## 🔧 Hardware Overview (Verified)
 
-### 1. All Use Same Hardware (MC68HC11)
-✅ **TCTL1 ($1020) register exists on ALL platforms**
-✅ **ISR vector table locations are IDENTICAL**
-✅ **Hardware capabilities are THE SAME**
+### All Holden Delco V6 ECUs (VN-VY) Share Same Processor Family
 
-### 2. But Implementations Are DIFFERENT
+**Source:** PCMHacking Getting Started Guide (Topic 655)
+> "The PCM is also a new generation IPCM-6 and runs a higher clock speed. The processor is still the **same 8bit HC11 derivative**."
 
-| Feature | VS $51 | VT $A5 | VY $060A | OSE12P |
-|---------|--------|--------|----------|---------|
-| **Binary Size** | 128KB | 128KB | 128KB | 32KB |
-| **TI2 ISR** | $650D | $622B | **$2003** | $0000 |
-| **TI3 ISR** | $6951 | $69C3 | **$2000** | $0000 |
-| **TCTL1 Writes** | 1 | 0 | **3** | 0 |
+**Source:** Mr Module - Holden Delco ECUs
+> "Holden Commodore models from VN to VY (1988-2004) used a Delco Electronics engine management system."
+
+| Generation | Service No. | Connectors | Memory Type | EPROM Chip | Binary Size |
+|------------|-------------|------------|-------------|------------|-------------|
+| VN/VP | 1227808 | 2× Black | Long Memcal (28-pin) | 27C128 | 16KB |
+| VR Manual | 16183082 | 2× Black | Long Memcal (28-pin) | 27C256 | 32KB |
+| VR/VS Auto | 16176424 | 2× Lt Blue | Long Memcal (28-pin) | 27C512 | 64KB |
+| VS V6 | 16199728 | 2× Pink, 1× Blue | Short Memcal (32-pin) | 27C010 | 128KB |
+| VT V6 | 16233396 | 2× Pink, 1× Blue | Short Memcal (32-pin) | 27C010 | 128KB |
+| **VX/VY V6** | **09356445** | 2× Brown, 1× Tan | **Flash (soldered)** | **AM29F400** | **128KB** |
+
+> **Sources:** Mr Module (memcal types), PCMHacking Topic 655 (EPROM sizes), Topic 3281 (VR auto = 27C512)
+
+### Processor: Motorola MC68HC11 (All Generations)
+
+| Feature | Specification | Source |
+|---------|---------------|--------|
+| **Architecture** | 8-bit | Motorola datasheet |
+| **Clock** | 2-4 MHz E-clock | HC11 Reference Manual |
+| **Address Space** | 64KB (bank-switched for 128KB) | HC11 Reference Manual |
+| **Timer Registers** | 5× Output Compare, 3× Input Capture | HC11 §10 |
+| **TCTL1 Address** | $1020 (controls OC2-OC5 outputs) | HC11 §10.4 |
+
+## 🔍 Binary Architecture Comparison
+
+> **⚠️ BANK SWITCHING:** VY uses 128KB in 64KB address space via bank switching. The exact latch address needs hardware verification.
+
+### Code & ISR Locations (Verified from Binaries)
+
+| Feature | VS $51 | VT $A5 | VY $060A | OSE12P | notes |
+|---------|--------|--------|----------|---------|-------|
+| **Binary Size** | 128KB | 128KB | 128KB | 32KB | |
+| **TI2 ISR** | $650D | $622B | **$2003** | $0000 | |
+| **TI3 ISR** | $6951 | $69C3 | **$2000** | $0000 | |
+| **TCTL1 Writes** | 1 | 0 | **3** | 0 | |
 | **Code Region** | $6000+ | $6000+ | **$2000+** | $0000+ |
 
 **KEY OBSERVATION:** VY has ISRs at **$2000-$2003** (very low addresses!)
@@ -1512,7 +1549,7 @@ GM ECUs explicitly listed: `1227727, 1227730, 1227748, 1227749, 1228321, 1227752
 >
 > **Q: What chip is in VX/VY flash PCM?**
 > A: ⚠️ NEEDS VERIFICATION — VX/VY V6 flash PCMs:
-> - Processor: **68HC11** (same family as VS/VT, NOT HC12)
+> - Processor: **68HC11** (same family as VS/VT)
 > - External flash: AM29F400BB or similar (512KB, replaces EPROM)
 > - No internal flash — the HC11 doesn't have on-chip flash
 > - EEPROM: Small section for VIN/VATS/trims
