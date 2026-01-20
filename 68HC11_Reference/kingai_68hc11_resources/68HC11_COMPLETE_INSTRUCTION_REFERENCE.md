@@ -3,8 +3,35 @@
 > **Source:** Tom Dickens / Dan Kohn (dankohn.info) + NXP M68HC11ERG Reference Manual
 > **Maintained for:** VY V6 ECU Decompilation Project
 > **Notes:** More rows and columns needed with notes. and each sources info in a column.
-> **Last Updated:** January 17, 2026
+> **Last Updated:** January 20, 2026
 > 
+---
+
+## Cross-Reference Verification Status ✅
+
+All opcodes verified against **7 independent sources** on January 20, 2026:
+
+| Source | File Path | Status |
+|--------|-----------|--------|
+| Ghidra SLEIGH | `ghidra_hc11/HC11.slaspec` | ✅ Matches |
+| dasmfw | `dasmfw/Dasm68HC11.cpp` | ✅ Matches |
+| gendasm | `gendasm/src/gendasm/cpu/m6811/m6811gdc.cpp` | ✅ Matches |
+| PySim11 | `EVBU_Simulator/PySim11/ops.py` | ✅ Matches |
+| techedge DISASM11 | `techedge_tools/DISASM11/DISASM11.OPC` | ✅ Matches |
+| m68hc11x Assembler | `m68hc11x/assembler.h` | ✅ Matches |
+| BASIC11 Registers | `BASIC11/exp-f1.inc` | ✅ Matches |
+| dis68hc11 | `dis68hc11/Opcodes.h` | ⚠️ **BUGGY** (ADCA/ADCB swapped) |
+
+### ⚠️ Known Bug in dis68hc11
+
+The `dis68hc11` disassembler has **IMM/DIR modes swapped** for ADCA and ADCB:
+- `OP_ADCA_DIR = 0x89` ❌ WRONG (should be IMM)
+- `OP_ADCA_IMM = 0x99` ❌ WRONG (should be DIR)
+- `OP_ADCB_DIR = 0xC9` ❌ WRONG (should be IMM)
+- `OP_ADCB_IMM = 0xD9` ❌ WRONG (should be DIR)
+
+**This document uses CORRECT opcodes verified against Motorola specifications.**
+
 ---
 
 ## Table of Contents

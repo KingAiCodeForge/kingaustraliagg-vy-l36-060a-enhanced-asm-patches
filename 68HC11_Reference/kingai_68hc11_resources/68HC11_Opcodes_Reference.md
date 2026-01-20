@@ -3,6 +3,21 @@
 > **Source:** dis68hc11 disassembler - Opcodes.h
 > **Purpose:** Complete opcode hex values for VY V6 ECU decompilation
 > **⚠️ Note:** dis68hc11 source has bugs - ADCA/ADCB IMM/DIR modes were swapped. This doc is CORRECTED.
+> **Cross-Referenced:** January 20, 2026 - Verified against 7 sources (see below)
+
+---
+
+## Cross-Reference Sources (All Verified ✅)
+
+| Source | Location | Notes |
+|--------|----------|-------|
+| Ghidra SLEIGH | `ghidra_hc11/HC11.slaspec` | Authoritative |
+| dasmfw | `dasmfw/Dasm68HC11.cpp` | Correct |
+| gendasm | `gendasm/src/gendasm/cpu/m6811/m6811gdc.cpp` | Correct |
+| PySim11 | `EVBU_Simulator/PySim11/ops.py` | Correct |
+| techedge DISASM11 | `techedge_tools/DISASM11/DISASM11.OPC` | Correct |
+| m68hc11x | `m68hc11x/assembler.h` | Correct |
+| BASIC11 | `BASIC11/exp-f1.inc` | Register defs correct |
 
 ---
 

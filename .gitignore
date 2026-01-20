@@ -2,6 +2,15 @@
 tools/
 priority_analysis/
 
+# Third-party tools (not ours to redistribute)
+68HC11_Reference/JBug11_F1/
+68HC11_Reference/techedge_tools/
+68HC11_Reference/README.md
+
+# Large disassembly files (too big for GitHub)
+VX-VY_V6_$060A_Enhanced_v1.1a_HC11_disasm.asm
+THE1_ADDRESS_MAPPING_RESULTS.md
+
 # Analysis Output (generated files)
 analysis_output/
 discovery_reports/
@@ -40,6 +49,15 @@ ghidra_processor_tests/
 # Backup folders
 asm_wip_backup/
 
+# Session/validation reports (working files, not for GitHub)
+FINAL_*.md
+VALIDATION_*.md
+SESSION_*.md
+KNOWLEDGE_*.md
+*_validation_*.txt
+*_verification_*.txt
+deep_verification_full.txt
+
 # Python cache
 __pycache__/
 *.pyc
@@ -74,6 +92,10 @@ hardware/
 # Research notes (some may have private content)
 research/
 
+# PCMHacking.net archived topics (forum content - not ours to share)
+topic_*.md
+Topic_*.md
+
 # Session-specific exports
 11P V104_3/
 11P V104_3.zip
@@ -83,6 +105,7 @@ wiring_diagrams/
 # Files to add to .gitignore
 DOCUMENT_CONSOLIDATION_PLAN.md
 Rev_Limiter_Analysis_Validated.md
+ENHANCED_v204c_SPARK_CUT_ANALYSIS.md
 
 # All the untracked MD files that shouldn't be on GitHub
 01_VY_V6_Enhanced_v2.md
@@ -204,7 +227,7 @@ WIRING_*.md
 Web_Research_Summary_*.md
 XDF_*.md
 ZERO_PARAMETERS_ANALYSIS.txt
-
+topic_8852_VX _ VY_V6_$060A_Enhanced_v2.04 - Dwell - Spark Cut Beta.md
 # Session/work files
 adding_dwell_est_3x_to_xdf.md
 asm_audit.txt
@@ -272,3 +295,45 @@ docs/
 *.description
 EXPORT_*.md
 HIDDEN_FEATURES_ANALYSIS.md
+
+LOCAL_ONLY_*.md
+
+# Session 19 additions - Analysis/Development documents
+ENHANCED_v204c_SPARK_CUT_ANALYSIS.md
+DOCUMENT_CONSOLIDATION_PLAN.md
+Rev_Limiter_Analysis_Validated.md
+GHIDRA_HC11_WORKING_GUIDE.md
+PYTHON_SCRIPTS_UPDATED.md
+REALITY_CHECK_BINARY_PROOF.md
+HC11_INSTRUCTION_ASSUMPTIONS_VALIDATION.md
+TEST_GHIDRA_HC11_WORKING.ps1
+
+# PowerShell test scripts (development only)
+*.ps1
+
+# Analysis output from tools (generated files)
+*_analysis.json
+*_analysis.txt
+*_report.json
+*_report.txt
+*_output.txt
+*_output.json
+*_results.json
+*_results.txt
+*_catalog.json
+
+# Script output directories (all tool output goes here)
+analysis_output/
+catalog_output/
+comparison_output/
+discovery_reports/
+disassembly_output/
+ghidra_output/
+reports/
+
+# Info files from downloads
+*.info.json
+
+# XDF exports/inventory
+xdfs_and_adx_and_bins_related_to_project/
+
