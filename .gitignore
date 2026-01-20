@@ -9,7 +9,9 @@ priority_analysis/
 
 # Large disassembly files (too big for GitHub)
 VX-VY_V6_$060A_Enhanced_v1.1a_HC11_disasm.asm
+92118883_STOCK_HC11_disasm.asm
 THE1_ADDRESS_MAPPING_RESULTS.md
+DISASSEMBLY_OUTPUTS_ANALYSIS.md
 
 # Analysis Output (generated files)
 analysis_output/
@@ -45,6 +47,7 @@ facebook_chats/
 
 # Ghidra processor tests (development)
 ghidra_processor_tests/
+ghidra_test_project/
 
 # Backup folders
 asm_wip_backup/
@@ -96,8 +99,13 @@ research/
 topic_*.md
 Topic_*.md
 
+# BMW MS4X community resources (reference only - not redistributable)
+ms43x-custom-firmware_and_community_patchlists_ms42_ms43/
+
 # Session-specific exports
 11P V104_3/
+OSE_12P V112/
+VX-VY_V6_$060A_Enhanced_v1.1.adx
 11P V104_3.zip
 
 # Wiring diagrams (copyrighted content)
