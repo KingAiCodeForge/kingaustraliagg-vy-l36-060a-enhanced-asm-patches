@@ -1311,9 +1311,10 @@ DONE_SHIFT:
 **Why the padding?** The HC11 boots from the top of its address space (reset vector at `$FFFE`). The 32KB code must appear at `0x8000-0xFFFF` within each 64KB bank, not at `0x0000-0x7FFF`.
 
 ### Compatible Flash/EEPROM Chips (TESTED)
-
-**28-Pin Chips (G2 Adapter - VN/VP/VR/VS Long MEMCAL):**
 i found that 128 in the eprom\eeprom name and then the pin number and width correlates to 16kb stock eproms replacements if its 5v and the right pinouts.
+so 27c128 is 16kb, 27c256 is 32kb, 27c512 is 64kb, for the 28pin. for the 32pin its 27c010 020 and 040 for 128kb 256kb and 512kb respectively. so when people say 040 or 256 they mean 512kb and 64kb respectively, and so on.
+**28-Pin Chips (G2 Adapter - VN/VP/VR/VS Long MEMCAL):**
+
 | Chip | Size | Type | Notes |
 |------|------|------|-------|
 | **27C128** | 16KB | UV EPROM | Stock VN/VP $5D — too small for 12P |
@@ -1321,7 +1322,7 @@ i found that 128 in the eprom\eeprom name and then the pin number and width corr
 | **27C512** | 64KB | UV EPROM | Required for 11P, works with offset burning |
 | **SST27SF512** | 64KB | Flash | Direct replacement for 27C128/256/512 |
 | **AT29C256** | 32KB | Flash | Moates recommended for 12P |
-
+please edit this if you know more that work you have tried.
 **32-Pin Chips (G6 Adapter - VS Short MEMCAL / VT):**
 
 | Chip | Size | Type | Notes |
@@ -1348,14 +1349,16 @@ i found that 128 in the eprom\eeprom name and then the pin number and width corr
 
 ### Flash PCM Tuning Tools (VT-VZ)
 
-| Tool | Method | Notes |
-|------|--------|-------|
-| **TunerPro RT + OSE Flash Tool plugin** | ALDL cable | Primary method for VT-VZ flash PCMs |
-| **TunerPro RT + Moates plugin** | USB ALDL | Works with Moates ALDU1 interface |
-| **Moates FlashnBurn** | USB ALDL | Standalone flash utility |
-| **DIY NVRAM/Emulator setups** | Hardware mod | Some have adapted Ostrich/NVRAM to flash PCMs |
+| Tool | Type | Notes |
+|------|------|-------|
+| **OSE Flash Tool V1.51** | Standalone Program | Primary method for VX/VY/VZ V6 flash PCMs — [PCMHacking Topic 82](https://pcmhacking.net/forums/viewtopic.php?t=82) |
+| **TunerPro RT** | Bin Editor | Used for editing tune files, NOT flashing (separate from OSE Flash Tool) |
+| **PCM Hammer** | Standalone Program | Alternative for LS1 V8 ECUs, works with OBDX Pro VT scantool |
+| **ALDL Cable** | Hardware | Required for all flash methods — Envyous Customs, DIY, or Moates ALDU1 |
 
-> **Note:** VT-VZ Flash PCMs don't require chip burning — they're flashed via ALDL/OBD2 port using software.
+> **Workflow:** Edit bin in TunerPro RT → Flash to ECU with OSE Flash Tool via ALDL cable.
+> 
+> **Important:** OSE Flash Tool is NOT a TunerPro plugin — it's a separate standalone application. Flash & Burn is for chip burning only (Burn1/Burn2/AutoProm), not flash PCMs.
 
 ### ALDL Communication Speeds
 
