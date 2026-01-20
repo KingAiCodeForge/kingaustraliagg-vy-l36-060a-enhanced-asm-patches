@@ -27,8 +27,8 @@ need to map out every thing to the bone in the binary itself and correct any mis
 | **Target Hardware** | VN/VP/VR/VS MEMCAL ECUs (Delco 808/424) | VT-VZ Flash PCMs |
 | **Fuel System** | **Speed-Density ONLY** (MAP-based, no MAF) | **MAF-based** (Mass Airflow) |
 | **Binary Size** | 32KB (12P) / 64KB (11P) | 128KB |
-| **EPROM Chip** | 28-pin (VN-VR) or 32-pin (VS) | Internal Flash |
-| **Real-time Tuning** | Requires NVRAM or Flash chip upgrade | Flash via Quarterhorse/EFILive |
+| **EPROM Chip** | 28-pin (VN-VR) or 32-pin (VS) EPROM/EEPROM | Internal Flash |
+| **Real-time Tuning** | Moates Ostrich 2.0, AutoProm, or NVRAM board | TunerPro RT (OSE Flash Tool / Moates plugin) |
 
 ### ✅ VY/VX/VT CAN Run OSE 12P — With ECU Swap
 
@@ -50,7 +50,8 @@ need to map out every thing to the bone in the binary itself and correct any mis
 **Quick Reference:**
 - **28-pin MEMCAL** (VN/VP/VR/VS V8): Use **G2 Adapter** + SST27SF512 or AT29C256
 - **32-pin MEMCAL** (VS S3/VT): Use **G6 Adapter** + W27E010, W27E040, or AM29F040B
-- **Real-time tuning:** Dallas DS1245Y NVRAM or Moates Ostrich 2.0
+- **Real-time tuning (MEMCAL):** Moates Ostrich 2.0, AutoProm, or NVRAM board (PCMHacking DIY)
+- **Real-time tuning (Flash PCM):** TunerPro RT with Moates plugin or OSE Flash Tool plugin
 - **Bin stacking:** 512KB chips hold 4× 128KB tunes (done in TunerPro)
 
 ### How This Repo Uses 11P/12P Research
@@ -393,8 +394,11 @@ print("✅ Binary verified - correct Enhanced v1.0a")
 ### Hardware Questions
 
 **Q: What hardware do I need to flash this?**
-> - **Moates Ostrich 2.0** - Real-time emulator (what I use)
-> - **Moates Quarterhorse** - Flash programmer
+> - **Moates Ostrich 2.0** - Real-time emulator for MEMCAL ECUs (28/32-pin)
+> - **Moates AutoProm** - Alternative real-time emulator
+> - **NVRAM board** - DIY option from PCMHacking (Dallas DS1245Y)
+> - **TunerPro RT** - With OSE Flash Tool plugin or Moates plugin for flash PCMs
+> - **Moates FlashnBurn** - Direct flash programming software
 > - **DIY ALDL cable** - For reading/communication
 > - **Oscilloscope** - For verifying EST/dwell timing
 
