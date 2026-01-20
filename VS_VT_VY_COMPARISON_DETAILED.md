@@ -1,18 +1,11 @@
 # VS/VT Memcal vs VY Flash ECU - Key Differences
 
-**Date:** January 14, 2026  
-**Analysis:** Binary architecture comparison for ignition cut porting
+**Last Updated:** January 20, 2026  
+**Purpose:** Binary architecture comparison for ignition cut porting
 
 ---
 
 > **⚠️ BANK SWITCHING STATUS:** The HC11 addressing and bank mapping sections below are **UNVERIFIED ASSUMPTIONS** based on cross-platform research. The exact VY V6 bank switching mechanism needs confirmation via oscilloscope or logic analyzer on the actual hardware.
-
-### Topic 2092 Reference Added
-
-✅ **Yes, Topic 2092 "Delco Code Related Books" info has been integrated:**
-- Rice University ELEC201 68HC11 tutorial → `from_topic_2092_delco_code_related_books.md`
-- Key concepts: Port D inputs, timer system, memory map
-- Applied to button/switch inputs section in `README.md`
 
 ---
 
@@ -41,22 +34,25 @@
 
 ## 📊 ISR Vector Analysis
 
-### VY V6 $060A ISR Vectors (CORRECTED - January 18, 2026)
+### VY V6 $060A ISR Vectors (VERIFIED from 92118883_STOCK.bin - January 20, 2026)
 
 ```
-VECTOR    FUNCTION              TRAMPOLINE   ACTUAL CODE   NOTES
-------    --------              ----------   -----------   -----
-$1FFEC    TIC2 (24X Crank)      $2012        **$358A**     24X timing input capture
-$1FFEA    TIC3 (3X Cam)         $200F        **$35FF**     ⭐ 3X reference - SPARK CUT POINT
-$1FFE4    TOC3 (EST Output)     $2009        **$35BD**     EST output compare
-$1FFE2    TOC4 (Timer 4)        $2006        **$35DE**     General purpose timer
-$FFFE8    RESET                 -            **$C060**     ROM bootloader entry
+FILE OFFSET   HC11 VECTOR   TRAMPOLINE   FUNCTION                    NOTES
+-----------   -----------   ----------   --------                    -----
+0x1FFEA       $FFEA         $200F        TIC3 (3X Crank)             ⭐ SPARK CUT HOOK POINT
+0x1FFEC       $FFEC         $2012        TIC2 (24X Crank)            24X timing input capture
+0x1FFEE       $FFEE         $2015        TIC1                        Timer Input Capture 1
+0x1FFE8       $FFE8         $C011        RESET                       ROM bootloader entry
+0x1FFE2       $FFE2         $2006        TOC4                        Timer Output Compare 4
+0x1FFE4       $FFE4         $2009        TOC3 (EST)                  EST output compare
+0x1FFE6       $FFE6         $200C        TOC1                        Timer Output Compare 1
 ```
 
-**CRITICAL CORRECTION:** VY vectors point to **trampolines at $2000+** which then JMP to actual code at **$35xx**.
-- The actual TIC3 handler is at **$35FF** (not $2000!)
-- $2000 is just a jump table, not the ISR code itself
-- This is where Chr0m3's period injection would hook
+**CRITICAL:** VY uses a **pseudo-vector bridge** at $2000+. Each ISR vector points to a JMP instruction at $20xx, which then jumps to the actual handler code. This allows the ROM to be relocated without changing the vector table.
+
+- **$200F** = TIC3 trampoline → actual handler TBD (needs trace)
+- **$2012** = TIC2 trampoline → actual handler TBD
+- The hook point for spark cut is at the **TIC3 handler** (3X crank reference)
 
 ### VS/VT ISR Vectors (for comparison)
 
@@ -1317,7 +1313,7 @@ DONE_SHIFT:
 ### Compatible Flash/EEPROM Chips (TESTED)
 
 **28-Pin Chips (G2 Adapter - VN/VP/VR/VS Long MEMCAL):**
-
+i found that 128 in the eprom\eeprom name and then the pin number and width correlates to 16kb stock eproms replacements if its 5v and the right pinouts.
 | Chip | Size | Type | Notes |
 |------|------|------|-------|
 | **27C128** | 16KB | UV EPROM | Stock VN/VP $5D — too small for 12P |
@@ -1337,15 +1333,29 @@ DONE_SHIFT:
 
 > **Bin Stacking:** 512KB chips (W27E040, AM29F040B) can hold 4× 128KB tunes. Bin stacking is done in TunerPro. Without the rotary switcher connected to G6, defaults to first tune bank. Works on memcal Ecotec ECUs: VS/VT L36 and L67 3.8L.
 
-### NVRAM Options for Real-Time Tuning
+### NVRAM & Real-Time Tuning Options (MEMCAL ECUs)
 
 | Hardware | Size | Type | Notes |
 |----------|------|------|-------|
 | **Dallas DS1230Y** | 32KB | NVRAM + Battery | Original Moates NVRAM board chip — fits 12P |
 | **Dallas DS1245Y-70+** | 128KB | NVRAM + Battery | 32-pin EDIP, integrated lithium battery — fits 11P |
-| **Moates Ostrich 2.0** | N/A | USB Emulator | Real-time emulation, no chip burning |
+| **Moates Ostrich 2.0** | 512KB | USB Emulator | Real-time emulation, plugs into 28/32-pin socket |
+| **Moates AutoProm (APU1)** | 512KB | USB Emulator | Alternative to Ostrich, same capability |
+| **PCMHacking DIY NVRAM** | Various | DIY Board | Dallas chip on custom PCB |
+| **Cobra RTP** | N/A | USB Emulator | May work — untested on Holden |
 
 > **DS1245Y Note:** 1Mbit (128KB), 70ns access time, 5V, 32-pin EDIP. Reliable for 6+ years per PCMHacking reports (Topic 8005).
+
+### Flash PCM Tuning Tools (VT-VZ)
+
+| Tool | Method | Notes |
+|------|--------|-------|
+| **TunerPro RT + OSE Flash Tool plugin** | ALDL cable | Primary method for VT-VZ flash PCMs |
+| **TunerPro RT + Moates plugin** | USB ALDL | Works with Moates ALDU1 interface |
+| **Moates FlashnBurn** | USB ALDL | Standalone flash utility |
+| **DIY NVRAM/Emulator setups** | Hardware mod | Some have adapted Ostrich/NVRAM to flash PCMs |
+
+> **Note:** VT-VZ Flash PCMs don't require chip burning — they're flashed via ALDL/OBD2 port using software.
 
 ### ALDL Communication Speeds
 
