@@ -1,30 +1,42 @@
 ;==============================================================================
-; VY V6 SPARK CUT - CHR0M3 METHOD - FULLY VERIFIED v38
+; VY V6 SPARK CUT - 3X PERIOD MANIPULATION METHOD - FULLY VERIFIED v38
 ;==============================================================================
 ; Author: Jason King (kingaustraliagg)
 ; Date: January 18, 2026
+; Updated: January 20, 2026
 ; Status: ✅ ALL ADDRESSES VERIFIED - READY FOR BENCH TESTING
 ;
-; Based on Chr0m3 Motorsport's validated approach:
+; Based on Chr0m3 Motorsport's CONCEPT (3X period manipulation):
 ;   "If you set the 3x period astronomically high the dwell gets really
 ;    really small (if I recall like 100µs) opposed to the usual 600 odd"
 ;
-; What Chr0m3 actually did:
+; Implementation by Jason King:
+;   - All reverse engineering done independently
+;   - Addresses verified using custom Python HC11 disassembler
+;   - NOT verified with IDA Pro or Ghidra (yet)
+;
+; Chr0m3's concept (from forum/video):
 ;   1. "Scrapped everything fuel cut" - Removed stock fuel cut logic
 ;   2. "Rewrote my own logic for rev limiter" - Custom implementation
 ;   3. "Used a free bit in RAM" - Found unused bit for on/off flag
 ;   4. "Moved entire dwell functions to add my flag"
-;
+;   
 ; This version uses:
 ;   ✅ Verified free flag bit at $0046 bit 7 (ENGINE_MODE_FLAGS)
 ;   ✅ 8-bit RPM comparison (correct for ≤6375 RPM)
 ;   ✅ Verified hook point at 0x101E1 (STD $017B)
 ;   ✅ Verified free space at $0C500
-;   ✅ Chr0m3's fake period value ($3E80 = 16000)
+;   ✅ Chr0m3's concept: fake period value ($3E80 = 16000)
 ;
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin (128KB)
 ; Processor: Motorola MC68HC711E9
+;
+; Verification Method:
+;   - Custom Python HC11 disassembler (hc11_disassembler_complete.py)
+;   - Binary verification via hex dump and grep analysis
+;   - Cross-referenced with STOCK 92118883 binary
+;   - NOT yet verified with IDA Pro or Ghidra
 ;
 ;==============================================================================
 
@@ -95,7 +107,7 @@ RPM_LOW         EQU $EC         ; 236 × 25 = 5900 RPM - RESUME (100 RPM hystere
 ; RPM_LOW         EQU $FA         ; 250 × 25 = 6250 RPM
 
 ;------------------------------------------------------------------------------
-; FAKE PERIOD VALUE (Chr0m3 validated)
+; FAKE PERIOD VALUE (Chr0m3 concept)
 ;------------------------------------------------------------------------------
 ; Normal 3X period at 6000 RPM ≈ 3.3ms = 3300 counts
 ; Fake period = 16000 ($3E80) = ~1000ms apparent

@@ -1,4 +1,4 @@
-HC11 Pin/Reg,Function (IC/OC/PA),QFP-64 Pin (needs more info) and references,ECU Connector,ECU Pin,Wire Colour,Sensor/Actuator,Expected Signal,Test Method/Conditions,Status,Notes,ConfidenceLevel,ResolvableFrom,extravalidationsources,GM_Connector_Label,GM_Function_Name,Enhanced_Mod_Feature,PPK_Calibration,Verification_Source
+HC11 Pin/Reg,Function (IC/OC/PA),QFP-64 Pin (needs more info) and references,ECU Connector,ECU Pin,Wire Colour,Sensor/Actuator,Expected Signal,Test Method/Conditions,Status,Notes,ConfidenceLevel,ResolvableFrom,extravalidationsources,GM_Connector_Label,GM_Function_Name,Enhanced_Mod_Feature,PPK_Calibration,Verification_Sourceneeds more cross references to be more accurate another ,sources, second source, third source?
 PA0/IC3,Crank 3X input (TIC3),20,Unknown,?,?,Crank position sensor,~3x pulses/rev square wave,Scope while cranking,⚠️ Needs wiring diagram,ISR at 0x180DB uses TIC3 - CONFIRMED crank input,HIGH,BOTH,"ISR 0x180DB-0x1815B (129 bytes); TIC3 vector 0xFFEA; 94 register ops (14 reads, 75 writes); ENHANCED_V1_0A_DECOMPILATION_SUMMARY.md lines 207,226,231,388,442; HC11 Reference Manual TIC3 section"
 PA1/IC2,TDC/Cam reference?,21,Unknown,?,?,Cam sensor OR secondary crank,1x pulse/rev OR 2x pulses/rev,Scope during cranking + compare to PA0,⚠️ Needs scope test,Reads at 0x18156 suggest timing reference,MEDIUM,BOTH,"TIC2 reads at 0x18156 within 3X ISR; TIC2 vector 0xFFEC; compare timing with PA0/TIC3; HC11 Reference Manual TIC2 section"
 PA2/IC1,VSS input candidate,22,Unknown,?,?,Vehicle Speed Sensor,4 pulses/rev (transmission output),Drive at 40-80 km/h with scope,⚠️ Needs scope test,Pulse accumulator alternative,LOW,BOTH,"TIC1 vector 0xFFEE; compare with PA7/PAI pulse accumulator; VSS vs OSS frequency differentiation required; HC11 TIC1 section"
@@ -136,7 +136,7 @@ N/A,Connector pin B12,Unknown,A/B Pink 24-pin,B12,BLU/WH,Unknown,Unknown,Needs s
 
 
 ===============================================================================
-SENSOR CONNECTOR PINOUTS (VERIFIED FROM VY V6 WIRING DIAGRAMS - 100% ACCURATE)
+SENSOR CONNECTOR PINOUTS (VERIFIED FROM VY V6 WIRING DIAGRAMS - needs more cross references to be more accurate another ,sources, second source, third source?
 ===============================================================================
 
 MAF (MASS AIR FLOW SENSOR) - 3-pin oval connector:

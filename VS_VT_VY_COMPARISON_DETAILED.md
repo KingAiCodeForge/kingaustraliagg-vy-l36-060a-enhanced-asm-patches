@@ -4,13 +4,15 @@
 **Analysis:** Binary architecture comparison for ignition cut porting
 
 ---
-address are bank mapped for hc11 stuff we are tryna find out
+
+> **⚠️ BANK SWITCHING STATUS:** The HC11 addressing and bank mapping sections below are **UNVERIFIED ASSUMPTIONS** based on cross-platform research. The exact VY V6 bank switching mechanism needs confirmation via oscilloscope or logic analyzer on the actual hardware.
+
 ### Topic 2092 Reference Added
 
 ✅ **Yes, Topic 2092 "Delco Code Related Books" info has been integrated:**
 - Rice University ELEC201 68HC11 tutorial → `from_topic_2092_delco_code_related_books.md`
 - Key concepts: Port D inputs, timer system, memory map
-- Applied to button/switch inputs section in `github readme.md`
+- Applied to button/switch inputs section in `README.md`
 
 ---
 
@@ -355,11 +357,9 @@ Original values (FROM OSE12P - NOT VY):
 - ✅ Multiple patches coordinated across functions
 - ⚠️ Complex implementation (edge checks, timestamps)
 
-### Chr0m3's Response to The1's Method
-**Source:** Facebook Messenger (January 15, 2026)
 
-**Quote:**
-> "He called my method **over complicated and unnecessary**"
+
+method is complicated 
 > "That's exactly why **his doesn't work without issues**"
 > "**Mine and The1's are entirely different code, same concept**" (Topic 8567, Post #33)
 
@@ -369,18 +369,7 @@ Original values (FROM OSE12P - NOT VY):
 3. **Hardware timing** - Accounts for TIO microcode limitations
 4. **Oscilloscope validated** - Real-world waveform analysis
 
-### The Verdict
-
-| Aspect | The1's Method | Chr0m3's Method | Winner |
-|--------|---------------|-----------------|--------|
-| **Simplicity** | ✅ Simple (600µs dwell) | ❌ Complex (3X injection) | The1 |
-| **Tested** | ❌ Never finished/tested | ✅ 3-4 years development | Chr0m3 |
-| **Bench Validated** | ❌ No oscilloscope | ✅ EST output monitored | Chr0m3 |
-| **High RPM (6500+)** | ❓ Unknown | ✅ Tested at 6500-6600 | Chr0m3 |
-| **Reliability** | ⚠️ "doesn't work without issues" | ✅ Works reliably | Chr0m3 |
-| **Public Release** | ❌ Never released | ✅ Working (private testing) | Chr0m3 |
-
-**Conclusion:** Chr0m3's method is proven. The1's simpler approach may work for lower RPM but lacks validation.
+**Conclusion:** methods based on Chr0m3's method is wip. The1's simpler approach may work for lower RPM
 
 ---
 
@@ -531,6 +520,11 @@ TI3_ISR:
 
 ## 🔧 HC11 EXPANDED MODE & BANK SWITCHING
 
+> **⚠️ UNVERIFIED / RESEARCH IN PROGRESS**  
+> This section contains **assumptions** based on HC11 datasheet theory and VS Commodore research.  
+> The exact VY V6 bank switching hardware (latch address, port bits) has **NOT been confirmed** on actual hardware.  
+> Treat all file offset mappings as "best guess until validated."
+
 ### Jason's Problem: Reset Vector 0xC011 Doesn't Decode
 **Source:** Facebook Messenger (January 15, 2026)
 
@@ -548,7 +542,7 @@ TI3_ISR:
 | **Special Test** | 0 | 1 | **$BFFE** | Disabled |
 | **Bootstrap** | 1 | 0 | $BFFE | Disabled |
 
-**VY V6 ECU Configuration:**
+**VY V6 ECU Configuration (ASSUMED - NEEDS VERIFICATION):**
 - **Mode:** Expanded (MODA=1, MODB=1)
 - **Internal ROM:** Disabled (external 128KB flash)
 - **Reset Vector Location:** $FFFE (in external ROM)
@@ -570,12 +564,12 @@ Bank 1: $10000 - $1FFFF → mapped to $8000-$FFFF
 **Reset Vector @ $FFFE:**
 - **CPU Address:** $FFFE (top of address space)
 - **File Offset:** Could be at $0FFFE (Bank 0) OR $1FFFE (Bank 1)
-- **VY V6:** Reset vector is at **file offset $1FFFE** (Bank 1)
+- **VY V6:** Reset vector is at **file offset $1FFFE** (Bank 1) - *(assumed, needs verification)*
 
 **Reset Handler @ $C011:**
 - **CPU Address:** $C011
 - **Which Bank?** Need to know CONFIG register setting
-- **VY V6:** Likely in Bank 0, so **file offset $0C011**
+- **VY V6:** Likely in Bank 0, so **file offset $0C011** - *(assumed, needs verification)*
 
 ### How to Disassemble with Bank Switching
 
@@ -622,7 +616,9 @@ m6811-elf-objdump -D -b binary -m m68hc11 --start-address=0xC011 bank0.bin
 
 ### Bank Switching Hardware
 
-**VY V6 uses external latch for bank selection:**
+> **⚠️ ASSUMPTION - NOT VERIFIED ON VY V6 HARDWARE**
+
+**VY V6 uses external latch for bank selection (assumed):**
 - Write to specific I/O port triggers bank switch
 - Bank select stored in hardware latch
 - Transparent to software (JSR/JMP work across banks)
@@ -672,10 +668,10 @@ grep -a "STAA.*\$10" 92118883.BIN  # Look for I/O writes
 | `$19000-$1FFAF` | Bank 1 ROM (trans) | 28K | ⚠️ Bank switching |
 | `$28000-$2FFAF` | Bank 2 ROM (engine) | 26K | ⚠️ Bank switching |
 
-**Bank Switching (VS/VY):** Port G bit 6 controls ROM bank selection
+**Bank Switching (VS/VY - UNVERIFIED FOR VY):** Port G bit 6 controls ROM bank selection *(from VS research, may differ on VY)*
 ```asm
-; Bank Switch To 1 (ORAB #0x40 on Port G)
-; Bank Switch To 2 (ANDB #0xBF on Port G)
+; Bank Switch To 1 (ORAB #0x40 on Port G) - UNVERIFIED
+; Bank Switch To 2 (ANDB #0xBF on Port G) - UNVERIFIED
 ```
 
 ### BKLL.md RAM Addresses (topic_184 - VN/VP/VR Era)
@@ -789,9 +785,9 @@ Example: Address 0x5AB1 → File Offset 0x1AB1
 Example: Address 0x6877 → File Offset 0x2877
 ```
 
-#### Option 2: VY 128KB Full Binary (Bank Switched)
+#### Option 2: VY 128KB Full Binary (Bank Switched) - UNVERIFIED
 ```
-Memory Map (Full 128KB):
+Memory Map (Full 128KB) - ASSUMED, NEEDS VERIFICATION:
 Bank 0: 0x00000-0x0FFFF → mapped to 0x8000-0xFFFF
 Bank 1: 0x10000-0x1FFFF → mapped to 0x8000-0xFFFF
 
@@ -908,16 +904,21 @@ patches = [
 - VY already uses TCTL1, so we know it works
 - Need to find VY-specific RPM address and inject code
 - **Recommended dwell for spark cut: 200-300µs** (proven values)
-- **Recommended production RPM: 6300-6400 RPM** (NOT 5900) i recommend 6000rpm chr0m3 was just tryna get past stock rpm limits as it has bad us we need to do 600dwell to get 1000us to get cut happening i think based on math.
+- **Recommended production RPM: 6000-6350 RPM** (staying under 8-bit max of 6375)
 - **CRITICAL: Opcode timing matters** - keep ISR patches minimal
-- **Bank switching:** Reset vector 0xC011 is in Bank 0 @ file offset 0x0C011
-we could just try it at 6000rpm though to be safe. incase it over revs.
-**Next Step:** Disassemble VY TI3 ISR at $2000 to understand existing logic this might of been done need to string search all documents at once # ## ### to read lines and things and use address in keywords or the keyword itself in strings of .md or .txt .json etc .xdf 
-in R:\VY_V6_Assembly_Modding
+- **Bank switching:** *(UNVERIFIED)* Reset vector 0xC011 is assumed to be in Bank 0 @ file offset 0x0C011
 
-R:\VY_V6_Assembly_Modding\VX VY_V6_$060A_Enhanced_v2.09a.xdf
+**Verified Items:**
+- Hook point at $101E1 contains `FD 01 7B` (STD $017B) ✅
+- RPM variable at $00A2 (×25 scaling) ✅
+- Free space at $0C468-$0FFBF ✅
 
-heres the xdf
+**Unverified Items:**
+- Bank switching mechanism (Port G bit 6?) - needs hardware probe
+- Exact memory mapping between file offsets and CPU addresses
+- CONFIG register contents at $103F
+
+**Next Step:** Test patches at 3000 RPM first (safe), then increase to production RPM after validation.
 
 bin is here
 R:\VY_V6_Assembly_Modding\VY_V6_Enhanced.bin
@@ -1141,8 +1142,9 @@ Chr0m3's approach for VT-VY Flash ECUs:
    - Calculation overflow causes misfires
    - Needs separate fix before higher RPM is viable
 
-**Key Forum Quotes:**
-> "I've been researching and developing spark cut on the VX/VY flash ecu for about 3-4 years now with decent success" - Chr0m3
+**Community Research:**
+
+Chr0m3, The1, and others have been working on spark cut for VX/VY flash ECUs for years. This is ongoing research with partial success - not a solved problem.
 
 > "Basically, but as discussed you can't pull the dwell down to 0, can get it low enough to misfire but yeah, still definitely needs more research and testing." - Chr0m3
 
@@ -1259,5 +1261,124 @@ DONE_SHIFT:
 ```
 
 ⚠️ **WARNING:** Pin needs confirmation from Chr0m3 or oscilloscope probing before use.
+
+---
+
+## 🔧 MEMCAL Hardware & Chip Reference
+
+### MEMCAL Pin Configurations
+
+| MEMCAL Type | Pin Count | Vehicles | Moates Adapter |
+|-------------|-----------|----------|----------------|
+| **Long MEMCAL** | 28-pin | VN, VP, VR, VS V8 | G2 (0.45" or 0.60" leg spacing) |
+| **Short MEMCAL** | 32-pin | VS S3 V6/V8, VT | G6 Adapter |
+
+> **Source:** Mr Module - "Long VN-VS (28-pin 27C128, 27C256 or 27C512) and Short VS-VT (32 pin 27C010)"
+
+### OS Binary Sizes (VERIFIED from local files)
+
+| OS | CPU | Bin Size | Chip Required | Vehicles |
+|----|-----|----------|---------------|----------|
+| **Stock $5D** | 808 | **16 KB** | 27C128 | VN/VP V6/V8, VL V8, JE Astra |
+| **OSE 12P V112** | 808 | **32 KB** | 27C256 minimum | VR/VS Long MEMCAL |
+| **OSE 11P V104** | 424 | **64 KB** | 27C512 | VS/VT Short MEMCAL |
+| **VS/VT L36/L67** | Short | **128 KB** | 27C010 | VS S3, VT Ecotec |
+
+> **Note:** "Stacked" bins are 128KB for quad-tune rotation on larger chips.
+
+### Stacked Bin Structure Analysis (UNVERIFIED - Binary Analysis Only)
+
+> ⚠️ **NEEDS CONFIRMATION:** The following is based on binary analysis of the `__stacked.BIN` files only. The actual EPROM burning requirements and A16 wiring should be verified against Moates documentation or PCMHacking forum posts.
+
+**Why Stacking?** HC11 only addresses 64KB max. Larger EPROMs (128KB+) have an A16 line that selects which 64KB half to use. By duplicating code in both halves, the chip works regardless of how A16 is wired.
+
+#### OSE 11P V104 (64KB → 128KB = 2× Simple Duplicate)
+
+| Offset | Size | Content |
+|--------|------|---------|
+| `0x00000-0x0FFFF` | 64KB | BASE CODE (identical to base .BIN) |
+| `0x10000-0x1FFFF` | 64KB | BASE CODE (identical to base .BIN) |
+
+**Pattern:** `[CODE][CODE]` — Simple 2× copy, no padding.
+
+#### OSE 12P V112 (32KB → 128KB = Padded 4-Chunk)
+
+| Offset | Size | Content |
+|--------|------|---------|
+| `0x00000-0x07FFF` | 32KB | ZERO PADDING (`0x00` fill) |
+| `0x08000-0x0FFFF` | 32KB | BASE CODE (identical to base .BIN) |
+| `0x10000-0x17FFF` | 32KB | ZERO PADDING (`0x00` fill) |
+| `0x18000-0x1FFFF` | 32KB | BASE CODE (identical to base .BIN) |
+
+**Pattern:** `[ZEROS][CODE][ZEROS][CODE]` — Code sits at TOP of each 64KB bank (A15=1, addresses `0x8000-0xFFFF`).
+
+**Why the padding?** The HC11 boots from the top of its address space (reset vector at `$FFFE`). The 32KB code must appear at `0x8000-0xFFFF` within each 64KB bank, not at `0x0000-0x7FFF`.
+
+### Compatible Flash/EEPROM Chips (TESTED)
+
+**28-Pin Chips (G2 Adapter - VN/VP/VR/VS Long MEMCAL):**
+
+| Chip | Size | Type | Notes |
+|------|------|------|-------|
+| **27C128** | 16KB | UV EPROM | Stock VN/VP $5D — too small for 12P |
+| **27C256** | 32KB | UV EPROM | Minimum for OSE 12P (32KB bin) |
+| **27C512** | 64KB | UV EPROM | Required for 11P, works with offset burning |
+| **SST27SF512** | 64KB | Flash | Direct replacement for 27C128/256/512 |
+| **AT29C256** | 32KB | Flash | Moates recommended for 12P |
+
+**32-Pin Chips (G6 Adapter - VS Short MEMCAL / VT):**
+
+| Chip | Size | Type | Notes |
+|------|------|------|-------|
+| **27C010** | 128KB | UV EPROM | Stock VS S3, VT — minimum for 11P with room |
+| **Winbond W27E010-70** | 128KB | EEPROM |  Testing soon in L36 VS V6 G6 adapter |
+| **Winbond W27E040** | 512KB | EEPROM | Quad-stack, 4 tunes in TunerPro |
+| **AM29F040B** | 512KB | Flash | ✅ Tested, quad-stack capable, easy to read and write with tl866 i got for under $100aud delivered just get the programmer not the extras. get the memcal adaptor 32 pin for ecotec ecus, for buick the 28pin adaptor. i have had success with no adaptor just with the eeprom into the tl866 with no adaptors. straight 32dip pins into the programmer read and writes as i use the g6 adaptor, not the stock memcals that required uv erasing before could write again. so for me the memcal adaptor is for reading stock memcals for ecotecs. |
+
+> **Bin Stacking:** 512KB chips (W27E040, AM29F040B) can hold 4× 128KB tunes. Bin stacking is done in TunerPro. Without the rotary switcher connected to G6, defaults to first tune bank. Works on memcal Ecotec ECUs: VS/VT L36 and L67 3.8L.
+
+### NVRAM Options for Real-Time Tuning
+
+| Hardware | Size | Type | Notes |
+|----------|------|------|-------|
+| **Dallas DS1230Y** | 32KB | NVRAM + Battery | Original Moates NVRAM board chip — fits 12P |
+| **Dallas DS1245Y-70+** | 128KB | NVRAM + Battery | 32-pin EDIP, integrated lithium battery — fits 11P |
+| **Moates Ostrich 2.0** | N/A | USB Emulator | Real-time emulation, no chip burning |
+
+> **DS1245Y Note:** 1Mbit (128KB), 70ns access time, 5V, 32-pin EDIP. Reliable for 6+ years per PCMHacking reports (Topic 8005).
+
+### ALDL Communication Speeds
+
+| ECU Type | Baud Rate | Protocol | Notes |
+|----------|-----------|----------|-------|
+| **VN/VP/VR Manual (808)** | 160 baud | ALDL Mode 1 | Slow, stock diagnostic only |
+| **VR/VS with comm board** | 8192 baud | ALDL Mode 1 | Requires SXR or USB comm board |
+| **VT-VZ Flash PCM** | 8192+ baud | ALDL/OBD2 | Native fast comms |
+
+> **160 Baud ECUs:** Stock 808 ECUs use 160 baud ALDL. For real-time tuning, you need an SXR comm board upgrade or USB ALDL interface.
+
+### Moates Hardware Reference
+
+| Product | Purpose | Price | Compatibility |
+|---------|---------|-------|---------------|
+| **G1 Adapter** | TPI memcal bypass | ~$25 USD | Early GM TPI |
+| **G2 Adapter (0.45"/0.60")** | 28-pin memcal upgrade | ~$25 USD | VN/VP/VR/VS long memcal |
+| **G6 Adapter** | 32-pin Holden memcal | ~$30 USD | VS S3, 128KB bins, quad-stack |
+| **HDR6 Header** | Read 32-pin memcal | ~$20 USD | Non-destructive stock read |
+| **Ostrich 2.0** | USB chip emulator | ~$140 USD | Real-time tuning |
+| **ALDU1** | USB-to-ALDL | ~$50 USD | Datalog and comms |
+
+> **Source:** [Moates.net GM Products](https://shop.moates.net/collections/gm), PCMHacking Topics 703, 574, 8005
+
+### VY/VX/VT Running OSE 12P — ECU Swap Path
+
+**VY V6 (and VX, VT, VS MAF cars) CAN run OSE 12P** — but NOT by patching the stock ECU:
+
+1. **Swap to a Delco 808 ECU** (VR/VS Manual or Buick 808)
+2. **Rewire the harness** to match 808 pinout (PCMHacking Topic 102, 356)
+3. **Install OSE 12P firmware** on the 808 ECU
+4. **Add MAP sensor** (MAF-based cars don't have one stock)
+
+> **Key Point:** MAF-based ECUs (VS-VZ) **cannot run OSE 12P directly** — the code doesn't exist. You need a complete ECU swap to older MEMCAL hardware. The MAF-based ECUs can't go backwards.
 
 ---

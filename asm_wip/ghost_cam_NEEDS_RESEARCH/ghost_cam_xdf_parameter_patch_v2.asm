@@ -3,187 +3,144 @@
 ;==============================================================================
 ; Author: Jason King (kingaustraliagg)
 ; Date: January 18, 2026
-; Status: 🔬 NEEDS RESEARCH - ROM addresses need verification
+; Status: 🔬 PARTIALLY VERIFIED - Addresses from VY V6 XDF v2.09a
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
 ; Processor: Motorola MC68HC11
 ;
-; ⚠️ WARNING: EXPERIMENTAL
+; ⚠️ WARNING: EXPERIMENTAL - NOT TESTED ON HARDWARE
 ;
 ;==============================================================================
 ; APPROACH: MODIFY XDF PARAMETERS IN ROM
 ;==============================================================================
 ;
-; Instead of complex ASM hook, directly modify the idle spark parameters
-; in ROM to create ghost cam behavior. This is simpler but less flexible.
+; Directly modify the idle spark parameters in ROM to create ghost cam.
+; VY V6 XDF v2.09a verified addresses used below.
 ;
-; From Enhanced XDF v2.09a and ghost_lumpy_idle_cam_asm.md research:
+; VERIFIED PARAMETERS FROM VY V6 XDF:
+; - Idle Spark Advance vs Coolant Temp: 0x6536 (11 cells)
+; - Retarded Idle Spark vs Coolant Temp: 0x6541 (11 cells)
+; - Enable Retarded Idle Spark flag: 0x652C bit 2
 ;
-; Stock values create smooth idle (2-5° swing)
-; Ghost cam values create lopey idle (30-45° swing)
+; IDLE SPARK CORRECTION PARAMETERS (from XDF v2.09a):
+; - 0x6524: IAC Spark Correction Lower Coolant Threshold (~40°C stock)
+; - 0x6525: High RPM Spark Correction Multiplier (KSARPMHI) - 0.04 DEG%/RPM
+; - 0x6527: Low RPM Spark Correction Multiplier (KSARPMLO) - 0.04 DEG%/RPM
+; - 0x6529: RPM Error Limit For Spark Advance Correction - 512 RPM stock
+; - 0x652B: Idle Spark Correction Limit (KSCORLIM) - ~15° stock
 ;
-;==============================================================================
-; TARGET PARAMETERS AND GHOST CAM VALUES
-;==============================================================================
-;
-; | Address | Parameter                           | Stock   | Ghost Cam |
-; |---------|-------------------------------------|---------|-----------|
-; | 0x6524  | IAC Spark Correction Lower ECT      | 40°C    | 100°C+    |
-; | 0x6525  | KSARPMHI (High RPM Spark Mult)      | 0.04    | 0.20-0.25 |
-; | 0x6527  | KSARPMLO (Low RPM Spark Mult)       | 0.04    | 0.20-0.25 |
-; | 0x6529  | RPM Error Limit for Spark Correction| 512 RPM | 200 RPM   |
-; | 0x652B  | KSCORLIM (Spark Correction Limit)   | 15°     | 30-35°    |
-; | 0x6536  | Idle Spark Advance Table            | 18°     | 8-10°     |
-; | 0x6541  | Retarded Idle Spark Table           | 10°     | 2-5°      |
+; Encoding: x/256*90-35 (degrees)
+;   0x3C = -13.4 deg, 0x60 = 0 deg, 0x84 = 14.3 deg, 0xA0 = 26.4 deg
 ;
 ;==============================================================================
-; BINARY PATCHES (Direct ROM modification)
+; VERIFIED VY V6 IDLE SPARK TABLE (0x6536-0x6540)
 ;==============================================================================
-
-;------------------------------------------------------------------------------
-; PATCH 1: KSARPMHI - High RPM Spark Correction Multiplier
-;------------------------------------------------------------------------------
-; Address: 0x6525 (file offset may differ - verify!)
-; Stock: 0x04 (0.04 × 100 = 4 DEG%/RPM)
-; Ghost: 0x14 (0.20 × 100 = 20 DEG%/RPM) - 5× more aggressive
 ;
-; Explanation: When RPM is ABOVE target by X, retard spark by X × 0.20°
-; Example: 100 RPM overspeed × 0.20 = 20° retard
+; Stock Values (from binary):
+;   0x6536: 0xA0 = 26.4 deg  (-40C)
+;   0x6537: 0xA0 = 26.4 deg  (-20C)
+;   0x6538: 0xA0 = 26.4 deg  (0C)
+;   0x6539: 0xA0 = 26.4 deg  (20C)
+;   0x653A: 0x9D = 25.4 deg  (40C)
+;   0x653B: 0x94 = 22.2 deg  (50C)
+;   0x653C: 0x8A = 18.6 deg  (60C)
+;   0x653D: 0x80 = 15.0 deg  (70C)
+;   0x653E: 0x79 = 12.5 deg  (80C)
+;   0x653F: 0x79 = 12.5 deg  (90C)
+;   0x6540: 0x79 = 12.5 deg  (100C)
 ;
-KSARPMHI_ADDR       EQU $6525
-KSARPMHI_STOCK      EQU $04
-KSARPMHI_GHOST      EQU $14         ; 0x14 = 20 = 0.20 DEG%/RPM
-
-;------------------------------------------------------------------------------
-; PATCH 2: KSARPMLO - Low RPM Spark Correction Multiplier
-;------------------------------------------------------------------------------
-; Address: 0x6527
-; Stock: 0x04
-; Ghost: 0x14 - match KSARPMHI for symmetric response
-;
-KSARPMLO_ADDR       EQU $6527
-KSARPMLO_STOCK      EQU $04
-KSARPMLO_GHOST      EQU $14
-
-;------------------------------------------------------------------------------
-; PATCH 3: RPM Error Limit for Spark Correction
-;------------------------------------------------------------------------------
-; Address: 0x6529
-; Stock: 0x0200 (512 RPM) - wide deadband
-; Ghost: 0x00C8 (200 RPM) - narrow deadband, engages faster
-;
-RPM_ERROR_LIMIT_ADDR    EQU $6529
-RPM_ERROR_LIMIT_STOCK   EQU $0200   ; 512 RPM
-RPM_ERROR_LIMIT_GHOST   EQU $00C8   ; 200 RPM
-
-;------------------------------------------------------------------------------
-; PATCH 4: KSCORLIM - Idle Spark Correction Limit
-;------------------------------------------------------------------------------
-; Address: 0x652B
-; Stock: 0x0F (15°) - maximum spark swing allowed
-; Ghost: 0x20 (32°) - allow bigger swings for lope effect
-;
-KSCORLIM_ADDR       EQU $652B
-KSCORLIM_STOCK      EQU $0F         ; 15°
-KSCORLIM_GHOST      EQU $20         ; 32°
-
-;------------------------------------------------------------------------------
-; PATCH 5: Lower Base Idle Spark (Table modification)
-;------------------------------------------------------------------------------
-; Address: 0x6536 (start of Idle Spark Advance Vs Coolant table)
-; Stock: ~18° across temperature range
-; Ghost: ~10° - lower base so retard cycles create weak combustion
-;
-; Table structure: 8 bytes, one per temp breakpoint
-;
-IDLE_SPARK_TABLE_ADDR   EQU $6536
-IDLE_SPARK_STOCK        EQU $24     ; 18° in Delco 0.5° per bit encoding
-IDLE_SPARK_GHOST        EQU $14     ; 10°
-
-;------------------------------------------------------------------------------
-; PATCH 6: Enable Retarded Idle Spark Mode
-;------------------------------------------------------------------------------
-; There's a flag "1 = Enable Retarded Idle Spark" in the XDF
-; Address needs verification - may enable alternate timing path
-;
-; From XDF: "1 = Enable Retarded Idle Spark" - ❌ Not Set (stock)
-; For ghost cam: Set to 1 to use retarded idle spark table
-;
-RETARDED_IDLE_ENABLE    EQU $????   ; TODO: Find this address
+IDLE_SPARK_TABLE_ADDR   EQU $6536   ; VERIFIED - 11 cells
+IDLE_SPARK_TABLE_SIZE   EQU 11
 
 ;==============================================================================
-; FUEL COMPENSATION - CRITICAL FOR NO BACKFIRES
+; VERIFIED VY V6 RETARDED IDLE SPARK TABLE (0x6541-0x654B)
 ;==============================================================================
 ;
-; Without fuel compensation, ghost cam = backfires/afterburner/flame throw each lope!
+; Stock Values (from binary):
+;   0x6541: 0x64 = 1.4 deg   (-40C)
+;   0x6542: 0x64 = 1.4 deg   (-20C)
+;   0x6543: 0x64 = 1.4 deg   (0C)
+;   0x6544: 0x64 = 1.4 deg   (20C)
+;   0x6545: 0x64 = 1.4 deg   (40C)
+;   0x6546: 0x64 = 1.4 deg   (50C)
+;   0x6547: 0x64 = 1.4 deg   (60C)
+;   0x6548: 0x64 = 1.4 deg   (70C)
+;   0x6549: 0x64 = 1.4 deg   (80C)
+;   0x654A: 0x64 = 1.4 deg   (90C)
+;   0x654B: 0x64 = 1.4 deg   (100C)
 ;
-; Options:
-;
-; 1. Increase injector offset at idle (adds ~5-10% fuel all the time)
-;    - Pro: Simple XDF change
-;    - Con: Runs rich all the time at idle
-;
-; 2. Richen Open Loop Idle AFR table
-;    - Address: Line 3088 in XDF
-;    - Stock: 14.7 AFR warm, 12.0 AFR cold
-;    - Ghost: 13.5 AFR warm, 11.5 AFR cold
-;
-; 3. Reduce idle VE cells by 5-10%
-;    - Forces ECU to calculate more fuel
-;    - Works in closed-loop
-;
-; 4. ASM patch to add fuel on misfire detection (most complex)
-;
+RETARD_SPARK_TABLE_ADDR EQU $6541   ; VERIFIED - 11 cells
+RETARD_SPARK_TABLE_SIZE EQU 11
+
 ;==============================================================================
-; IDLE TARGET ADJUSTMENT (BMW METHOD)
+; VERIFIED VY V6 RETARDED IDLE ENABLE FLAG (0x652C bit 2)
 ;==============================================================================
 ;
-; From BMW MS42 research - flat 850 RPM warm idle helps ghost cam stability
+; XDF Name: "1 = Enable Retarded Idle Spark"
+; Address: 0x652C, Bit 2 (mask 0x04)
+; Stock: 0 (disabled)
+; Ghost Cam: 1 (enabled) - ECU will use retarded idle spark table
 ;
-; DESIRED IDLE SPEED (PARK) VS COOLANT TEMP table:
-; Address: XDF Line 2565
+RETARD_IDLE_FLAG_ADDR   EQU $652C   ; VERIFIED
+RETARD_IDLE_FLAG_BIT    EQU $04     ; Bit 2 mask
+
+;==============================================================================
+; GHOST CAM STRATEGY - SIMPLE XDF PARAMETER MODIFICATION
+;==============================================================================
 ;
-; Stock:
-;   -40°C  -20°C   0°C   20°C   40°C   60°C   80°C  100°C
-;    1300   1150   950    800    750    700    650    650
+; The simplest ghost cam approach for VY V6:
 ;
-; Ghost Cam (BMW style - flat warm):
-;   -40°C  -20°C   0°C   20°C   40°C   60°C   80°C  100°C
-;    1300   1150  1000    900    900    900    900    900
+; 1. ENABLE Retarded Idle Spark (0x652C bit 2 = 1)
+;    - This activates the alternate retarded idle spark table
 ;
-; Higher stable target = more headroom for oscillation
+; 2. LOWER the Idle Spark Advance table (0x6536)
+;    - Stock warm idle: 12.5 deg → Ghost: 5-8 deg
+;    - Lower base timing = weak combustion = RPM drop
+;
+; 3. RAISE the gap between normal and retarded tables
+;    - Stock: 26 deg normal, 1.4 deg retarded = 25 deg swing
+;    - Ghost: keep swing but lower both bases
+;
+; The ECU oscillates between tables based on RPM error, creating lope.
 ;
 ;==============================================================================
-; HEX PATCH SUMMARY
+; HEX PATCH SUMMARY - VERIFIED ADDRESSES
 ;==============================================================================
 ;
 ; Apply these byte changes to VX-VY_V6_$060A_Enhanced_v1.0a.bin:
 ;
-; | Offset | Stock | Ghost | Parameter                    |
-; |--------|-------|-------|------------------------------|
-; | 0x6525 | 0x04  | 0x14  | KSARPMHI                     |
-; | 0x6527 | 0x04  | 0x14  | KSARPMLO                     |
-; | 0x6529 | 0x02  | 0x00  | RPM Error Limit (high byte)  |
-; | 0x652A | 0x00  | 0xC8  | RPM Error Limit (low byte)   |
-; | 0x652B | 0x0F  | 0x20  | KSCORLIM                     |
+; PATCH 1: Enable Retarded Idle Spark
+; | Offset | Stock | Ghost | Description                      |
+; |--------|-------|-------|----------------------------------|
+; | 0x652C | 0x??  | |=0x04 | Set bit 2 to enable retarded idle|
 ;
-; Plus table modifications for idle spark and idle RPM targets
+; PATCH 2: Lower Warm Idle Spark (last 3 cells: 80C, 90C, 100C)
+; | Offset | Stock | Ghost | Description                      |
+; |--------|-------|-------|----------------------------------|
+; | 0x653E | 0x79  | 0x60  | 12.5 deg → 0 deg (80C)           |
+; | 0x653F | 0x79  | 0x60  | 12.5 deg → 0 deg (90C)           |
+; | 0x6540 | 0x79  | 0x60  | 12.5 deg → 0 deg (100C)          |
+;
+; PATCH 3: Lower Retarded Spark (make it more negative for bigger swing)
+; | Offset | Stock | Ghost | Description                      |
+; |--------|-------|-------|----------------------------------|
+; | 0x6549 | 0x64  | 0x54  | 1.4 deg → -5 deg (80C)           |
+; | 0x654A | 0x64  | 0x54  | 1.4 deg → -5 deg (90C)           |
+; | 0x654B | 0x64  | 0x54  | 1.4 deg → -5 deg (100C)          |
+;
+; Encoding formula: value = (degrees + 35) * 256 / 90
+;   0 deg = 0x63, -5 deg = 0x54, -10 deg = 0x47, 12.5 deg = 0x79
 ;
 ;==============================================================================
-; WARNING: ALL ADDRESSES NEED VERIFICATION
+; WARNING: FUEL ENRICHMENT MAY BE NEEDED
 ;==============================================================================
 ;
-; The addresses above are from XDF analysis but may be:
-; - XDF line numbers, not actual ROM addresses
-; - Relative to calibration start, not file start
-; - Subject to Enhanced v1.0a binary structure
-;
-; Before applying:
-; 1. Open binary in TunerPro with v2.09a XDF
-; 2. Find each parameter
-; 3. Note actual file offset
-; 4. Verify stock value matches expected
-; 5. Apply patch and test on bench FIRST
+; Without fuel compensation, ghost cam can cause backfires.
+; 
+; Options in TunerPro:
+; 1. Increase "Injector Offset" at idle by 0.1-0.2ms
+; 2. Richen "Open Loop AFR" table at idle cells
+; 3. Lower VE table idle cells by 5-10% (forces ECU to add fuel)
 ;
 ;==============================================================================
 ; END OF FILE

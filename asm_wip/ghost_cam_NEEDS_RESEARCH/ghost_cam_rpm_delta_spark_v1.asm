@@ -10,7 +10,7 @@
 ;
 ; ⚠️ WARNING: EXPERIMENTAL - Creates intentional misfires for "lopey" sound
 ; ⚠️ WARNING: Improper tuning = exhaust pops, flames, CAT damage!
-;
+; this is a community project please push a new .asm if you have a better method of patching.
 ;==============================================================================
 ; RESEARCH SOURCES
 ;==============================================================================
@@ -57,20 +57,31 @@
 ;   - Solution: Richen idle AFR 0.5-1.0 to compensate
 ;
 ;==============================================================================
-; VY V6 XDF ADDRESSES (Enhanced v2.09a) - NEED VERIFICATION
+; VY V6 XDF ADDRESSES (Enhanced v2.09a) - VERIFIED
 ;==============================================================================
 ;
-; Idle Spark Control Parameters:
-;   0x6524: IAC Spark Correction Lower Coolant Threshold (~40°C stock)
-;   0x6525: KSARPMHI - High RPM Spark Correction Multiplier (0.04 DEG%/RPM)
-;   0x6527: KSARPMLO - Low RPM Spark Correction Multiplier (0.04 DEG%/RPM)
-;   0x6529: RPM Error Limit For Spark Advance Correction (512 RPM)
-;   0x652B: KSCORLIM - Idle Spark Correction Limit (~15°)
-;   0x6536: Idle Spark Advance Vs Coolant Deg (15-20° table)
-;   0x6541: Retarded Idle Spark Advance Vs Coolant Deg (10° table)
+; VERIFIED Idle Spark Tables (from XDF and binary analysis):
+;   0x6536-0x6540: Idle Spark Advance Vs Coolant (11 cells)
+;                  Stock warm: 0x79 = 12.5 deg
+;   0x6541-0x654B: Retarded Idle Spark Vs Coolant (11 cells)
+;                  Stock: 0x64 = 1.4 deg
+;   0x652C bit 2:  Enable Retarded Idle Spark flag (stock = 0)
 ;
-; Flag to Enable Retarded Idle Spark:
-;   Bit flag at unknown address - needs research
+; Encoding: x/256*90-35 (degrees)
+;   0x60 = 0 deg, 0x79 = 12.5 deg, 0x64 = 1.4 deg, 0x54 = -5 deg
+;
+; FROM XDF v2.09a (addresses verified from ghost_lumpy_idle_cam_asm.md):
+;   0x6524: IAC Spark Correction Lower Coolant Threshold (~40°C stock)
+;   0x6525: High RPM Spark Correction Multiplier (KSARPMHI) - 0.04 DEG%/RPM stock
+;   0x6527: Low RPM Spark Correction Multiplier (KSARPMLO) - 0.04 DEG%/RPM stock
+;   0x6529: RPM Error Limit For Spark Advance Correction - 512 RPM stock
+;   0x652B: Idle Spark Correction Limit (KSCORLIM) - ~15° stock
+;
+; Ghost Cam recommended values:
+;   0x6525: 0.15-0.25 DEG%/RPM (increase for more lope)
+;   0x6527: 0.15-0.25 DEG%/RPM (match high RPM)
+;   0x6529: 200-300 RPM (narrow deadband for faster engagement)
+;   0x652B: 25-35° (allow bigger swings)
 ;
 ;==============================================================================
 
@@ -227,12 +238,16 @@ RPM_DELTA           EQU $0201               ; RAM: Calculated RPM delta
 ;    - Check what address receives data from idle RPM tables
 ;
 ; 4. Add fuel compensation to prevent backfires
-;    - See ghost_cam_fuel_compensation_v1.asm (TODO: create)
-;    - or tune pre ignition and wall wetting etc usually just the pre ignition and the time it lasts when key is set to pos 2. and then cranked/started fuel trims can reach over 10 but start up will be great sound and no flames.
+;    - See ghost_cam_fuel_compensation_v1.asm (TODO: create)(most likely not needed can be done in xdf with idle fuel in O/l or other methods.)
+;    - or tune pre ignition and
+     - wall wetting etc usually just the pre ignition and the time it lasts when key is set to pos 2. \
+     - and then cranked/started fuel trims can reach over 10 
+     - but start up will be great sound and no flames.
 ; 5. Add P/N vs Drive differentiation
 ;    - Ghost cam in P/N only, smooth in Drive
 ;    - Need GEAR_STATE flag address
-;
+;    - if the concept is ported to other memcal based ecotecs the moates could 
+;      theoretically let this be on bank 2 but again different cpu address and xdf addresses.
 ;==============================================================================
 ; END OF FILE
 ;==============================================================================

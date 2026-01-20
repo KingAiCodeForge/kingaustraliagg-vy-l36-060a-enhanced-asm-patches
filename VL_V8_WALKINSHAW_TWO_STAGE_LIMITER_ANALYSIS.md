@@ -426,10 +426,9 @@ SPARK_CUT_CHECK:
 
 **Key Difference:** VL uses **calibration table lookups** (`LDX #$027E`), VY can use **immediate values** or table lookups. Both approaches work on HC11.
 
-### Chr0m3's Unused Pin for VY Shift Light
+### VY Shift Light Possibility
 
-**Quote from Chr0m3 (Facebook Messenger):**
-> "I found an unused pin on VX / VY and wrote code to control it. Could do a shift light off that"
+**Note:** A shift light could be implemented using custom code to control an unused pin on VX/VY. If anyone has findings on which pin is available, please update this section.
 
 **Implementation Path:**
 1. **Identify the pin** - Likely on Port G or Port A (HC11 output ports)

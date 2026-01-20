@@ -322,9 +322,11 @@ Flash Writer (FC00-FF7F): ~1KB
 | **VS V6 Manual** | $12 (808) | MAP only | OSE 12P | ✅ Mature |
 | **VS V6 Auto** | $11 (424) | MAP only | OSE 11P | 🔨 Development |
 | **VS V8 S1/S2** | $12 (808) | MAP only | OSE 12P | ✅ Mature |
-| **VS V8 S3** | 16234531 | MAF-based | Kalmaker / 11P | ⚠️ Complex |
-| **VT/VX/VY V6** | 16236757+ | MAF-based | Kalmaker / 11P | ⚠️ Complex |
-| **VT/VX/VY V8** | 1290005+ | MAF-based | Kalmaker / 11P | ⚠️ Complex |
+| **VS V8 S3** | 16234531 | MAF-based | Kalmaker | ⚠️ Complex |
+| **VT/VX/VY V6** | 16236757+ | MAF-based | Kalmaker / ECU Swap | ⚠️ Complex |
+| **VT/VX/VY V8** | 1290005+ | MAF-based | Kalmaker / ECU Swap | ⚠️ Complex |
+
+> **⚠️ CLARIFICATION:** OSE 11P/12P are **speed-density only** firmwares for VN-VS MEMCAL ECUs. They **cannot run on VT/VX/VY** without a complete ECU swap to older MEMCAL hardware. For VT/VX/VY MAFless, options are: (A) Kalmaker patches on stock ECU, or (B) ECU swap to VR/VS + OSE 11P/12P.
 
 ---
 

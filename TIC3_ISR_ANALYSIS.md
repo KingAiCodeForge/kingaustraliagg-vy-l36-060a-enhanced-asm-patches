@@ -1,7 +1,29 @@
-# VY V6 TIC3 ISR Analysis - SPARK CUT INJECTION POINT FOUND
+# VY V6 TIC3 ISR Analysis - EXPLORATORY RESEARCH
 
-**Date:** January 16, 2026  
-**Status:** 🎯 CRITICAL FINDINGS - Ready for patch implementation
+**Date:** January 16, 2026 (Updated: January 20, 2026)  
+**Status:** ⚠️ EXPLORATORY - May be from Enhanced v1.0a or different variant
+
+---
+
+## ⚠️ CRITICAL DISCLAIMER
+
+**These ISR addresses are NOT in the STOCK 92118883 binary!**
+
+Deep verification (Jan 20, 2026) confirms:
+- Jump table 0x2006-0x2012: **ALL ZEROS in STOCK** (may exist in Enhanced v1.0a)
+- ISR code at 0x35FF-0x3640: **NOT FOUND in STOCK disassembly**
+- Source: Likely Enhanced v1.0a or different OSID variant (possibly LPG variant?)
+
+**For spark cut implementation, THIS ANALYSIS IS NOT NEEDED!**
+
+Use the verified hook point instead:
+- ✅ **File offset 0x101E1** = `STD $017B` (CONFIRMED in STOCK)
+- ✅ **Hook with JSR $C500** = spark_cut_chr0m3_method_VERIFIED_v38.asm
+
+**Next Steps:**
+- [ ] Check Enhanced v1.0a binary for ISR code at 0x35FF
+- [ ] Search for alternate TIC3 ISR location in STOCK
+- [ ] Verify if $0178 vs $017B are both valid period storage
 
 ---
 

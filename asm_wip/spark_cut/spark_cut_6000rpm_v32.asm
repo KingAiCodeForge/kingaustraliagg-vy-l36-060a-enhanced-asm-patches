@@ -263,7 +263,7 @@ STORE_REAL:
 ; ignition_cut_patch.asm              - Full featured version
 ; ignition_cut_patch_v7_two_step_launch_control.asm - Launch control variant
 ; DOCUMENT_CONSOLIDATION_PLAN.md      - Project status and validation
-; github readme.md                    - Full documentation
+; README.md                           - Full documentation
 ;
 ;------------------------------------------------------------------------------
 ; CHANGELOG:

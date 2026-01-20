@@ -1,13 +1,82 @@
 # VY V6 $060A RAM Variables - Validated Reference
-to add x and y linking to a xdf i think this is needed and for patching safer with less guesswork and verification needed. once we know math and constants and the full internals confirmed or confidently with no other option and then check it twice we know its right. remeber the way the hc11 works from docuemnts and xdf.
+
 **Document Created:** December 6, 2025  
-**Source:** map_ram_variables.py analysis, XDF validation, PCMhacking research  
+**Last Updated:** January 18, 2026  
+**Source:** map_ram_variables.py analysis, XDF validation, PCMhacking research, binary search  
 **Status:** Validated for Enhanced v1.0a (92118883)  
 **Processor:** MC68HC11 (8-bit, $060A mask)
 
 ---
 
+## 🔍 Axis Breakpoints Discovery (NOT IN XDF)
+
+### Q: Can axis breakpoints be edited in the binary?
+**A: YES** - We found at least one axis array that IS in the binary but NOT exposed in the XDF.
+
+### RPM Axis Found at 0x75FA
+
+| Address | Index | Raw Value | RPM (×25) |
+|---------|-------|-----------|-----------|
+| 0x75FA | 0 | 16 | 400 |
+| 0x75FB | 1 | 24 | 600 |
+| 0x75FC | 2 | 32 | 800 |
+| 0x75FD | 3 | 40 | 1000 |
+| 0x75FE | 4 | 48 | 1200 |
+| 0x75FF | 5 | 56 | 1400 |
+| 0x7600 | 6 | 64 | 1600 |
+| 0x7601 | 7 | 72 | 1800 |
+| 0x7602 | 8 | 80 | 2000 |
+| 0x7603 | 9 | 88 | 2200 |
+| 0x7604 | 10 | 96 | 2400 |
+
+**In XDF v2.09a?** ❌ NO - Address 0x75FA not defined  
+**Encoding:** `RPM = byte × 25`  
+**Size:** 11 cells (0x75FA to 0x7604)
+
+### Q: Why does the XDF use LABEL tags instead of binary addresses?
+**A:** The XDF author either:
+1. Didn't find the axis arrays in binary, OR
+2. Assumed axes were hardcoded in code (not calibration data)
+
+**Current XDF approach:**
+```xml
+<XDFAXIS id="x">
+  <LABEL value="400"/><LABEL value="600"/>...  <!-- Hardcoded text -->
+</XDFAXIS>
+```
+
+**Correct approach (if axis is in binary):**
+```xml
+<XDFAXIS id="x">
+  <embeddeddata mmedaddress="0x75FA" />  <!-- Points to binary data -->
+  <math equation="X*25"/>
+</XDFAXIS>
+```
+
+### TODO: Find More Axis Arrays
+- [ ] Search for load axis (mg/stroke patterns)
+- [ ] Search for temperature axis patterns
+- [ ] Match discovered axes to tables that use them
+- [ ] Update XDF with EMBEDDEDDATA instead of LABEL
+does our current xdf give us any data on this?
+---
+
 ## Critical RAM Addresses (Confirmed)
+
+### ⚠️ Version Note
+
+This document covers **Enhanced v1.0a** (v2.09a XDF package). Enhanced v1.1a (v2.04c package) adds spark cut functionality with additional RAM variables that are currently under investigation:
+
+| Address | Name | v1.0a | v1.1a | Notes |
+|---------|------|-------|-------|-------|
+| `$149E` | UNKNOWN | N/A | Used | The1's spark cut code references this |
+| `$16FA` | UNKNOWN | N/A | Used | The1's spark cut code references this |
+| `$9D1A` | RPM_16BIT? | N/A | Used | 16-bit RPM source for v2.04c |
+| `$78B2` | SPARK_RPM_CUT | N/A | XDF | XDF-tunable spark cut threshold |
+
+*Full v1.1a analysis pending - need to disassemble and verify opcodes before publishing.*
+
+---
 
 ### Engine Speed / RPM
 

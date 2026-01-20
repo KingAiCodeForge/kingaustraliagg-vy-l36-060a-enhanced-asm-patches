@@ -13,6 +13,55 @@
 No patched binaries included. These are reference implementations requiring manual binary patching and oscilloscope verification before real-world use.
 
 > **Reality Check:** Most patches will likely work if applied correctly. However, use at your own risk. If you don't understand what connects to what in the binary, how one routine calls another, how RAM variables are shared between ISRs, or how timing-critical code interacts — you can brick your ECU or damage your engine. The HC11 has no safety net.
+need to map out every thing to the bone in the binary itself and correct any mistakes i make along the way. im only human after all.
+---
+
+## 🚨 CRITICAL PLATFORM CLARIFICATION
+
+**This section addresses common misunderstandings about OSE 11P/12P and VY V6 architecture.**
+
+### OSE 11P / 12P — What They Are and Aren't
+
+| Aspect | OSE 11P / 12P | VY V6 ($060A) |
+|--------|---------------|---------------|
+| **Target Hardware** | VN/VP/VR/VS MEMCAL ECUs (Delco 808/424) | VT-VZ Flash PCMs |
+| **Fuel System** | **Speed-Density ONLY** (MAP-based, no MAF) | **MAF-based** (Mass Airflow) |
+| **Binary Size** | 32KB (12P) / 64KB (11P) | 128KB |
+| **EPROM Chip** | 28-pin (VN-VR) or 32-pin (VS) | Internal Flash |
+| **Real-time Tuning** | Requires NVRAM or Flash chip upgrade | Flash via Quarterhorse/EFILive |
+
+### ✅ VY/VX/VT CAN Run OSE 12P — With ECU Swap
+
+**VY V6 (and VX, VT, VS) CAN run OSE 12P** — but NOT by patching the stock VY ECU. You must:
+
+1. **Swap to a Delco 808 ECU** (VR/VS Manual or Buick 808)
+2. **Rewire the harness** to match 808 pinout (see PCMHacking Topic 102, 356)
+3. **Install OSE 12P firmware** on the 808 ECU
+4. **Add MAP sensor** (MAF-based cars don't have one stock)
+
+> **Key Point:** MAF-based ECUs (VT-VZ) **cannot run OSE 12P directly** — the code doesn't exist in those ECUs. You need a complete ECU swap to older MEMCAL hardware. The MAF-based ECUs can't go backwards.
+
+### Hardware Details
+
+**For complete MEMCAL hardware reference (chips, adapters, NVRAM, ALDL speeds), see:**
+
+📄 [`VS_VT_VY_COMPARISON_DETAILED.md`](VS_VT_VY_COMPARISON_DETAILED.md#-memcal-hardware--chip-reference)
+
+**Quick Reference:**
+- **28-pin MEMCAL** (VN/VP/VR/VS V8): Use **G2 Adapter** + SST27SF512 or AT29C256
+- **32-pin MEMCAL** (VS S3/VT): Use **G6 Adapter** + W27E010, W27E040, or AM29F040B
+- **Real-time tuning:** Dallas DS1245Y NVRAM or Moates Ostrich 2.0
+- **Bin stacking:** 512KB chips hold 4× 128KB tunes (done in TunerPro)
+
+### How This Repo Uses 11P/12P Research
+
+We study OSE 11P/12P **concepts** (spark cut via dwell, timer control) and **port the techniques** to VY V6:
+
+- **11P dwell spark cut method** → Ported to `spark_cut_chr0m3_method_VERIFIED_v38.asm`
+- **12P TCTL1 timer control** → Research in `NEEDS_VALIDATION_v16_tctl1_bennvenn_ose12p_port.asm`
+- **VE table structure** → Inspiration for `speed_density_ve_table.asm`
+
+**The MAFless research document covers the PCM swap option** (swapping VY to a VR/VS 808 ECU + OSE 12P) as a complete conversion path with wiring diagrams.
 
 ---
 
@@ -25,6 +74,9 @@ asm_wip/
 │   ├── spark_cut_3x_period_VERIFIED.asm    # ⭐ VERIFIED - 16-bit test template
 │   ├── PATCH_BYTES_v38.asm                 # Raw hex bytes for v38 patch
 │   ├── spark_cut_3000rpm_TEST_v38t.asm     # Low RPM test version
+│   ├── spark_cut_the1_method_port_v39.asm  # 🔬 The1's CPD comparison port (research)
+│   ├── spark_cut_bmw_inspired_v40.asm      # 🔬 BMW MS42/MS43 table-driven (concept)
+│   ├── spark_cut_delco_optimized_v41.asm   # 🔬 Multi-method systematic test (experimental)
 │   ├── spark_cut_6000rpm_v32.asm           # Hard cut at 6000 RPM
 │   ├── spark_cut_chrome_method_v33.asm     # Chr0m3 method (fuel cut scrapped)
 │   ├── spark_cut_progressive_soft_v9.asm   # Gradual soft limiter
@@ -123,7 +175,7 @@ xdfs_and_adx_and_bins_related_to_project/
 | Feature | Method | Notes |
 |---------|--------|-------|
 | **Spark Cut Limiter** | ⚙️ ASM Required | Not in XDF - needs code injection |
-| **Ghost Cam / Lopey Idle** | 📊 XDF Preferred | KSARPMHI, KSARPMLO, Idle Spark tables |
+| **Ghost Cam / Lopey Idle** | 📊 XDF Preferred | Idle Spark Correction tables, RPM Error Limit (get a real cam they say) |
 | **Cold Maps Tuning** | 📊 XDF Preferred | Cold Spark Multiplier, STFT/LTFT temps |
 | **MAFless / Alpha-N** | ⚙️ ASM Required | Force TPS-based load calculation |
 | **Speed Density** | ⚙️ ASM Required | VE table + MAP-based fueling |
@@ -141,6 +193,15 @@ xdfs_and_adx_and_bins_related_to_project/
 
 ## 🎯 Primary Focus: Spark Cut Limiter
 
+### Binary Versions
+
+| Binary | XDF | Spark Cut? | Status |
+|--------|-----|------------|--------|
+| **Enhanced v1.0a** | v2.09a | ❌ NO | This repo's target |
+| **Enhanced v1.1a** | v2.04c | ✅ YES | The1's implementation (Topic 8852) |
+
+> **Note:** Enhanced v1.1a (v2.04c package, Topic 8852) includes The1's spark cut implementation. We are currently reverse-engineering that code to understand exactly what changed from v1.0a → v1.1a before documenting it publicly. Our v38 ASM patches are independent work based on Chr0m3's 3X period method.
+
 Primary implementation based on **3X Period Injection** (Chr0m3 validated method):
 
 | Step | Description |
@@ -157,11 +218,19 @@ Primary implementation based on **3X Period Injection** (Chr0m3 validated method
 
 | Address | Type | Purpose |
 |---------|------|---------|
-| `$00A2` | RAM | Engine RPM (×25 scaling) |
+| `$00A2` | RAM | Engine RPM (×25 scaling, 8-bit) |
 | `$017B` | RAM | 3X period storage |
 | `$0199` | RAM | Dwell time storage |
-| `$101E1` | ROM | Hook point (STD $017B) |
+| `$101E1` | ROM | Hook point (STD $017B) - **v38 method** |
 | `$0C468-$0FFBF` | ROM | 15,192 bytes free space |
+
+**v1.1a (v2.04c) Additional Addresses** *(under investigation)*:
+
+| Address | Type | Purpose | Status |
+|---------|------|---------|--------|
+| `$78B2` | ROM | Spark RPM Cut threshold (XDF tunable) | 🔬 Researching |
+| `$1FD84` | ROM | The1's spark cut code location | 🔬 Researching |
+| `$056F4` | ROM | The1's hook point | 🔬 Researching |
 
 ---
 
@@ -185,9 +254,26 @@ All claims verified against PCMHacking.net archive:
 | Source | Topic | Key Finding |
 |--------|-------|-------------|
 | **Chr0m3** | [Topic 8567](https://pcmhacking.net/forums/viewtopic.php?t=8567) | 3X period injection method, dwell starving |
-| **The1** | [Topic 2518](https://pcmhacking.net/forums/viewtopic.php?t=2518) | Enhanced OS bins, LPG zeroing, XDF definitions |
+| **The1** | [Topic 2518](https://pcmhacking.net/forums/viewtopic.php?t=2518) | Enhanced OS bins, CPD comparison method, XDF definitions |
 | **BennVenn** | [Topic 7922](https://pcmhacking.net/forums/viewtopic.php?t=7922) | OSE12P timer bit `$3FFC` discovery |
 | **Rhysk94** | [Topic 8756](https://pcmhacking.net/forums/viewtopic.php?t=8756) | 6,375 RPM max (255 × 25 = 6375) |
+
+### The1's Spark Cut Method (Enhanced v1.1a)
+
+**Discovered:** January 19, 2026 via disassembly  
+**Location:** File offset 0x1FD84-0x1FD9F  
+**Method:** CPD (Compare D) with EST flag manipulation
+
+Key differences from Chr0m3's method:
+- Uses **CPD** (non-destructive compare) vs SUBD
+- Reads **16-bit RPM** from $9D (not 8-bit $A2)
+- Compares against **table** at $78B2 (not immediate value)
+- Manipulates **EST control flags** at $149E and $16FA
+- Calls EST subroutine at $31EF
+
+**Status:** Addresses need mapping to $060A STOCK 99218883, 1,0 then 1,1a to fully understand.
+**Please** edit if you know and push corrections please.
+**See:** `spark_cut_the1_method_port_v39.asm` for research notes
 
 ### Hardware Limits
 
@@ -285,7 +371,7 @@ print("✅ Binary verified - correct Enhanced v1.0a")
 
 **Q: Why can't I just set fuel cut to 9999 RPM?**
 > The stock fuel cut uses 8-bit RPM storage: `255 × 25 = 6375 RPM max`. You physically cannot exceed this without code modification.
-
+> You will lose the limiter at any value above 6374 RPM.
 **Q: What's the difference between fuel cut and spark cut?**
 > - **Fuel cut:** Stops injectors → engine dies smoothly, no sound
 > - **Spark cut:** Stops ignition → unburnt fuel ignites in exhaust → pops and bangs
@@ -533,11 +619,13 @@ This ensures if stock code ever touches $01A0 unexpectedly, our code isn't corru
 | **VX L36** | 3.8L V6 NA | Delco $060A | 128KB | ✅ **Very High** | Same ECU, different BCM comms |
 | **VY L67** | 3.8L V6 S/C | Delco $07 | 128KB | ⚠️ **Medium** | Different calibration, boost tables |
 | **VT L36** | 3.8L V6 NA | Delco $A5 | 128KB | ⚠️ **Medium** | ISRs at $6000+ vs $2000+ |
-| **VS L36** | 3.8L V6 NA | Delco $51 | 128KB | ⚠️ **Medium** | Memcal-based, different offsets |
-| **OSE 12P** | VN-VS V8 | Custom | 32KB | 🔬 **Research** | BennVenn's TCTL1 method proven |
-| **OSE 11P** | VN-VS V8 | Custom | 64KB | 🔬 **Research** | vlad01 spark cut research |
+| **VS L36** | 3.8L V6 NA | Delco $51 | 128KB | ⚠️ **Medium** | MEMCAL-based, different offsets |
+| **OSE 12P** | VN-VS V6/V8 | Delco 808 MEMCAL | 32KB | 🔬 **Concept Only** | Speed-density, no MAF - techniques ported |
+| **OSE 11P** | VR-VS V6/V8 | Delco 424 MEMCAL | 64KB | 🔬 **Concept Only** | Dwell spark cut method studied |
 | **VL Walkinshaw** | 5.0L V8 | Delco 808 | 32KB | 🔬 **Research** | Two-stage limiter (BMW MS43 pattern) |
 | **Buick 3800** | 3.8L L36/L67 | Delco 808 | 32KB | 🔬 **Related** | Same engine family, GearheadEFI resources |
+
+> **⚠️ IMPORTANT:** OSE 11P/12P are **speed-density (MAP-only)** platforms that **cannot run on MAF-based VY V6 ECUs**. We study their spark cut and dwell techniques, then port those concepts to VY V6 code. Running 11P/12P requires a complete PCM swap to VR/VS MEMCAL hardware + NVRAM conversion.
 
 ### What's The Same Across All Platforms?
 
@@ -657,6 +745,10 @@ The Holden L36/L67 **IS** the Buick 3800 (licensed from GM). Resources from Gear
 - **Credit sources** - Chr0m3, The1, BennVenn, Antus, Mark Mansur - legends
 - **Test before bragging** - This code is marked UNTESTED until I verify on hardware
 
+### Why Markdown?
+
+Markdown is the only format that is **diff-native** and **reviewable at speed**. People can comment line-by-line, submit PRs, and every change is attributable and reversible. PDFs, Word docs, and spreadsheets are fine for final releases but they are hostile to rapid iteration and community correction. PDF and spreadsheet outputs can be auto-generated later from the same source. For now, the repo stays in a format that supports **fast review, fast fixes, and clear history**.
+
 ---
 
 ## 🔧 Bench Testing Setup (What I'm Building)
@@ -744,8 +836,8 @@ After **1+ year** trying to learn ECU tuning through "official" Discord channels
 
 | Platform | My Contribution | Their Response |
 |----------|-----------------|----------------|
-| **BMW Tuning Discord** | Cracked password-protected RAR with Stage 1/2/3 tunes, shared the password to help community access locked files | *"You must have serious mental problems"* → **BANNED** |
-| **Facebook Groups** | GitHub repos, offered help | Posts deleted → **BLOCKED** |
+| **BMW Tuning Discord** | Cracked password-protected RAR with Stage 1/2/3 tunes, shared the password to help community access locked files, uploaded some tunes that werent on public repos. tried to share a patch for the community patch. waste of effort with that lot | classed as spam **BANNED** |
+| **Facebook Groups** | GitHub repos, offered help and advice | Posts deleted → **BLOCKED** |
 | **Various "Experts"** | Questions about specific opcodes | Left on read, or *"that looks like GPT crap"* |
 
 The pattern is always the same:
