@@ -1502,19 +1502,39 @@ GM ECUs explicitly listed: `1227727, 1227730, 1227748, 1227749, 1228321, 1227752
 - Hardware map/table tracing supported
 - Requires desoldering original flash chip and installing SOP44 adapter
 
-> **⚠️ RESEARCH TODO (Ask Wadim):**
-> - Does Flash Online have on-the-fly bank/map switching like G6 rotary?
-> - Is there a standalone map switching solution without PC?
-> - What chip is in VX/VY flash PCM? (AM29F400BB per research, 512KB)
-> - Could Flash Online work on VX/VY with adapter? (16-bit bus concern)
+> **⚠️ RESEARCH FINDINGS (Partially Answered):**
+>
+> **Q: Does Flash Online have on-the-fly bank/map switching like G6 rotary?**
+> A: ✅ YES — "upload two firmware (ROMs), followed by switching between them, for example using a switch or a jumper (without a PC)" — BoostedNW/CobraRTP
+>
+> **Q: Is there a standalone map switching solution without PC?**
+> A: ✅ YES — Both MotronicRT R6 and Flash Online support dual-mode with physical switch/jumper
+>
+> **Q: What chip is in VX/VY flash PCM?**
+> A: ⚠️ NEEDS VERIFICATION — VX/VY V6 flash PCMs:
+> - Processor: **68HC11** (same family as VS/VT, NOT HC12)
+> - External flash: AM29F400BB or similar (512KB, replaces EPROM)
+> - No internal flash — the HC11 doesn't have on-chip flash
+> - EEPROM: Small section for VIN/VATS/trims
+>
+> **Q: Could Flash Online work on VX/VY with adapter?**
+> A: ⚠️ MAYBE — Flash Online emulates 29F400/29F800 which matches the VY external flash chip.
+> The VY flash PCM has external flash soldered to PCB (not socketed like MEMCAL).
+> Would need to desolder flash and install SOP44 adapter — same as BMW MS42/MS43 process.
 
-**VX/VY Flash Chip Research:**
+**VX/VY Flash Chip Research (Corrected):**
 
-| ECU | Flash Chip | Size | Bus | Cobra RTP Compatible? |
-|-----|-----------|------|-----|----------------------|
-| VX/VY V6 (Delco '011) | AM29F400BB | 512KB | 16-bit | ⚠️ Needs 2× MotronicRT + daughterboard |
-| BMW MS42/MS43 | 29F400/29F800 | 512KB-1MB | 16-bit | ✅ Flash Online (tested) |
-| VS/VT MEMCAL | 29F040 (G6) | 128KB per bank | 8-bit | ✅ MotronicRT R6 |
+| ECU | Processor | Memory Type | Chip | Cobra RTP? |
+|-----|-----------|-------------|------|------------|
+| VS MEMCAL | 68HC11 | EPROM (socketed) | 27C010 (128KB) | ✅ MotronicRT R6 |
+| VT MEMCAL | 68HC11 | Flash (socketed) | 29F040 or 27SF010 | ✅ MotronicRT R6 |
+| VX/VY V6 Flash | 68HC11 | Flash (soldered) | AM29F400BB (512KB) | ⚠️ Flash Online (untested) |
+| VX/VY L67 SC | 68HC11 | Flash (soldered) | AM29F400/STM M29F400 | ⚠️ Flash Online (untested) |
+| BMW MS42/MS43 | C167CR | Flash (soldered) | AM29F400BB (512KB) | ✅ Flash Online (tested) |
+
+> **Key Insight:** VX/VY and BMW MS42/MS43 both use AM29F400BB external flash (512KB, 16-bit).
+> Flash Online is designed for AM29F400/29F800 emulation.
+> **Compatibility is theoretically possible** — needs hardware verification and correct SOP44 adapter wiring.
 
 ### VY/VX/VT Running OSE 12P — ECU Swap Path
 
