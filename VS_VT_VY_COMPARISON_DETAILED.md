@@ -1368,24 +1368,63 @@ please edit this if you know more that work you have tried.
 > 
 > **Important:** OSE Flash Tool is NOT a TunerPro plugin — it's a separate standalone application. Flash & Burn is for chip burning only (Burn1/Burn2/AutoProm), not flash PCMs.
 
+### OSEPlugin for TunerPro RT (MEMCAL Real-Time Tuning)
+
+**Author:** antus | **Topic:** [590](https://pcmhacking.net/forums/viewtopic.php?t=590) | **Current Version:** v1.80 (2016-07-20)
+
+| Detail | Value |
+|--------|-------|
+| **First Post** | 2010-06-23 |
+| **Latest Post** | 2024-07-08 |
+| **Total Posts** | 323 |
+| **Downloads v1.80** | 3,670+ |
+| **Purpose** | Real-time tuning & logging via NVRAM for MEMCAL ECUs |
+| **Supports** | VR/VS/VT/VX SC/VY SC, OSE $12P, OSE $11P |
+
+> **OSEPlugin** enables real-time emulation (upload/download cal while running) and datalogging via TunerPro RT. Requires:
+> - NVRAM installed in ECU (Dallas DS1230/DS1245 or Ostrich 2.0)
+> - Enhanced bin with real-time code (OSE $12P, $11P, or VT-VZ Enhanced)
+> - ALDL interface (ALDU1, Envyous Customs USB, DIY)
+
+**Known Issues (VT-VZ Flash PCMs):**
+> "On VT-VZ ALDL commodores oseplugin struggles to silence the bus and operate normally. It is supposed to work and can work, but its not uncommon on some cars that it wont. [...] There is a hardware fix, you can disconnect the BCM or put a switch on the serial (aldl) data line from the BCM and disconnect it when you log." — antus, 2024-07-08
+
 ### DIY Ostrich/NVRAM on VX-VY Flash PCMs (Experimental)
 
 > **⚠️ WARNING:** This is DIY only — **no commercial product exists**. No warranty. Requires fine soldering skills.
 
+**Related Topics:**
+| Topic | Title | First Post | Latest Post | Posts |
+|-------|-------|------------|-------------|-------|
+| [1806](https://pcmhacking.net/forums/viewtopic.php?t=1806) | Flash PCMs Made Realtime | 2011-10-19 | 2025-08-30 | 17 |
+| [2483](https://pcmhacking.net/forums/viewtopic.php?t=2483) | REALTIME VX-VY n/a PCM | 2012-06-07 | 2024-11-19 | 82 |
+
 Some users have converted VX-VY flash PCMs to use Ostrich or NVRAM by desoldering the flash chip and wiring an adapter:
 
 **VX L67 Getrag (PCMHacking Topic 4671, 2016):**
-> "I had a VX-VY flash pcm converted for me a while ago with the ribbon directly soldered to the pads for the ostrich cable & worked perfectly except **it was a little unstable when going round corners or over bumps** & was told it could be due to the **ribbon length being too long**, but was a success until I let it sit for a year & then next time I tested it I couldn't get it to work again."
+> "I had a VX-VY flash pcm converted for me a while ago with the ribbon directly soldered to the pads for the ostrich cable & worked perfectly except **it was a little unstable when going round corners or over bumps** & was told it could be due to the **ribbon length being too long**"
+
+**The1's PLCC Socket Attempt (Topic 2483, 2024):**
+> "Well made an adapter according to this website wiring of plcc to ostrich. Have tested each pin from ostrich straight through to the adapter but **ostrich will not work**, upload bin, set to bank 8 but pcm wont fire up, **put a eeprom in the socket and pcm fires up straight away**. So im out of ideas atm." (2024-10-13)
+>
+> "Tried with a real short cable no go, i think it must be the signal doesn't like either the pins so close together as it would normally be used for dip." (2024-11-11)
+
+**antus's Conclusion (Topic 2483, 2024-11-19):**
+> "it would be possible to make up a board that plugs in the expansion header and provides a DIP socket, or PCM memcal compatible socket. You might need a couple of jumper wires [...] **A bit of work to develop. Not huge, not small, though. More than just a casual 1 night project.**"
 
 **Key Issues:**
+
 - Flash chip is **hard soldered** — requires desoldering (fine pitch, risk of damage)
-- **Cable length is critical** — short cables required for stability
-- Physical vibration can cause intermittent connection
+- **Cable length is critical** — VL400's original worked at <30cm, The1's 22cm still failed
+- Ostrich is "funny about signal quality" — PLCC socket + adapter adds too much capacitance
+- Even EEPROM in socket works, but Ostrich won't boot — signal integrity issue
 - No commercial adapter/installer exists — purely DIY
 
 **Alternative Approaches:**
+
 - **29F040 DIP32 chip** instead of ribbon cable (quadstar87, Topic 4671)
 - **Socket soldered to pads** for easier chip swapping
+- **PCB adapter** plugging into expansion header (antus recommendation)
 - Keep ribbon/cable as short as physically possible
 
 **Ostrich on VS/VT MEMCAL ECU (Topic 1090):**
