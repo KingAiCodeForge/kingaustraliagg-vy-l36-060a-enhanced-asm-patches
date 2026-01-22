@@ -71,8 +71,11 @@
 ; This provides 4 different methods you can select:
 ; - Method A: Period injection (Chr0m3's verified method)
 ; - Method B: Dwell reduction (GM P59 style, NOT zero)
-; - Method C: Hardware TCTL1 (BennVenn OSE12P)
+; - Method C: Hardware TCTL1 (BennVenn OSE12P - VN-VS platform, needs VY adaptation)
 ; - Method D: Combined (dwell + period + timing)
+;
+; NOTE: OSE 12P = VN-VS custom OS (ECU 1227808, OSID $5D/$12B)
+;       Same HC11 CPU but different memory layout than VY V6 $060A!
 ;
 ; Use calibration byte to select method!
 ;------------------------------------------------------------------------------

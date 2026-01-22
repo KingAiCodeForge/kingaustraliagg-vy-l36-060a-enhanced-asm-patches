@@ -6,7 +6,29 @@
 ; Status: ⚠️ NEEDS VALIDATION - Port from OSE12P, requires bench testing
 ;
 ; ⚠️ IMPORTANT: This method is THEORETICAL for VY V6. It was proven on
-;    VS/VT OSE12P V112 custom OS but needs validation on Enhanced v1.0a
+;    OSE12P custom OS but needs validation on VY V6 Enhanced v1.0a
+;
+;==============================================================================
+; OSE 11P/12P PLATFORM REFERENCE (FOR CLARITY)
+;==============================================================================
+;
+; OSE = "Open Source ECM" - Custom firmware for VN-VS Commodore ECUs
+; DIFFERENT ECU hardware than VX/VY! Uses 1227808 ECU (VN-VS era)
+;
+; OSE 11P V104 Base Calibrations (ECU 1227808):
+;   - BLCC V8 = VN V8 (OSID $5D) - VL Walkinshaw Group A SS
+;   - CAKH V6 = VR V6 Auto (OSID $11C) - Final VR fix calibration
+;
+; OSE 12P V112 Base Calibrations (ECU 1227808 / 16183082):
+;   - APNX V6 = VN V6 (OSID $5D) - Production Run Change, Backfire fix
+;   - BLCD V6 = VR V6 Manual (OSID $12B) - Serial Data Fixes
+;   - BLCF V8 = VR V8 Manual (OSID $12B) - O2 Malfunction Fix
+;
+; ⚠️ OSE uses same MC68HC11 CPU but DIFFERENT hardware layout:
+;   - 808 timer IC for dwell (external, not internal TIO)
+;   - Different EST output routing
+;   - Different memory map for calibration data
+;   - Addresses from OSE12P do NOT directly map to VY V6 $060A!
 ;
 ;==============================================================================
 ; SOURCE & EVIDENCE
@@ -14,14 +36,14 @@
 ;
 ; Primary Source: PCMHacking Topic 7922 - BennVenn's OSE12P spark cut
 ; Forum Quote: "Bit 1 at 0x3FFC = 1 = spark cut enabled"
-; Evidence Level: ⭐⭐⭐⭐⭐ (95% confidence - proven on VS/VT OSE12P)
+; Evidence Level: ⭐⭐⭐ (proven on OSE12P, but OSE12P ≠ VY V6!)
 ;
 ; Method: TCTL1 register bits 5-4 = 10 forces PA5 (EST) LOW
 ; Why this might work: Hardware-level control, no dwell manipulation
 ; Why Chr0m3 didn't reject: He never mentioned this method specifically
 ;
 ; BennVenn's OSE12P Implementation:
-;   - Uses 808 timer IC for dwell control (different from VY)
+;   - Uses 808 timer IC for dwell control (DIFFERENT from VY V6!)
 ;   - Sets TCTL1 to force EST output LOW
 ;   - Proven to produce 300µs minimum dwell (spark cut threshold)
 ;

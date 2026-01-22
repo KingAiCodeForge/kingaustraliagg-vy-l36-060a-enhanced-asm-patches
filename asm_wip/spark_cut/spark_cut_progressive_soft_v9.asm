@@ -28,8 +28,13 @@
 ;   Progressive "soft" limiter that gradually reduces power instead of
 ;   harsh on/off cut. Creates smoother limiter feel, less drivetrain shock.
 ;   Uses proportional spark cut based on RPM above threshold.
-;  need to have expert knowledge of ose 11p 12p or hc11 to implement.
-; vy v6 is different to them but hc11 code is hc11 code only thing stopping is hardcoded unknown limits.
+;
+; OSE 11P/12P Reference:
+;   OSE = "Open Source ECM" for VN-VS Commodore (ECU 1227808, NOT VY!)
+;   OSE 11P: Based on BLCC V8 (OSID $5D VN) / CAKH V6 (OSID $11C VR)
+;   OSE 12P: Based on APNX V6 (OSID $5D VN) / BLCD/BLCF (OSID $12B VR)
+;   VY V6 ($060A) uses different memory map but same HC11 CPU instructions.
+;
 ; Based On: Chr0m3-approved 3X Period Injection (Method A)
 ; Status: 🔬 EXPERIMENTAL - Variation of proven method
 ;

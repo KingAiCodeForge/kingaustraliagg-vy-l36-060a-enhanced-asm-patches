@@ -45,6 +45,9 @@
 ; to reduce drivetrain lurch when trans downshifts at closed throttle.
 ;
 ; The 11P approach from Topic 7922:
+;   NOTE: OSE 11P = VN-VS custom OS (ECU 1227808, NOT VY V6!)
+;         Based on BLCC V8 (OSID $5D), CAKH V6 (OSID $11C VR)
+;         Same HC11 CPU but different memory layout than VY V6 $060A!
 ;   "Spark retard option... reduces spark advance to create less engine
 ;    torque" - we apply same concept to shift events.
 ;

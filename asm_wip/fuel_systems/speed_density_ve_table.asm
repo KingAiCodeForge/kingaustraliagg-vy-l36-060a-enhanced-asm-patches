@@ -4,13 +4,35 @@
 ; Author: Jason King kingaustraliagg  
 ; Date: January 14, 2026
 ; Method: Speed-Density (MAP + RPM + VE Table) Replaces MAF Sensor
-; Source: OSE12P V112 + GM P59/P01 Native Speed-Density
-; Target: Holden VY V6 $060A (OSID 92118883/92118885)
-; Processor: Motorola MC68HC11 (8-bit)
+; Source: OSE12P V112 concept + GM Speed-Density theory
+; Target: Holden VY V6 $060A (OSID 92118883/92118885)  
+; Processor: Motorola MC68HC711E9 (8-bit)
+;
+; ⚠️⚠️⚠️ CRITICAL HARDWARE REQUIREMENT ⚠️⚠️⚠️
+;
+; VY V6 L36 Ecotec has NO MAP SENSOR from factory!
+; The ECU uses MAF-based fueling strategy, NOT Speed-Density.
+;
+; TO USE THIS PATCH YOU MUST:
+;   1. Install aftermarket MAP sensor (GM 3-bar 12223861 recommended)
+;   2. Find spare A/D input pin on ECU (check VY wiring diagrams)
+;   3. Wire MAP sensor signal to spare A/D pin
+;   4. Wire MAP sensor ground + 5V reference
+;   5. Create/update XDF table for voltage→kPa calibration
+;   6. Update MAP_VAR address below to match YOUR wiring!
+;
+; REFERENCE PLATFORMS (different ECU/pinout - for CONCEPT only!):
+;   - OSE 12P V112: VN/VP/VR/VS Commodore (Buick 3800 V6/304 V8)
+;     * OSE = "Open Source ECM" (ECU 1227808, NOT VY V6!)
+;     * Based on APNX V6 (OSID $5D), BLCD/BLCF (OSID $12B VR)
+;     * Uses Delco 808/3082 ECM - HAS MAP sensor on pin C11!
+;     * Different binary layout, different RAM addresses
+;   - GM P59/P01: LS1/LS2 OBD2 ECU (completely different platform)
+;   - These addresses DO NOT apply to VY V6 - FOR CONCEPT ONLY!
 ;
 ; ⭐ PRIORITY: MEDIUM - For forced induction, big cams, ITBs
 ; ⚠️ Success Rate: 70% (proven on GM platforms, needs extensive tuning)
-; 🔬 Status: EXPERIMENTAL - Requires dyno validation + AFR monitoring
+; 🔬 Status: EXPERIMENTAL - Requires hardware + dyno validation
 ;
 ;==============================================================================
 ; THEORY OF OPERATION

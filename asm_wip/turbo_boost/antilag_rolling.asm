@@ -8,15 +8,22 @@
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
 ; Processor: Motorola MC68HC11
 ;
-; Description:
-;   "Rolling" anti-lag that cuts spark on alternating cylinders
-;   - 50% of cylinders fire normally (maintains some power)
-;   - 50% of cylinders cut spark (unburned fuel for anti-lag)
-;   - Smoother than full anti-lag
-;   - Safer than full cut (less thermal shock)
+; ⚠️⚠️⚠️ PLATFORM & HARDWARE NOTES ⚠️⚠️⚠️
 ;
-; Based On: Progressive Soft Limiter (v9) + Anti-lag (v10)
-; Status: 🔬 EXPERIMENTAL - MODERATE RISK
+; VY V6 L36 Ecotec is NATURALLY ASPIRATED from factory.
+; "Anti-lag" is for TURBO builds only!
+;
+; DFI ARCHITECTURE LIMITATION:
+;   VY V6 uses DFI (Direct Fire Ignition) module.
+;   ECU sends SINGLE EST signal → DFI → 3 coilpacks
+;   We CANNOT control individual cylinders from ECU!
+;   "Rolling" cut concept may not be possible on this platform.
+;
+; KNOWN ISSUE: Uses $01A0 for cycle counter (UNVERIFIED RAM)
+;   FIX: Use verified free RAM or $0046 bits
+;
+; ⬜ STATUS: LIKELY IMPOSSIBLE on DFI platform - needs research
+;==============================================================================
 ;
 ; How It Works:
 ;   1. At limiter: Cut spark on every OTHER ignition event
@@ -34,18 +41,18 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP - ⚠️ ISSUES NOTED
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM/25 (8-bit!) - max 255 = 6375 RPM
-PERIOD_3X_RAM       EQU $017B       ; 3X period storage
-CYCLE_COUNTER       EQU $01A0       ; Event counter (0-1)
+RPM_ADDR            EQU $00A2       ; ✅ VERIFIED: RPM/25 (8-bit!)
+PERIOD_3X_RAM       EQU $017B       ; ✅ VERIFIED: 3X period storage
+CYCLE_COUNTER       EQU $01A0       ; ❌ UNVERIFIED RAM - change to $0046 bits?
 
 ; SAFE DEFAULT - 6000 RPM (8-BIT VALUES - FIXED Jan 17 2026)
 ; ⚠️ Changed from 16-bit ($1770) to 8-bit ($F0 = 240 × 25 = 6000 RPM)
-RPM_HIGH            EQU $F0         ; 240 × 25 = 6000 RPM activation
-RPM_LOW             EQU $EF         ; 239 × 25 = 5975 RPM deactivation
+RPM_HIGH            EQU $F0         ; ✅ 240 × 25 = 6000 RPM activation
+RPM_LOW             EQU $EF         ; ✅ 239 × 25 = 5975 RPM deactivation
 
-FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
+FAKE_PERIOD         EQU $3E80       ; ✅ Fake 3X period (spark cut)
 
 ;------------------------------------------------------------------------------
 ; CODE SECTION

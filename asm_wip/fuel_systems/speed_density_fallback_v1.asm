@@ -25,6 +25,9 @@
 ;   - Result: 3-5 tables to tune instead of 50+
 ;
 ; OSE 12P PARALLEL DESIGN (VL400):
+;   NOTE: OSE = "Open Source ECM" for VN-VS Commodore (ECU 1227808)
+;         OSE 12P based on: APNX V6 (OSID $5D), BLCD/BLCF (OSID $12B)
+;         Same HC11 CPU but DIFFERENT memory layout than VY V6 $060A!
 ;   - Single N/A VE table (not 8 MAP-indexed tables)
 ;   - Single Boost VE table (separate from N/A)
 ;   - VE Learn updates ONE table only

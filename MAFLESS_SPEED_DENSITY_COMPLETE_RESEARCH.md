@@ -1,6 +1,8 @@
 # MAFless / Speed-Density Complete Research Database
 
-**Date:** January 13, 2026 (Updated: January 16, 2026)  
+> **📢 PUBLIC DOCUMENT** - This file is published on GitHub for community reference.
+
+**Date:** January 13, 2026 (Updated: January 22, 2026)  
 **Compiled From:** PCM_SCRAPING_TOOLS FULL_ARCHIVE_V2 + OSE Project Files + Alpha-N Feasibility Analysis + MS43X Custom Firmware  
 **Purpose:** Complete MAFless tuning knowledge for Delco platforms
 
@@ -58,11 +60,37 @@
 |-----------|---------|-------|--------|
 | MAF Failure Flag | `$56D4` bit 6 | M32 DTC | ✅ VERIFIED |
 | Default Airflow | `$7F1B` | 3.5 g/s | ✅ VERIFIED |
+| Default Airflow Table | `$7F2A` | 7×5 TPS×RPM | ✅ VERIFIED (0 code refs!) |
 | Max Airflow Table | `$6D1D` | 17 cells | ✅ VERIFIED |
 | MAF Bypass Flag | `$5795` bit 6 | Crank bypass | ✅ VERIFIED |
 | Maximum RPM Formula | 255 × 25 | 6375 RPM | ✅ VERIFIED |
 | CYLAIR Limit (N/A Flash) | - | 750 max | ❌ NOT UNLOCKED |
 | RPM Fuel Cut (N/A Flash) | - | - | ❌ NOT UNLOCKED |
+
+### $56D4 Bit Map (Disassembly-Verified January 22, 2026)
+
+**Method:** Binary search for `XX 56 D4` patterns + udis.py disassembly
+
+| File Offset | CPU Addr | Instruction | Bit Tested | DTC Code |
+|-------------|----------|-------------|------------|----------|
+| 0x15678 | 0x5678 | LDAB $56D4 / BITB #$80 | **Bit 7** | M38? |
+| 0x156A3 | 0x56A3 | LDAB $56D4 / BITB #$40 | **Bit 6** | **M32 MAF** ✅ |
+| 0x156CE | 0x56CE | LDAA $56D4 / BITA #$20 | **Bit 5** | M35? |
+| 0x15713 | 0x5713 | LDAA $56D4 / BITA #$10 | **Bit 4** | M34 MAP Low |
+| 0x15758 | 0x5758 | LDAA $56D4 / BITA #$08 | **Bit 3** | M33 MAP High |
+| 0x15812 | 0x5812 | LDAA $56D4 / BITA #$04 | **Bit 2** | M31? |
+
+**Confirmed:** To force MAF failure mode, set `$56D4` bit 6 (0x40) = 1
+
+### $7F2A Code References (Disassembly-Verified January 22, 2026)
+
+**Result:** **ZERO code references** to $7F2A found in VY V6 Enhanced binary!
+
+This means the "Default Airflow Vs RPM & TPS %" table at 0x7F2A is defined in XDF but **NOT USED BY STOCK CODE!**
+
+**Implication:** To use this table for Alpha-N, you would need to:
+1. Write custom ASM that reads from $7F2A
+2. Or, modify the $7F1B single-value fallback which HAS 19 code references
 
 ---
 
@@ -2260,9 +2288,13 @@ The VY V6 $060A ECU uses:
 
 **The VY V6 $060A ALREADY HAS a built-in TPS×RPM Alpha-N fallback table!**
 
-| Address | Title | Dimensions | Description |
+> **⚠️ UPDATE (January 22, 2026):** Disassembly verification found **ZERO code references** to $7F2A!
+> The table is defined in XDF but may NOT be used by stock code. The $7F1B single value has 19 code refs.
+> **NEEDS FURTHER INVESTIGATION** - Check if F18DFAIR is dead code or accessed via indirect addressing.
+
+| Address | Title | Dimensions | Description | notes | would it be good or bad and why?
 |---------|-------|------------|-------------|
-| `0x7F2A` | **Default Airflow Vs RPM & TPS %** | 7×5 (35 cells) | F18DFAIR - The ACTUAL Alpha-N lookup table! |
+| `0x7F2A` | **Default Airflow Vs RPM & TPS %** | 7×5 (35 cells) | F18DFAIR - Alpha-N lookup (⚠️ 0 CODE REFS!) | would this need patching in?
 | `0x7F4D` | **Default TPS Vs Modified Airflow** | 1×17 | F22DFTPS - TPS-based airflow modifier |
 | `0x7F1D` | **GM/SEC Per IAC Step For DEF. Air** | Scalar | KKIACGPS - IAC contribution to default airflow |
 | `0x7F1E` | **Maximum Air Due To IAC Position** | Scalar | Upper limit for IAC-based airflow |
@@ -2278,6 +2310,8 @@ Where:
 - KKIACGPS  = IAC step contribution (0x7F1D)
 - ISSPMP    = Current IAC stepper motor position
 - KMINGPS   = Minimum Airflow (0x7F1B)
+
+⚠️ NOTE: This formula is from XDF description. Disassembly needed to verify if actually used!
 ```
 
 **THIS IS THE ALPINA METHOD ALREADY BUILT INTO VY V6!**
@@ -3089,38 +3123,34 @@ Bit 5-7: Reserved
 ### Key Calibration Addresses (12P V111)
 
 ```
+⚠️ NOTE: These addresses are from older OSE 12P documentation.
+   V112 XDF uses DIFFERENT addresses - verify against actual XDF!
+   Example: VE Table is at 0x889C, not 0x8000 in V112
+
 VE TABLES:
-0x8000 - VE Table 20-100 kPa (N/A)
-0x8200 - VE Table 100-200 kPa (Boost, 2-bar)
-0x8400 - VE Table 100-300 kPa (Boost, 3-bar)
+0x889C - VE Table 20-100 kPa (N/A) - VERIFIED V112
+0x8A69 - VE Table Boost (2-bar/3-bar) - CHECK XDF
 
 SPARK TABLES:
-0x8600 - Base Spark Advance 20-100 kPa
-0x8800 - Base Spark Advance 100-200 kPa (Boost)
-0x8A00 - Coolant Advance vs Boost MAP and Temp
-0x8B00 - Charge Temp Advance (Atmo)
-0x8C00 - Charge Temp Advance (Boost)
+0x8074 - Map A: EST - 20-100kPa Main Spark Advance - VERIFIED V112
+0x---- - Base Spark Advance 100-200 kPa (Boost) - CHECK XDF
 
 AFR TABLES:
-0x8D00 - Target AFR 20-100 kPa
-0x8E00 - Target AFR 100-200 kPa (Boost)
-0x8F00 - Boost Cold Engine AFR
+0x---- - Target AFR 20-100 kPa - CHECK XDF
+0x---- - Target AFR 100-200 kPa (Boost) - CHECK XDF
 
 BARO COMPENSATION:
-0x9000 - Baro vs VE Multiplier
-0x9100 - % Coolant Contribution for Charge Temp
+0x---- - Baro vs VE Multiplier - CHECK XDF
 
 SENSOR CONFIGS:
-0x9200 - MAP Sensor Type (1/2/3 bar)
-0x9201 - MAP Switch Point (kPa)
-0x9202 - Update Baro During Run (flag)
-0x9203 - Use VE Multiplier vs Altitude Adj (flag)
+0x---- - MAP Sensor Type (1/2/3 bar) - CHECK XDF
+0x---- - MAP Switch Point (kPa) - CHECK XDF
 
 VE LEARN:
-0x9300 - Narrowband VE Learn Enable
-0x9301 - Wideband VE Learn Enable
-0x9302 - Wideband 0V AFR
-0x9304 - Wideband 5V AFR
+0x---- - Narrowband VE Learn Enable - CHECK XDF
+0x---- - Wideband VE Learn Enable - CHECK XDF
+0x---- - Wideband 0V AFR
+0x---- - Wideband 5V AFR
 ```
 
 ---
@@ -3135,7 +3165,7 @@ VE LEARN:
 - topic_1089 - Beginners Guide to OSE 12P
 
 **MAFless Conversions:**
-- topic_2474 - Dual ecu's mafless vt (Jervies' build)
+- topic_2474 - Dual ecu's mafless vt (Jervies' build) (question to answer wtf is dual ecus lol)
 - topic_5358 - VY Mafless tune discussion
 - topic_3892 - VS 3 Mafless tune options
 - topic_4845 - Mafless ls1 (11P development)

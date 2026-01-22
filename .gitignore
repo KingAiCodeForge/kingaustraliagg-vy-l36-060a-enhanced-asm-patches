@@ -6,6 +6,11 @@ priority_analysis/
 68HC11_Reference/JBug11_F1/
 68HC11_Reference/techedge_tools/
 68HC11_Reference/README.md
+68HC11_Reference/udis/
+
+# Local-only working documents
+VERIFIED_ADDRESSES_SUMMARY.md
+chatgpt*.md
 
 # Large disassembly files (too big for GitHub)
 VX-VY_V6_$060A_Enhanced_v1.1a_HC11_disasm.asm
@@ -31,7 +36,16 @@ enhanced_v1_0a_analysis/
 cache/
 
 # Binary files (too large / copyrighted)
+# Ignore BINs globally except in project XDF folder
 *.bin
+*.BIN
+!xdfs_and_adx_and_bins_related_to_project/**/*.bin
+!xdfs_and_adx_and_bins_related_to_project/**/*.BIN
+# But still ignore BIN files in the project folder (override above)
+xdfs_and_adx_and_bins_related_to_project/**/*.bin
+xdfs_and_adx_and_bins_related_to_project/**/*.BIN
+xdfs_and_adx_and_bins_related_to_project/**/*.log
+
 *.rep
 *.zip
 *.pdf
@@ -104,8 +118,17 @@ ms43x-custom-firmware_and_community_patchlists_ms42_ms43/
 
 # Session-specific exports
 11P V104_3/
-OSE_12P V112/
 VX-VY_V6_$060A_Enhanced_v1.1.adx
+
+# XDF/ADX/BIN Project Files Repository
+# Keep structure but ignore large binaries and logs
+xdfs_and_adx_and_bins_related_to_project/**/*.bin
+xdfs_and_adx_and_bins_related_to_project/**/*.BIN
+xdfs_and_adx_and_bins_related_to_project/**/*.log
+# Allow XDF and ADX files to be tracked
+!xdfs_and_adx_and_bins_related_to_project/**/*.xdf
+!xdfs_and_adx_and_bins_related_to_project/**/*.adx
+!xdfs_and_adx_and_bins_related_to_project/**/*.txt
 11P V104_3.zip
 
 # Wiring diagrams (copyrighted content)

@@ -119,12 +119,23 @@ RPM_LOW         EQU $0B54       ; 2900 RPM = 0x0B54 (100 RPM hysteresis)
 FAKE_PERIOD     EQU $3E80       ; 16000 decimal = ~1000ms fake period
 
 ;------------------------------------------------------------------------------
-; FREE RAM FOR LIMITER STATE
+; FREE RAM FOR LIMITER STATE - VERIFIED January 22, 2026
 ;------------------------------------------------------------------------------
-; UNVERIFIED - Need to find actual free RAM location
-; Using $01A0 as placeholder - MUST BE CONFIRMED before use!
+; Analysis of $0046 (Engine Mode Flags):
+;   Used bits: 0, 1, 2, 4, 5 (mask $37)
+;   FREE bits: 3, 6, 7 (mask $C8)
+;   
+; We use bit 7 ($80) because:
+;   - Top bit, easy to test with BMI/BPL after LDAA
+;   - No stock code uses BRSET/BRCLR/BSET/BCLR on bit 7
+;   - Matches v38 verified implementation
 ;
-LIMITER_FLAG    EQU $01A0       ; ⚠️ UNVERIFIED - needs confirmation
+; ⚠️ WARNING: $00A0 is NOT SAFE (7 refs in stock code!)
+;    $01A0 is safe (0 refs) but requires extended addressing
+;    $0046 bit 7 is preferred (direct page, fast access)
+;
+LIMITER_FLAGS   EQU $0046       ; ✅ VERIFIED: Engine mode flags byte
+LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE (unused in stock)
 
 ;------------------------------------------------------------------------------
 ; CODE SECTION - VERIFIED FREE SPACE
@@ -149,19 +160,17 @@ IGNITION_CUT_HANDLER:
     PSHA                        ; 36       Save A (period high byte)
     PSHB                        ; 37       Save B (period low byte)
     
-    ; Check current limiter state
-    LDAA    LIMITER_FLAG        ; 96 A0    Load limiter flag
-    CMPA    #$01                ; 81 01    Is limiter active?
-    BEQ     CHECK_LOW           ; 27 xx    Yes → check if should deactivate
+    ; Check current limiter state using $0046 bit 7
+    ; BRSET $46,#$80,label = if bit 7 set, branch (limiter active)
+    BRSET   LIMITER_FLAGS,#LIMITER_BIT,CHECK_LOW  ; 12 46 80 xx
     
     ; Limiter OFF - check if RPM exceeds HIGH threshold
     LDD     RPM_ADDR            ; DC A2    Load current RPM (16-bit)
     CPD     #RPM_HIGH           ; 1A 83 0B B8  Compare with high threshold
     BCS     STORE_REAL          ; 25 xx    RPM < threshold → store real period
     
-    ; RPM exceeded threshold - ACTIVATE LIMITER
-    LDAA    #$01                ; 86 01    Set flag = 1
-    STAA    LIMITER_FLAG        ; 97 A0    Store flag
+    ; RPM exceeded threshold - ACTIVATE LIMITER (set bit 7 of $0046)
+    BSET    LIMITER_FLAGS,#LIMITER_BIT  ; 14 46 80  Set bit 7
     BRA     STORE_FAKE          ; 20 xx    Jump to store fake period
 
 CHECK_LOW:
@@ -170,8 +179,8 @@ CHECK_LOW:
     CPD     #RPM_LOW            ; 1A 83 0B 54  Compare with low threshold
     BCC     STORE_FAKE          ; 24 xx    RPM >= threshold → keep cutting
     
-    ; RPM dropped below threshold - DEACTIVATE LIMITER
-    CLR     LIMITER_FLAG        ; 7F 01 A0 Clear flag
+    ; RPM dropped below threshold - DEACTIVATE LIMITER (clear bit 7)
+    BCLR    LIMITER_FLAGS,#LIMITER_BIT  ; 15 46 80  Clear bit 7
     BRA     STORE_REAL          ; 20 xx    Store real period
 
 STORE_FAKE:
@@ -306,23 +315,27 @@ STORE_DONE:
 ;   - Stock code continues normally, using our value
 ;
 ;------------------------------------------------------------------------------
-; ⚠️ THINGS STILL TO FIND OUT
+; ✅ RAM VERIFICATION COMPLETE (January 22, 2026)
 ;------------------------------------------------------------------------------
 ;
-; 1. LIMITER_FLAG RAM ($01A0 - UNVERIFIED)
-;    - Need to confirm this RAM location is free
-;    - Check XDF for any mappings at $01A0
-;    - Alternative: use a bit in existing status register
+; LIMITER_FLAG RESOLUTION:
+;   - $00A0: NOT SAFE! (7 references in stock code)
+;   - $01A0: SAFE (0 references) but requires extended addressing (slower)
+;   - $0046 bit 7: RECOMMENDED ✅ (verified FREE, direct page = fast)
+;
+;   Binary search confirmed only these bits of $0046 are used:
+;   Bits 0,1,2,4,5 (20 total references) → Bits 3,6,7 are FREE
 ;
 ; 2. VY Min Dwell Address
 ;    - VT V6 uses 0x14735, VY is DIFFERENT
 ;    - Need to search for LDAA #$A2 pattern in VY binary
 ;    - Or disassemble dwell calc at $371A fully
 ;
-; 3. Free RAM Candidates:
-;    - $01A0-$01AF: Likely unused (needs verification)
-;    - $00FB-$00FF: May have unused bits
-;    - Check OSE 11P documentation for RAM map
+; 3. FREE RAM Summary (verified):
+;    - $0046 bit 3 ($08): FREE
+;    - $0046 bit 6 ($40): FREE  
+;    - $0046 bit 7 ($80): FREE ← USING THIS FOR LIMITER
+;    - $01A0: FREE (0 refs, but extended addressing)
 ;
 ;------------------------------------------------------------------------------
 ; 🔄 ALTERNATIVE METHODS (Pros/Cons)

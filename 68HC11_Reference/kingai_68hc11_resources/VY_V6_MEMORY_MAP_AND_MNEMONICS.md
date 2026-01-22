@@ -1,5 +1,7 @@
 # VY V6 ECU Memory Map & Mnemonic Reference
 
+> **📢 PUBLIC DOCUMENT** - This file is published on GitHub for community reference.
+
 > **Created:** January 20, 2026  
 > **Purpose:** Document bank switching, memory layout, and non-standard mnemonics  
 > **Target:** Holden Commodore VY V6 Ecotec (Delco P04, OSID: 92118883)
@@ -72,7 +74,7 @@ The DHC11 disassembler from TechEdge uses different mnemonics from Motorola's of
 ### 128KB Binary Layout (OSID: 92118883)
 
 The VY V6 Ecotec ECU uses a **128KB (0x20000 byte)** EEPROM/Flash organized as follows:
-
+where is the trans tables located is it in a higher or lower in the calibration area
 ```
 FILE OFFSET         SIZE      PURPOSE                    CPU ADDRESS
 ─────────────────────────────────────────────────────────────────────
@@ -157,12 +159,36 @@ LDAA    #$01
 STAA    $7FFF
 ```
 
-### VY V6 Specifics (Needs Verification)
+### ✅ VY V6 Bank Switch - VERIFIED (Jan 22, 2026)
+this is how it works on vs? 
+**Source:** PCMhacking Archive `downloads_md\BMW\topic_181\bank switch.md`
 
-Based on reset vector analysis:
-- Reset vector at 0xFFFE contains **$C011**
-- Code at $C011 begins execution
-- Likely uses Port G or similar for bank control
+```assembly
+; -- Bank Switch To Bank 1 (Code/Upper 64KB) --
+tpa             ; Save The Conditions Register On The Stack
+psha            ; 
+sei             ; Turn Off Interrupts
+ldab  $1002     ; Port G
+orab  #$40      ; Set Bit 6 [b01000000]
+stab  $1002     ; Save It
+pula            ; 
+tap             ; Restore The Condition Registers
+
+; -- Bank Switch To Bank 0 (Calibration/Lower 64KB) --
+tpa             ; Save The Conditions Register On The Stack  
+psha            ;
+sei             ; Turn Off Interrupts
+ldab  $1002     ; Port G
+andb  #$BF      ; Clear Bit 6 [b10111111]
+stab  $1002     ; Save It
+pula            ;
+tap             ; Restore The Condition Registers
+```
+
+**Summary:**
+| Register | Address | Bit | Bank 0 (Cal) | Bank 1 (Code) |
+|----------|---------|-----|--------------|---------------|
+| **PORTG** | **$1002** | **Bit 6** | CLEAR (ANDB #$BF) | SET (ORAB #$40) |
 
 ---
 
@@ -344,3 +370,4 @@ def is_rom(cpu_addr):
 | Date | Changes |
 |------|---------|
 | 2026-01-20 | Initial document - DHC11 mnemonics, memory map, bank switching |
+| 2026-01-21 | **VERIFIED** vector table against v1.1a binary (TIC3=$200F, RST=$C011) | we are meant to be working on 92118883 and enhanced 1.0

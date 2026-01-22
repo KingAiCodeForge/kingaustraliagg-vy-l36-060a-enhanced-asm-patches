@@ -12,8 +12,13 @@
 ;   Attempts to implement hardware-level EST disable similar to BennVenn's
 ;   OSE12P discovery where bit 1 at $3FFC controls EST output.
 ;
+;   OSE 12P PLATFORM NOTE:
+;   OSE = "Open Source ECM" for VN-VS Commodore (ECU 1227808, NOT VY!)
+;   OSE 12P based on: APNX V6 (OSID $5D VN), BLCD/BLCF (OSID $12B VR)
+;   Same HC11 CPU but DIFFERENT memory layout than VY V6 $060A!
+;
 ;   On 808 (OSE12P): Setting bit 1 at $3FFC disables EST pulse
-;   On HC11 (VY V6): Need to find equivalent register/bit
+;   On HC11 (VY V6): Need to find equivalent register/bit - $3FFC doesn't exist!
 ;
 ; Based On: BennVenn's OSE12P research (July 2022)
 ; Status: 🔬 EXPERIMENTAL - Hardware registers unknown

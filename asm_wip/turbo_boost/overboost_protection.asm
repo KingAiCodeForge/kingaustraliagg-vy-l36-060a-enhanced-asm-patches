@@ -3,13 +3,44 @@
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
 ; Date: January 15, 2026
-; Method: Fuel cut on overboost detection (MS43X port)
-; Source: MS43X overboost_protection.asm
+; Method: Fuel cut on overboost detection (MS43X concept port)
+; Source: MS43X overboost_protection.asm (REFERENCE ONLY - different CPU!)
 ; Target: Holden VY V6 $060A (OSID 92118883/92118885) with turbo
-; Processor: Motorola MC68HC11 (8-bit)
+; Processor: Motorola MC68HC711E9 (8-bit)
 ;
-; ⭐ PRIORITY: HIGH for turbo builds - SAFETY CRITICAL
-; ⚠️ WARNING: Requires 3-bar MAP sensor for accurate boost reading
+; ⚠️ MS43X = BMW Siemens C166 ECU - completely different CPU!
+;    Code here is CONCEPT PORT only - addresses/opcodes differ!
+;
+; ⚠️⚠️⚠️ CRITICAL HARDWARE WARNING ⚠️⚠️⚠️
+; VT/VX/VY V6 Ecotec has NO MAP SENSOR from factory!
+; This ECU uses MAF-based fueling strategy.
+; 
+; TO USE THIS PATCH:
+;   1. Install aftermarket 3-bar MAP sensor (GM 12223861 or equiv)
+;   2. Wire to spare A/D input on ECU
+;   3. Update MAP_VAR address below to your wired input
+;   4. Calibrate voltage→kPa scaling in XDF
+;
+; ⬜ STATUS: NOT USABLE without MAP sensor hardware install!
+;==============================================================================
+;
+;==============================================================================
+; CROSS-PLATFORM REFERENCE (MS43X vs VY V6)
+;==============================================================================
+;
+; SOURCE: BMW Siemens MS43X (Siemens C166 CPU)
+;   - XDF: Siemens_MS43_MS43X001_512K.xdf
+;   - Location: xdfs_and_adx_and_bins_related_to_project\ms43x-custom-firmware\
+;   - HAS built-in MAP sensor + overboost tables
+;   - Category "Overboost Protection" with E85/RON98 thresholds
+;   - DIFFERENT CPU (C166 16-bit) - code NOT directly portable!
+;   - DIFFERENT pinout - addresses DO NOT match VY V6!
+;
+; TARGET: VY V6 $060A (MC68HC11 8-bit CPU)
+;   - XDF: VX VY_V6_$060A_Enhanced_v2.09a.xdf
+;   - NO MAP sensor from factory (MAF-based)
+;   - NO overboost tables exist - must create from scratch
+;   - MUST verify RAM addresses for VY V6 specifically
 ;
 ;==============================================================================
 ; THEORY OF OPERATION (Ported from MS43X C166)
@@ -25,17 +56,39 @@
 ; MS43X adds E85/RON98 blend for thresholds - simplified here
 ;
 ;==============================================================================
-; HARDWARE REQUIREMENTS
+; HARDWARE REQUIREMENTS - VERIFIED FROM VY_V6_PINOUT_MASTER_MAPPING.csv
 ;==============================================================================
 ;
-; Required: 3-bar MAP sensor wired to MAP input (C11)
-; The stock 1-bar MAP saturates at 100 kPa (atmospheric)
-; 3-bar MAP range: 0-300 kPa (0-200 kPa boost)
+; ⚠️ VY V6 L36 Ecotec has NO MAP sensor from factory!
+; ⚠️ OSE 11P/12P (VN-VS Buick 3800) HAS MAP at C11 - DIFFERENT PLATFORM!
+; ⚠️ MS43X (BMW M54) HAS MAP - completely different ECU/CPU!
+;
+; Required: 3-bar MAP sensor wired to Enhanced Mod EEI input
 ;
 ; MAP Sensor Options:
 ;   - GM 12575832 (3-bar, 0-5V)
 ;   - GM 12223861 (3-bar, -14.7 to 29.4 psi)
 ;   - Omni Power 3-bar (aftermarket)
+;
+; MAP SENSOR WIRING (from VY_V6_PINOUT_MASTER_MAPPING.csv):
+;
+;   RECOMMENDED - Enhanced Mod EEI Input A5:
+;     ECU Pin: C16
+;     HC11 Pin: PE4/AN4 (QFP-64 pin 59)
+;     Wire: PURPLE/WHITE (existing) or user-supplied
+;     Signal: 0-5V analog → 0-255 ADC count
+;     Requires: Enhanced Mod v1.0a bin + case drilling
+;
+;   ALTERNATIVE - Enhanced Mod EEI Input B10:
+;     ECU Pin: C17
+;     HC11 Pin: PE5/AN5 (QFP-64 pin 60)
+;     Note: Can use both A5 + B10 for wideband + MAP
+;
+; ADC READ PROCEDURE:
+;   LDAA #$04          ; Select AN4 (PE4) single channel mode
+;   STAA ADCTL         ; Start conversion
+;   BRCLR ADCTL,$80,*  ; Wait for CCF (conversion complete flag)
+;   LDAA ADR1          ; Read result (0-255)
 ;
 ;==============================================================================
 ; RAM VARIABLES
@@ -56,10 +109,13 @@ CAL_OB_HYSTERESIS   EQU     $7E91   ; Hysteresis (kPa) - e.g., 20 kPa
 CAL_OB_ENABLE       EQU     $7E92   ; Enable flag (1 = on, 0 = off)
 
 ;==============================================================================
-; EXISTING ECU ADDRESSES
+; EXISTING ECU ADDRESSES - *** REQUIRES HARDWARE INSTALL ***
 ;==============================================================================
 
-MAP_VAR             EQU     $00D8   ; Current MAP (kPa) - verify in XDF
+; ⚠️ MAP_VAR: VY V6 has NO MAP sensor! This address is placeholder.
+;    You MUST install 3-bar MAP sensor and wire to spare A/D pin.
+;    Then update this address to match your wiring.
+MAP_VAR             EQU     $00D8   ; PLACEHOLDER - WIRE YOUR MAP SENSOR!
 FUEL_CUT_FLAG       EQU     $00F8   ; Fuel cut request flag - verify address
                                     ; Set to 1 = fuel cut active
 

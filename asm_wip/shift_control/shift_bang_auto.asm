@@ -333,6 +333,11 @@ SB_RETARD_ZERO:
 ; VL400 $11P BETA INFO (from PCMHacking Topic 5692)
 ;==============================================================================
 ;
+; OSE 11P PLATFORM NOTE:
+;   OSE = "Open Source ECM" for VN-VS Commodore (ECU 1227808, NOT VY!)
+;   OSE 11P V104 based on: BLCC V8 (OSID $5D VN), CAKH V6 (OSID $11C VR)
+;   Same HC11 CPU but DIFFERENT memory layout than VY V6 $060A!
+;
 ; VL400 confirmed:
 ; - "$11P V104 has NO spark retard on shift"
 ; - "But it can in the beta version I run, light blue is advance..."

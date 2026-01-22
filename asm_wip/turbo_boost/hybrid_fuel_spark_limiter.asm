@@ -8,17 +8,20 @@
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
 ; Processor: Motorola MC68HC11
 ;
-; Description:
-;   Combines fuel cut AND spark cut for absolute zero combustion
-;   Redundant safety - if one method fails, other still active
-;   Cleaner than fuel-only cut (no unburned fuel/backfires)
-;   Cleaner than spark-only cut (no weak spark risk)
+; ⚠️⚠️⚠️ KNOWN ISSUES - NEEDS FIXING ⚠️⚠️⚠️
 ;
-; Based On: 
-;   - Chr0m3-approved 3X Period Injection (spark cut)
-;   - Factory fuel cut system (proven OEM method)
+; ISSUE 1: Uses $01A0 for state flag (UNVERIFIED RAM)
+;   FIX: Change to $0046 bit 7 (verified free in v38)
 ;
-; Status: 🔬 EXPERIMENTAL - Combines two proven methods
+; ISSUE 2: 16-bit RPM thresholds ($0BB8 = 3000 raw) but $00A2 is 8-bit!
+;   $00A2 = RPM/25 (8-bit, max 255 = 6375 RPM)
+;   FIX: Use 8-bit: RPM_HIGH EQU $78 (120 × 25 = 3000 RPM)
+;
+; ISSUE 3: INJECTOR_PW_RAM @ $0150 is UNVALIDATED guess!
+;   Need to find actual injector pulse width RAM address in binary. or xdf WIP.
+;
+; ⬜ STATUS: EXPERIMENTAL - Fix above issues before testing
+;==============================================================================
 ;
 ; How It Works:
 ;   1. Monitor RPM against threshold
@@ -46,23 +49,24 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP - ⚠️ ADDRESSES NEED VERIFICATION!
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM address
-PERIOD_3X_RAM       EQU $017B       ; 3X period storage (spark control)
-INJECTOR_PW_RAM     EQU $0150       ; Injector pulse width (need to validate!)
+RPM_ADDR            EQU $00A2       ; ✅ VERIFIED: RPM/25 (8-bit!)
+PERIOD_3X_RAM       EQU $017B       ; ✅ VERIFIED: 3X period storage
+INJECTOR_PW_RAM     EQU $0150       ; ❌ UNVALIDATED - find real address!
 
-; TEST THRESHOLDS
-RPM_HIGH            EQU $0BB8       ; 3000 RPM activation
-RPM_LOW             EQU $0B54       ; 2900 RPM deactivation
+; ❌ WRONG: These are 16-bit raw RPM, but $00A2 is 8-bit RPM/25!
+; TEST THRESHOLDS (WRONG FORMAT)
+RPM_HIGH            EQU $0BB8       ; ❌ WRONG! Should be $78 (120 × 25 = 3000)
+RPM_LOW             EQU $0B54       ; ❌ WRONG! Should be $74 (116 × 25 = 2900)
 
 ; PRODUCTION THRESHOLDS (SAFE DEFAULT - 6000 RPM)
-; RPM_HIGH          EQU $1770       ; 6000 RPM activation (SAFE - recommended)
-; RPM_LOW           EQU $175C       ; 5980 RPM deactivation (20 RPM hysteresis)
+; RPM_HIGH          EQU $1770       ; ❌ WRONG! Should be $F0 (240 × 25 = 6000)
+; RPM_LOW           EQU $175C       ; ❌ WRONG! Should be $EF (239 × 25 = 5975)
 
-FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
+FAKE_PERIOD         EQU $3E80       ; ✅ Fake 3X period (spark cut)
 ZERO_FUEL           EQU $0000       ; Zero pulse width (fuel cut)
-LIMITER_FLAG        EQU $01A0       ; State flag
+LIMITER_FLAG        EQU $01A0       ; ❌ WRONG! Use $0046 bit 7!
 
 ;------------------------------------------------------------------------------
 ; CODE SECTION
@@ -158,7 +162,7 @@ EXIT_HANDLER:
 ;   ❌ Catalyst damage risk (lean + hot = meltdown)
 ;   ❌ Exhaust backfires (oxygen + hot exhaust)
 ;
-; Spark Cut Only (Chr0m3 Method):
+; Spark Cut Only (Chr0m3 conceptual Method still untested from vt 300hp video analysis ported to vy.):
 ;   ✅ No unburned fuel
 ;   ✅ No O2 sensor false readings
 ;   ⚠️  Weak spark possible if timing not exact
@@ -194,7 +198,7 @@ EXIT_HANDLER:
 ; [ ] 3. Bench test spark cut alone
 ; [ ] 4. Add fuel cut component
 ; [ ] 5. Bench test hybrid cut
-; [ ] 6. Monitor ALDL for DTC codes
+; [ ] 6. Monitor ALDL for DTC codes (still figuring out how to add to adx properly innovate and other things to each adx file.)
 ; [ ] 7. Oscilloscope validation (EST + injector signals)
 ; [ ] 8. In-vehicle testing
 ; [ ] 9. Log data and verify zero combustion

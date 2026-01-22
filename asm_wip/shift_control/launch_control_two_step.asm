@@ -8,15 +8,20 @@
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
 ; Processor: Motorola MC68HC11
 ;
-; Description:
-;   Two-step launch control for drag racing / burnouts
-;   - Normal driving: Rev limiter at 6300 RPM (main limiter)
-;   - Clutch pressed: Rev limiter at 3500 RPM (launch limiter)
-;   - Allows building boost/RPM with clutch in
-;   - Release clutch = instant power at optimum launch RPM
+; ⚠️⚠️⚠️ KNOWN ISSUES - NEEDS FIXING ⚠️⚠️⚠️
 ;
-; Based On: Chr0m3-approved 3X Period Injection (Method A)
-; Status: 🔬 EXPERIMENTAL - Builds on proven method
+; ISSUE 1: Uses $01A0 for state flag (UNVERIFIED RAM)
+;   FIX: Use $0046 bit 7 like verified v38 does
+;
+; ISSUE 2: 16-bit RPM values but $00A2 is 8-bit!
+;   $00A2 = RPM/25 (8-bit, max 255 = 6375 RPM)
+;   FIX: Convert to 8-bit: LDAA $00A2; CMPA #$8C (3500/25=140)
+;
+; ISSUE 3: ORG $14468 may not be free code space
+;   Need to verify this is executable ROM, not calibration data
+;
+; ⬜ STATUS: EXPERIMENTAL - Needs above fixes before testing
+;==============================================================================
 ;
 ; How It Works:
 ;   1. Monitor clutch switch input (needs hardware connection)

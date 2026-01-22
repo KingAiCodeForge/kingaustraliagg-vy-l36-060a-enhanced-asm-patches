@@ -2,11 +2,17 @@
 ; VY V6 E85 Dual-Map Toggle Patch (v24)
 ; ============================================================================
 ; Purpose: Manual E85/Petrol fuel map toggle via button input
-; Inspired by: MS43X flex_fuel_sensor_diagnostics.asm + OSE 12P multi-fuel maps, needs the opcode and the address check carefully.
+; Inspired by: BMW MS43X flex_fuel + OSE 12P multi-fuel maps
 ; Author: Adapted from BMW MS43X and OSE 12P concepts
 ; Date: 2026-01-15
 ; Status: UNTESTED - Proof of concept
 ; ============================================================================
+;
+; OSE 12P PLATFORM NOTE:
+;   OSE = "Open Source ECM" for VN-VS Commodore (ECU 1227808, NOT VY!)
+;   OSE 12P V112 based on: APNX V6 (OSID $5D VN), BLCD/BLCF (OSID $12B VR)
+;   Same HC11 CPU but DIFFERENT memory layout than VY V6 $060A!
+;   Addresses from OSE12P must be re-mapped for VY V6 Enhanced.
 ;
 ; CONCEPT:
 ; - Uses power button or unused pin as E85/Petrol toggle

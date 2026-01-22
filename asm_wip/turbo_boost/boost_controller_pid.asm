@@ -3,13 +3,33 @@
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
 ; Date: January 15, 2026
-; Method: PWM wastegate solenoid with PID control (MS43X port)
-; Source: MS43X boost_controller.asm + get_pressure_request.asm
+; Method: PWM wastegate solenoid with PID control (MS43X concept port)
+; Source: MS43X boost_controller.asm + get_pressure_request.asm (REFERENCE ONLY)
 ; Target: Holden VY V6 $060A (OSID 92118883/92118885) with turbo
-; Processor: Motorola MC68HC11 (8-bit)
+; Processor: Motorola MC68HC711E9 (8-bit)
 ;
-; ⭐ PRIORITY: HIGH for turbo builds
-; ⚠️ WARNING: TURBO APPLICATIONS ONLY - Requires boost solenoid + 3-bar MAP
+; ⚠️ MS43X = BMW Siemens C166 ECU - completely different CPU!
+;    Code here is CONCEPT PORT only - addresses/opcodes differ!
+;
+; ⚠️⚠️⚠️ CRITICAL ISSUES - NOT USABLE AS-IS ⚠️⚠️⚠️
+;
+; ISSUE 1: NO MAP SENSOR ON VY V6!
+;   VY V6 uses MAF-based fueling. There is NO manifold pressure sensor.
+;   TO FIX: Install aftermarket 3-bar MAP sensor (GM 12223861 or equiv)
+;           Wire to spare A/D input, then update addresses below.
+;
+; ISSUE 2: RAM ADDRESSES CONFLICT WITH STOCK ECU!
+;   $00A2 = RPM/25 (8-bit engine speed) - CANNOT USE FOR BOOST TARGET!
+;   $00A3 = Engine state flags - CANNOT USE FOR ACTUAL BOOST!
+;   All addresses $00A0-$00AC need remapping to unused RAM.
+;
+; ISSUE 3: REQUIRES PWM OUTPUT HARDWARE
+;   Need wastegate solenoid driver circuit + available ECU output pin.
+;
+; ⬜ STATUS: TEMPLATE ONLY - Requires hardware + RAM remapping!
+;
+; ⭐ PRIORITY: HIGH for turbo builds (once hardware installed)
+;==============================================================================
 ;
 ;==============================================================================
 ; THEORY OF OPERATION (Ported from MS43X C166)
@@ -34,40 +54,69 @@
 ;   - Slower execution than C166 (adapt gains accordingly)
 ;
 ;==============================================================================
-; HARDWARE REQUIREMENTS
+; HARDWARE REQUIREMENTS - DERIVED FROM VY_V6_PINOUT_MASTER_MAPPING.csv
 ;==============================================================================
+;
+; ⚠️ VY V6 L36 Ecotec has NO MAP sensor from factory!
+; ⚠️ OSE 11P/12P examples are for VN-VS Buick 3800 (HAS MAP at C11)
+; ⚠️ MS43X examples are for BMW M54 (completely different ECU!)
 ;
 ; Required Hardware:
 ;   1. MAC wastegate solenoid (3-port) or similar
-;   2. 3-bar MAP sensor (GM 12575832 or similar)
+;   2. 3-bar MAP sensor (GM 12575832/12223861 or similar)
 ;   3. Flying lead from ECU to solenoid driver (10A relay or MOSFET)
 ;
-; Suggested ECU Output Pin:
-;   - Use EEI Enhanced Mod unused output
-;   - Or repurpose EGR output (VY V6 has no EGR)
-;   - Port A bit 6 (PA6) if available
+; MAP SENSOR WIRING OPTIONS (from VY_V6_PINOUT_MASTER_MAPPING.csv):
 ;
-; MAP Sensor Wiring:
-;   - Use existing MAP input (C11) - replace 1-bar with 3-bar
-;   - Or add 3-bar to spare analog input (EEI pin if available)
+; ⚠️ PINOUT CSV MAY HAVE ERRORS - VERIFY BEFORE WIRING!
+; ⚠️ Cross-reference with wiring diagrams + physical ECU inspection!
+;
+;   OPTION A - Enhanced Mod EEI Input (RECOMMENDED):
+;     Pin: C16 (Enhanced Mod claims PE4/AN4 = EEI A5) - VERIFY THIS!
+;     Wire: PURPLE/WHITE (claimed - verify with multimeter!)
+;     Signal: 0-5V analog → 0-255 ADC count
+;     Formula: kPa = (ADC_count × 5V / 255) × MAP_scale_factor
+;     Note: Requires Enhanced Mod v1.0a bin + case drilling to HC11 pin 59
+;     ⚠️ HC11 QFP-64 pin mapping NOT fully verified - check datasheet!
+;
+;   OPTION B - Enhanced Mod Secondary Input:
+;     Pin: C17 (Enhanced Mod claims PE5/AN5 = EEI B10) - VERIFY THIS!
+;     Wire: User-supplied (wire from ECU case to HC11 pin 60)
+;     Note: Can use A5 for wideband AND B10 for MAP (or vice versa)
+;
+;   OPTION C - Repurpose unused analog:
+;     PE0/AN0, PE1/AN1, PE2/AN2, PE3/AN3 show ZERO explicit selections
+;     in binary analysis - may be available but UNCONFIRMED
+;
+; PWM OUTPUT OPTIONS:
+;   - PA4/OC4 = Low speed fan relay (Pin 42) - could repurpose
+;   - PA6/OC2 = High speed fan relay (Pin 33) - could repurpose
+;   - PA3/OC5 = Possibly unused (needs verification)
 ;
 ;==============================================================================
-; RAM VARIABLES (Allocate in unused RAM)
+; RAM VARIABLES - ⚠️ CONFLICTS WITH STOCK ECU - NEED REMAPPING!
 ;==============================================================================
 
-; RAM addresses (find unused space in $0080-$00FF range) need verify this is wrong.
-RAM_BC_ENABLE       EQU     $00A0   ; Boost controller enable flag (1 = active)
-RAM_BC_MODE         EQU     $00A1   ; 0 = off, 1 = open-loop, 2 = closed-loop
-RAM_BC_TARGET       EQU     $00A2   ; Target boost pressure (kPa, 0-255)
-RAM_BC_ACTUAL       EQU     $00A3   ; Actual boost from MAP (kPa, 0-255)
-RAM_BC_ERROR        EQU     $00A4   ; Error = target - actual (signed)
-RAM_BC_ERROR_SUM    EQU     $00A5   ; Integral sum (16-bit: $A5:$A6)
-RAM_BC_ERROR_PREV   EQU     $00A7   ; Previous error for D term
-RAM_BC_P_TERM       EQU     $00A8   ; Proportional term output
-RAM_BC_I_TERM       EQU     $00A9   ; Integral term output
-RAM_BC_D_TERM       EQU     $00AA   ; Derivative term output
-RAM_BC_PWM_OUT      EQU     $00AB   ; Final PWM duty cycle (0-255 = 0-100%)
-RAM_BC_PILOT        EQU     $00AC   ; Pilot (feedforward) PWM from table
+; ❌ WRONG: These addresses overlap stock ECU RAM!
+; $00A2 = RPM/25 (verified), $00A3 = Engine State, etc.
+; TODO: Find UNUSED RAM in VY V6 binary for boost controller variables
+;
+; Possible unused RAM regions to investigate:
+;   - $00B0-$00BF (check for stock usage)
+;   - $0180-$01FF (extended RAM, less used)
+;
+RAM_BC_ENABLE       EQU     $00A0   ; ❌ CONFLICT - find unused addr!
+RAM_BC_MODE         EQU     $00A1   ; ❌ CONFLICT - find unused addr!
+RAM_BC_TARGET       EQU     $00A2   ; ❌ CONFLICT with RPM! MUST CHANGE!
+RAM_BC_ACTUAL       EQU     $00A3   ; ❌ CONFLICT with Engine State!
+RAM_BC_ERROR        EQU     $00A4   ; ❌ CONFLICT - find unused addr!
+RAM_BC_ERROR_SUM    EQU     $00A5   ; ❌ CONFLICT - find unused addr!
+RAM_BC_ERROR_PREV   EQU     $00A7   ; ❌ CONFLICT - find unused addr!
+RAM_BC_P_TERM       EQU     $00A8   ; ❌ CONFLICT - find unused addr!
+RAM_BC_I_TERM       EQU     $00A9   ; ❌ CONFLICT - find unused addr!
+RAM_BC_D_TERM       EQU     $00AA   ; ❌ CONFLICT - find unused addr!
+RAM_BC_PWM_OUT      EQU     $00AB   ; ❌ CONFLICT - find unused addr!
+RAM_BC_PILOT        EQU     $00AC   ; ❌ CONFLICT - find unused addr!
 
 ;==============================================================================
 ; CALIBRATION CONSTANTS (Define in XDF-accessible area)

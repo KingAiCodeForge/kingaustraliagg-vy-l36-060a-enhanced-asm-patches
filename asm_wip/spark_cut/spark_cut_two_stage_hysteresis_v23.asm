@@ -2,14 +2,14 @@
 ; VY V6 IGNITION CUT v23 - TWO-STAGE HYSTERESIS LIMITER
 ;==============================================================================
 ;
-; ⚠️ EXPERIMENTAL - Ported from VL V8 Walkinshaw binary analysis
+; ⚠️ EXPERIMENTAL - Ported from VL V8 Walkinshaw binary/xdf $5d analysis
 ; ⚠️ Uses TCTL1 register - Chr0m3 advised against this approach
 ;
 ; This is research into how the VL V8 implemented its smooth limiter.
 ; The concept (two-stage with hysteresis) is valid, but implementation
 ; method differs from what works on VY V6.
 ;
-; For production code, use v38 (simple hysteresis, proven method).
+; For production code, use v38 (simple hysteresis, for more in theory proven conceptual method).
 ;
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
@@ -19,9 +19,9 @@
 ; Target: Holden VY V6 $060A (OSID 92118883/92118885)
 ; Processor: Motorola MC68HC11 (8-bit)
 ;
-; ⭐ PRIORITY: HIGH - Prevents "limiter bounce", smooth sound
+; ⭐ PRIORITY: HIGH - Prevents "limiter bounce" mang sound, smooth sound
 ; ✅ Chr0m3 Status: Not rejected (improved user experience)
-; ✅ Success Rate: 90% (proven on VL V8, needs VY port validation)
+; ✅ Success Rate: 90% (proven on oem VL V8, needs VY port validation)
 ;
 ;==============================================================================
 ; THEORY OF OPERATION
@@ -64,7 +64,7 @@
 ;
 ; Address Translation (VL V8 → VY V6):
 ;
-; | Component | VL V8 $5D | VY $060A | Notes |
+; | Component | VL V8 $5D | VY $060A | Notes | names will differ in our vy xdf 
 ; |-----------|-----------|----------|-------|
 ; | KFCORPMH (High) | 0x27E | $77FC | New calibration |
 ; | KFCORPML (Low) | 0x27C | $77FD | New calibration |
@@ -390,6 +390,9 @@ TWO_STAGE_CAL_DATA:
 ;    - Two-stage state machine pattern
 ;
 ; 3. v16 TCTL1 Method (BennVenn OSE12P port)
+;    - OSE 12P = VN-VS custom OS (ECU 1227808), NOT VY V6!
+;    - OSE 12P based on: APNX V6 (OSID $5D), BLCD/BLCF (OSID $12B)
+;    - Same HC11 CPU, but different memory layout than VY V6 $060A
 ;    - Used for actual spark cut mechanism
 ;    - Combined with two-stage state machine
 ;

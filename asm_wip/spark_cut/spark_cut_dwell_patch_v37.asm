@@ -69,24 +69,35 @@
 ; is where to find it in the .bin file. They differ due to address mapping.
 ;
 ;------------------------------------------------------------------------------
-; VY V6 ADDRESSES - ✅ VERIFIED JAN 17, 2026
+; VY V6 ADDRESSES - ✅ VERIFIED JAN 22, 2026 (BINARY CONFIRMED!)
 ;------------------------------------------------------------------------------
 ;
 ; VY V6 ($060A) has different calibration layout than VT V6 ($A5).
 ; 
-; ✅ CONFIRMED VY ADDRESSES (Binary analysis Jan 17, 2026):
+; ✅ ADDRESSES VERIFIED BY READING VX-VY_V6_$060A_Enhanced_v1.0a.bin!
+;    Bytes at 0x171A9: CC 00 A2 = LDD #$00A2 ✅
+;    Bytes at 0x19812: 86 24 = LDAA #$24 ✅
+;
+; VY V6 DWELL PATCH LOCATIONS:
 ;
 ; FILE OFFSET     | Instruction        | Stock | Patched | Description
 ; ----------------|--------------------| ------|---------|-------------
 ; 0x171AA-0x171AB | LDD #$00A2         | 0x00A2| 0x009A  | Min Dwell (16-bit)
 ; 0x19813         | LDAA #$24          | 0x24  | 0x1C    | Min Burn (8-bit)
 ;
+; TO APPLY PATCHES (hex editor):
+;   1. Open VX-VY_V6_$060A_Enhanced_v1.0a.bin
+;   2. Go to offset 0x171AA, change A2 → 9A (Min Dwell: 162→154)
+;   3. Go to offset 0x19813, change 24 → 1C (Min Burn: 36→28)
+;   4. Save and flash
+;   5. Result: Stable spark control to ~7200 RPM
+;
 ; NOTE: These are IMMEDIATE VALUES in the instruction stream, not table data!
 ;   - 0x171A9: CC 00 A2 = LDD #$00A2 (load D with 162)
 ;   - 0x19812: 86 24    = LDAA #$24 (load A with 36)
-; could be wrong maybe above. 
-; Known VY calibration addresses:
-;   0x6776 = Delta CYLAIR Max Dwell (value 0x20 = 32) - from XDF
+;
+; Known VY calibration addresses (XDF confirmed):
+;   0x6776 = Delta CYLAIR Max Dwell (value 0x20 = 32) - from XDF v2.09a
 ;
 ;------------------------------------------------------------------------------
 

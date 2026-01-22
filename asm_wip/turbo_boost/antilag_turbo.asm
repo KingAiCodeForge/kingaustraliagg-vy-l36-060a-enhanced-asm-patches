@@ -8,6 +8,22 @@
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
 ; Processor: Motorola MC68HC11
 ;
+; ⚠️⚠️⚠️ HARDWARE & PLATFORM NOTES ⚠️⚠️⚠️
+;
+; VY V6 L36 Ecotec is NATURALLY ASPIRATED from factory.
+; This patch assumes AFTERMARKET TURBO KIT is installed!
+;
+; FOR TURBO BUILDS YOU MUST:
+;   1. Install aftermarket 3-bar MAP sensor (GM 12223861 or equiv)
+;   2. Wire to spare A/D input on ECU (find unused pin)
+;   3. Calibrate voltage→kPa scaling in TunerPro XDF
+;   4. Add boost cut protection (see overboost_protection.asm)
+;
+; THIS PATCH CONCEPT from MS43X/OSE tuning communities.
+; MS43X = BMW Siemens ECU (different CPU, different pinout!)
+; OSE = Holden commodore tuning community
+; Addresses/pinouts MUST be verified for YOUR specific wiring!
+;
 ; ⚠️ EXTREME WARNING: FOR TURBO APPLICATIONS ONLY!
 ; ⚠️ HIGH RISK: Exhaust and turbo damage possible
 ; ⚠️ ILLEGAL IN MANY JURISDICTIONS: Check local laws
@@ -46,22 +62,22 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP - ⚠️ SOME ADDRESSES NEED VERIFICATION!
 ;------------------------------------------------------------------------------
 ; ⚠️ UPDATED Jan 17 2026: Changed to 8-bit RPM since 6000 RPM < 6375 limit
 ;    For turbo builds needing >6375 RPM, need dwell patches too!
 ;
-RPM_ADDR            EQU $00A2       ; RPM/25 (8-bit!) - max 255 = 6375 RPM
-PERIOD_3X_RAM       EQU $017B       ; 3X period storage (spark control) - VERIFIED
-INJECTOR_PW_RAM     EQU $0150       ; ⚠️ UNVALIDATED - Injector pulse width guess
-FUEL_ENRICHMENT     EQU $0160       ; ⚠️ UNVALIDATED - Fuel enrichment multiplier guess
+RPM_ADDR            EQU $00A2       ; ✅ VERIFIED: RPM/25 (8-bit!) - max 255 = 6375 RPM
+PERIOD_3X_RAM       EQU $017B       ; ✅ VERIFIED: 3X period storage (spark control)
+INJECTOR_PW_RAM     EQU $0150       ; ❌ UNVALIDATED - Need to find real injector PW addr
+FUEL_ENRICHMENT     EQU $0160       ; ❌ UNVALIDATED - Need to find real enrichment addr
 
 ; SAFE DEFAULT - 6000 RPM (8-BIT VALUES - FIXED Jan 17 2026)
-RPM_HIGH            EQU $F0         ; 240 × 25 = 6000 RPM activation
-RPM_LOW             EQU $EF         ; 239 × 25 = 5975 RPM deactivation
+RPM_HIGH            EQU $F0         ; ✅ 240 × 25 = 6000 RPM activation
+RPM_LOW             EQU $EF         ; ✅ 239 × 25 = 5975 RPM deactivation
 
-FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
-LIMITER_FLAG        EQU $01A0       ; State flag
+FAKE_PERIOD         EQU $3E80       ; ✅ Fake 3X period (spark cut)
+LIMITER_FLAG        EQU $01A0       ; ❌ WRONG! Use $0046 bit 7 like v38!
 NORMAL_FUEL_MULT    EQU $0100       ; Normal fuel multiplier (1.0x = 256 decimal)
 ENRICHED_FUEL_MULT  EQU $0133       ; 1.2x fuel multiplier (307 decimal = 120%)
 

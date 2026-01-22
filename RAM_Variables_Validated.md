@@ -1,7 +1,9 @@
 # VY V6 $060A RAM Variables - Validated Reference
 
+> **📢 PUBLIC DOCUMENT** - This file is published on GitHub for community reference.
+
 **Document Created:** December 6, 2025  
-**Last Updated:** January 18, 2026  
+**Last Updated:** January 22, 2026  
 **Source:** map_ram_variables.py analysis, XDF validation, PCMhacking research, binary search  
 **Status:** Validated for Enhanced v1.0a (92118883)  
 **Processor:** MC68HC11 (8-bit, $060A mask)
@@ -95,6 +97,34 @@ This document covers **Enhanced v1.0a** (v2.09a XDF package). Enhanced v1.1a (v2
 LDAA $A2            ; Load current RPM (direct page)
 CMPA #$EC           ; Compare with 5,900 RPM (236 × 25)
 BHI LIMIT_ACTIVE    ; Branch if RPM > 5,900
+```
+
+### Engine Mode Flags ($0046) - VERIFIED January 22, 2026
+
+| Address | Name | Size | Access | Description |
+|---------|------|------|--------|-------------|
+| **0x0046** | ENGINE_MODE_FLAGS | 1 byte | 20 refs | Mode/state flags byte |
+
+**Bit Usage Analysis (verified by binary opcode search):**
+
+| Bit | Mask | Status | Refs | Opcode Types Found |
+|-----|------|--------|------|-------------------|
+| 0 | `$01` | ❌ USED | 5 | BSET, BCLR, BRCLR |
+| 1 | `$02` | ❌ USED | 6 | BSET, BCLR, BRCLR |
+| 2 | `$04` | ❌ USED | 4 | BRSET, BSET, BCLR |
+| 3 | `$08` | ✅ **FREE** | 0 | None |
+| 4 | `$10` | ❌ USED | 4 | BRSET, BSET, BCLR |
+| 5 | `$20` | ❌ USED | 1 | BRSET (mask 0x25) |
+| 6 | `$40` | ✅ **FREE** | 0 | None |
+| 7 | `$80` | ✅ **FREE** | 0 | **← BEST FOR LIMITER FLAG** |
+
+**Recommended for Spark Cut Limiter: Bit 7 ($80)**
+
+**Example Assembly (using bit 7 for limiter flag):**
+```assembly
+BRSET $46,#$80,LIMIT_ON  ; If bit 7 set, limiter is active
+BSET  $46,#$80           ; Set bit 7 (activate limiter)
+BCLR  $46,#$80           ; Clear bit 7 (deactivate limiter)
 ```
 
 ### 3X Period Storage

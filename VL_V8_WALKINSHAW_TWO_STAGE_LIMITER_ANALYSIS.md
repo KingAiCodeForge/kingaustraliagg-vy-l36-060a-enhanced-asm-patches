@@ -1,22 +1,32 @@
 # VL V8 Walkinshaw Two-Stage Limiter Analysis
 
+> **📢 PUBLIC DOCUMENT** - This file is published on GitHub for community reference.
+
 **⚠️ WARNING: UNTESTED RESEARCH CODE FOR VEHICLE ECU MODIFICATION**
 This analysis is for educational/research purposes only. Implementation may cause ECU damage or vehicle malfunction. Requires bench testing before vehicle installation.
+
+**📅 FACT-CHECK STATUS (January 20, 2026):**
+- ✅ VL Walkinshaw uses 1227808 ECU with AMBX6968 $5D memcal (verified PCMHacking)
+- ✅ Released **March 1988** (Wikipedia), not 1989
+- ✅ Two-stage fuel cut with hysteresis exists in Delco ECUs (confirmed PCMHacking Topic 2544)
+- ✅ 6375 RPM = 0xFF = 255 × 25 scaling (confirmed PCMHacking Astra Z22SE thread)
+- ⚠️ RPM scaling `983040 / value` for VL needs verification - VY uses `value × 25`
+- ⚠️ All addresses and parameters need verification against actual VL $5D binary
 
 ---
 
 ## Why VL Walkinshaw Limiter Concepts Apply to VY V6
 
-| Aspect | VL $5D | VY $060A | Portable? |
-|--------|--------|----------|-----------|
-| **Processor** | MC68HC11 | MC68HC11 | ✅ Same instruction set |
-| **TCTL1 register** | $1020 | $1020 | ✅ Identical hardware |
-| **Output Compare** | OC1-OC5 | OC1-OC5 | ✅ Same timer system |
-| **RAM layout** | Different | Different | ⚠️ Addresses vary |
-| **ISR structure** | JMP trampolines | JMP trampolines | ✅ Same pattern |
-| **Shift light code** | Native | ❌ Not present | 🔧 Can port logic |
-| **Two-stage limiter** | Native | ❌ Simple threshold | 🔧 Can port logic |
-| **Hysteresis** | 94 RPM band | ❌ None | 🔧 Can implement |
+| Aspect | VL $5D | VY $060A | Portable? | notes |
+|--------|--------|----------|-----------|-------|
+| **Processor** | MC68HC11 | MC68HC11 | ✅ Same instruction set | |
+| **TCTL1 register** | $1020 | $1020 | ✅ Identical hardware | |
+| **Output Compare** | OC1-OC5 | OC1-OC5 | ✅ Same timer system | |
+| **RAM layout** | Different | Different | ⚠️ Addresses vary | |
+| **ISR structure** | JMP trampolines | JMP trampolines | ✅ Same pattern | |
+| **Shift light code** | Native | ❌ Not present | 🔧 Can port logic | |
+| **Two-stage limiter** | Native | ❌ Simple threshold | 🔧 Can port logic | |
+| **Hysteresis** | 94 RPM band | ❌ None | 🔧 Can implement | |
 
 ### What Can Be Ported from VL to VY
 
@@ -32,7 +42,7 @@ This analysis is for educational/research purposes only. Implementation may caus
 | RPM @ TBD | RPM @ $00A2 | Different RAM layout |
 | Limiter @ 0x27E | Limiter @ $77DD | Different calibration offsets |
 | Shift light pin @ Port B | **Unused pin** (Chr0m3) | Need to identify VY port |
-| 16KB MEMCAL | 128KB Flash | More free space in VY |
+| 16KB MEMCAL | 128KB Flash | More free space in VY | but the high part of bin uses the lowest. |
 | ISRs @ $B248+ | ISRs @ $2000+ | Different entry points |
 
 **Key Insight:** The **algorithm is portable**, not the addresses. Same HC11 opcodes work on both.
@@ -44,7 +54,7 @@ This analysis is for educational/research purposes only. Implementation may caus
 | OSID Mask | Platform | ECU Hardware | Binary Size | Notes |
 |-----------|----------|--------------|-------------|-------|
 | **$5D** | VL/VN/VP/VR V6/V8 | Delco 808 MEMCAL | 16-32KB | Stock firmware masks |
-| **$51** | VS V6/L67 | Delco 808 MEMCAL | 32KB | Late 808, Supercharged |
+| **$51** | VS V6/L67 | Delco 808 MEMCAL | 128KB | Short memcal (27C010), Supercharged |
 | **$11P** | VN-VS (OSE custom) | Delco "424" PCM | 64KB (128KB stacked) | OSE replacement firmware |
 | **$12P** | VN-VS (OSE custom) | Delco 808 PCM | 32KB | OSE enhanced, soft-touch limiter |
 
@@ -58,9 +68,21 @@ OSE replaces the ENTIRE ECU code with custom algorithms, not just calibration. T
 
 ## Executive Summary
 
-The 1989 VL V8 Walkinshaw (Delco 808, $5D mask) uses a **BMW MS43-style two-stage fuel cutoff limiter with hysteresis** - significantly more sophisticated than the VY V6 (2001-2004 HC11) simple RPM table limiter.
+The **March 1988** VL V8 Walkinshaw (Delco 808, $5D mask) has **two separate RPM fuel cutoff parameters** (KFCORPMH @ 0x27E and KFCORPML @ 0x27C) similar to BMW MS43's two-stage limiter implementation. This is significantly more sophisticated than the VY V6 (2001-2004 HC11) single threshold limiter.
 
-**Key Discovery**: The VL V8's "amazing limiter sound" (described as "ignition cut or valve bounce hardcut") is caused by the **94 RPM hysteresis band** creating smooth on/off cycling at the limiter threshold.
+**Verified Facts:**
+- ✅ VL $5D XDF defines two RPM parameters: HIGH (0x27E) and LOW (0x27C)
+- ✅ Parameter names suggest hysteresis: "HI limit" vs "LOW limit"
+- ✅ PCMHacking Topic 2544 confirms hysteresis exists in Delco ECUs
+- ✅ 94 RPM separation between parameters (5617 HIGH, 5523 LOW)
+
+**Unverified Assumptions (Needs Binary Disassembly):**
+- ⚠️ State machine logic implementation (assumed, not proven)
+- ⚠️ Actual hysteresis behavior (parameter names suggest it)
+- ⚠️ Delay counter at KFCOTIME (0x282) - usage not confirmed
+- ⚠️ RAM flag addresses (marked TBD - need to find in binary)
+
+**Key Hypothesis**: The VL V8's "amazing limiter sound" (described as "ignition cut or valve bounce hardcut") is likely caused by the **94 RPM hysteresis band** creating smooth on/off cycling at the limiter threshold - **IF** the state machine logic exists as hypothesized.
 
 ---
 
@@ -118,19 +140,32 @@ Hysteresis Behavior:
   - Result: Smooth on/off cycle, sounds like hardware bounce/ignition cut
 ```
 
-### 1.3 Comparison with BMW MS43
+### 1.3 Comparison: VL V8 vs BMW vs VY V6
 
-| Feature | BMW MS43 (C167) | VL V8 Delco 808 (HC11) | VY V6 HC11 |
-|---------|-----------------|------------------------|------------|
-| **Limiter Type** | Two-stage hysteresis | Two-stage hysteresis | Single threshold |
-| **High Threshold** | Configurable | 5617 RPM (KFCORPMH) | ~6375 RPM (table) |
-| **Low Threshold** | Configurable | 5523 RPM (KFCORPML) | N/A (no hysteresis) |
-| **Hysteresis Band** | ~100-200 RPM typical | **94 RPM** | 0 RPM |
-| **Delay Logic** | 1-second roughness check | 0.1 sec (KFCOTIME) | None detected |
-| **Bit Flags** | lv_ign_cut, lv_n_max | lv_fuel_cut (TBD) | Unknown |
-| **Sound Character** | Smooth on/off cycle | "Amazing hardcut" | Sharp cut |
+| Feature | BMW MS43 (C167) Stock | VL V8 Delco 808 (HC11) | VY V6 HC11 |
+|---------|----------------------|------------------------|------------|
+| **Limiter Architecture** | Soft + Hard (2 stages) ✅ | **Two fuel cut thresholds** ⚠️ | Single fuel cut ✅ |
+| **Soft Limiter** | id_n_max_at__gear (torque reduction) | N/A | N/A |
+| **Hard Limiter** | id_n_max_max_at__gear (fuel cut) | KFCORPMH 5617 RPM ✅ | ~6375 RPM (0x77DE) ✅ |
+| **Hysteresis LOW** | N_HYS_MIN_SA (DFCO) ✅ | KFCORPML 5523 RPM ✅ | N/A |
+| **Hysteresis Band** | ~100-200 RPM (DFCO) | **94 RPM** ✅ | 0 RPM |
+| **Delay Logic** | Multiple timers | KFCOTIME 0.1s ⚠️ | None |
+| **Implementation** | Per-gear limits ✅ | Global limits ⚠️ | Single table ✅ |
+| **Sound Character** | Progressive (torque → fuel) | "Amazing hardcut" 📝 | Sharp cut |
+| **Binary Verified** | ✅ Disassembled | ❌ **NOT YET** | ✅ Disassembled |
 
-**Pattern Match Confidence: 95%** - VL V8 uses identical logic structure to BMW MS43 despite different processor architecture (HC11 8-bit vs C167 16-bit).
+**Legend:**
+- ✅ = Verified from XDF, binary, or datasheet
+- ⚠️ = Parameter exists but implementation logic unconfirmed
+- 📝 = User reports only
+
+**Critical Clarification:**
+- **BMW MS43**: Uses soft limiter (torque reduction) THEN hard limiter (fuel cut) - different RPM thresholds per gear
+- **VL V8**: Appears to use FUEL CUT hysteresis (HIGH activate, LOW deactivate) - similar to BMW's DFCO hysteresis, NOT the rev limiter
+- **VY V6**: Simple single-threshold fuel cut at ~6375 RPM
+- **BMW MS43 "Ignition Cut Limiter"**: Community patchlist modification, NOT stock feature
+
+**Pattern Analysis:** The VL V8's two parameters (KFCORPMH/KFCORPML) structurally resemble BMW's DFCO (Decel Fuel Cut Off) hysteresis parameters (N_HYS_MAX_SA/N_HYS_MIN_SA), not the rev limiter itself. Binary disassembly required to confirm if VL implements true hysteresis state machine or simply has two independent thresholds.
 
 ---
 
@@ -239,12 +274,12 @@ Shift Light Activation Logic:
 
 ## 4. Comparison: VL V8 vs VY V6 Rev Limiter
 
-| Feature | VL V8 (1989 Delco 808) | VY V6 (2001-2004 HC11) |
-|---------|------------------------|------------------------|
-| **Architecture** | MEMCAL-based (16KB EPROM + NetRes) | Integrated Flash PCM (128KB) |
-| **Processor** | MC68HC11 8-bit | MC68HC11 8-bit |
-| **Limiter Type** | **Two-stage hysteresis** | Single threshold table |
-| **High Threshold** | 5617 RPM (KFCORPMH) | ~6375 RPM (table @ 0x77DE) |
+| Feature | VL V8 (1989 Delco 808) | VY V6 (2001-2004 HC11) | notes |
+|---------|------------------------|------------------------|-------|
+| **Architecture** | MEMCAL-based (16KB EPROM + NetRes) | Integrated Flash PCM (128KB) | |
+| **Processor** | MC68HC11 8-bit | MC68HC11 8-bit | |
+| **Limiter Type** | **Two-stage hysteresis** | Single threshold table | |
+| **High Threshold** | 5617 RPM (KFCORPMH) | 5900rpm high fuel cut limiter than can be set to 6374rpm ~6375 RPM (table @ 0x77DE) | never tested above 6000rpm on my own vy, have heard the vl walkinshaw efi twin throttle body stock v8 limiter |
 | **Low Threshold** | 5523 RPM (KFCORPML) | N/A |
 | **Hysteresis Band** | **94 RPM** | 0 RPM |
 | **Delay Logic** | 0.1 sec (KFCOTIME) | None detected |
@@ -386,7 +421,7 @@ Port two-stage limiter logic to VY V6:
 | **Two-Stage Hysteresis** | `spark_cut_two_stage_hysteresis_v23.asm` | `asm_wip/spark_cut/` | 🔧 WIP |
 | **Soft Timing Rolloff** | `spark_cut_soft_timing_v36.asm` | `asm_wip/spark_cut/` | 🔧 WIP |
 | **Progressive Cut** | `spark_cut_progressive_soft_v9.asm` | `asm_wip/spark_cut/` | 🔧 WIP |
-| **Shift Light** | *Not yet created* | - | ❌ Needs Chr0m3's pin |
+| **Shift Light** | *Not yet created* | - | ❌ Needs someone cough cough (Chr0m3's) brain to pickle for the pin |
 | **Delay Timer** | `KFCOTIME` pattern in v23 | `asm_wip/spark_cut/` | 🔧 WIP |
 
 ### VL $5D vs VY $060A Algorithm Translation

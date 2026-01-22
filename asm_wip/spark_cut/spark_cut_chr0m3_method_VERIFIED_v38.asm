@@ -87,11 +87,23 @@ HOOK_PATCHED    EQU $BDC500     ; JSR $C500 (call our routine)
 ;------------------------------------------------------------------------------
 ; Formula: RPM = Value × 25
 ;
+; ⚠️ 8-BIT LIMIT: $00A2 is RPM/25 (8-bit), so max representable = 6375 RPM!
+; ⚠️ ABOVE 6375 RPM: The dwell+burn timer OVERFLOWS → NO SPARK!
+;    Chr0m3: "Above 6,350 you lose the limiter"
+;    The1: "ends up overflowing, dwell + burn ends up as 0 = no spark"
+;
+; FOR >6375 RPM OPERATION (turbo builds) you MUST also patch:
+;   File Offset 0x171AA: Change 0xA2 → 0x9A (Min Dwell: 162→154)
+;   File Offset 0x19813: Change 0x24 → 0x1C (Min Burn: 36→28)
+;   See: spark_cut_dwell_patch_v37.asm for full instructions
+;   Result: Stable operation to ~7200 RPM
+;
 ; Examples:
 ;   120 ($78) × 25 = 3000 RPM (test)
 ;   236 ($EC) × 25 = 5900 RPM (stock fuel cut)
 ;   240 ($F0) × 25 = 6000 RPM (recommended spark cut)
-;   255 ($FF) × 25 = 6375 RPM (absolute max - 8-bit overflow!)
+;   254 ($FE) × 25 = 6350 RPM (safe maximum without dwell patches)
+;   255 ($FF) × 25 = 6375 RPM (AVOID - 8-bit overflow boundary!)
 ;------------------------------------------------------------------------------
 
 ; PRODUCTION: 6000 RPM spark cut (safe, proven)
