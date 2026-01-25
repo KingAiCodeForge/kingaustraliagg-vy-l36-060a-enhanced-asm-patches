@@ -99,13 +99,21 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP (CORRECTED January 25, 2026 from 92118883_STOCK.bin)
 ;------------------------------------------------------------------------------
-MAF_FAILURE_FLAG    EQU $56D4   ; M32 MAF Failure flag
+; ⚠️ CRITICAL CORRECTION: 0x56D4 is a DTC ENABLE mask, NOT a failure flag!
+;    To enable MAFless fallback, set 0x56F3 bit 6 = 1
+
+; DTC Mask Bytes (ROM calibration data)
+M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC)
+M32_CEL_MASK        EQU $56DE   ; Check Trans Light bit 6 = M32 CEL (stock=0xC0)
+M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00) ← KEY!
+
+; RAM Variables (BARO_RAM needs validation)
 BARO_RAM            EQU $0199   ; Barometric pressure (need to confirm)
 MAP_RAM             EQU $019B   ; MAP sensor value (DOES NOT EXIST - need to create!)
-IAT_RAM             EQU $01A0   ; Intake Air Temperature
-RPM_RAM             EQU $00A2   ; Engine RPM
+IAT_RAM             EQU $01A0   ; Intake Air Temperature (UNVERIFIED)
+RPM_RAM             EQU $00A2   ; Engine RPM (VERIFIED)
 VE_TABLE_BASE       EQU $6D1D   ; Repurpose "Max Airflow Vs RPM" as VE table
 
 ;------------------------------------------------------------------------------

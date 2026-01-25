@@ -93,20 +93,27 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP (CORRECTED January 25, 2026 from 92118883_STOCK.bin)
 ;------------------------------------------------------------------------------
-; XDF-Verified Addresses
-MAF_FAILURE_FLAG    EQU $56D4   ; M32 MAF Failure (0=OK, 1=Failed)
-MAF_BYPASS_FLAG     EQU $5795   ; Bypass MAF filtering (0=Normal, 1=Always)
-MIN_AIRFLOW_ROM     EQU $7F1B   ; Minimum Airflow For Default Air (ROM)
+; ⚠️ CRITICAL CORRECTION: 0x56D4 is a DTC ENABLE mask, NOT a failure flag!
+;    To enable MAFless fallback, set 0x56F3 bit 6 = 1
+
+; DTC Mask Bytes (ROM calibration data)
+M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC)
+M32_CEL_MASK        EQU $56DE   ; Check Trans Light bit 6 = M32 CEL (stock=0xC0)
+M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00) ← KEY!
+MAF_OPTION_WORD     EQU $5795   ; Option word, multiple bits (stock=0xFC)
+
+; Fallback Fuel Tables
+MIN_AIRFLOW_ROM     EQU $7F1B   ; Minimum Airflow For Default Air (16-bit, stock=0x01C0)
 VE_TABLE_ADDR       EQU $6D1D   ; Maximum Airflow Vs RPM (VE table)
 
-; RAM Variables
-MAP_SENSOR          EQU $00B0   ; MAP sensor reading (kPa)
-IAT_SENSOR          EQU $00B2   ; IAT sensor reading (°C)
-ECT_SENSOR          EQU $00B4   ; ECT sensor reading (°C)
-RPM_ADDR            EQU $00A2   ; RPM (high byte)
-AIRFLOW_CALC        EQU $01A0   ; Calculated airflow (g/s) - 16-bit
+; RAM Variables (⚠️ UNVERIFIED - need oscilloscope/ALDL validation)
+MAP_SENSOR          EQU $00B0   ; MAP sensor reading (kPa) - DOES NOT EXIST STOCK!
+IAT_SENSOR          EQU $00B2   ; IAT sensor reading (°C) - UNVERIFIED
+ECT_SENSOR          EQU $00B4   ; ECT sensor reading (°C) - VERIFIED
+RPM_ADDR            EQU $00A2   ; RPM (high byte) - VERIFIED
+AIRFLOW_CALC        EQU $01A0   ; Calculated airflow (g/s) - 16-bit - UNVERIFIED
 
 ; Calibration
 VE_ENABLE           EQU $7800   ; Enable VE mode flag

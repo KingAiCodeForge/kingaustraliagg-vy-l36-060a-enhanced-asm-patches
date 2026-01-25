@@ -138,12 +138,21 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP (CORRECTED January 25, 2026 from 92118883_STOCK.bin)
 ;------------------------------------------------------------------------------
-MAF_FAILURE_FLAG    EQU $56D4   ; M32 MAF Failure flag (0=OK, 1=Failed)
-MAF_BYPASS_FLAG     EQU $5795   ; Bypass MAF filtering during crank
-MIN_AIRFLOW_CAL     EQU $7F1B   ; Minimum Airflow For Default Air (ROM constant)
+; DTC Mask Bytes (ROM calibration data, not runtime flags!)
+; ⚠️ IMPORTANT: These are NOT runtime status flags!
+M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC)
+M32_CEL_MASK        EQU $56DE   ; Check Trans Light bit 6 = M32 CEL (stock=0xC0)
+M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00) ← KEY!
+MAF_OPTION_WORD     EQU $5795   ; Option word, multiple bits (stock=0xFC)
+
+; Fallback Fuel Tables
+MIN_AIRFLOW_CAL     EQU $7F1B   ; Minimum Airflow For Default Air (16-bit, stock=0x01C0 = 3.5 g/s)
 MAX_AIRFLOW_TABLE   EQU $6D1D   ; Maximum Airflow Vs RPM table address
+;
+; ⚠️ CRITICAL: To enable MAFless fallback, set 0x56F3 bit 6 = 1!
+;    Stock has this bit CLEARED (0x00), so ECU does NOT enter fallback on MAF fail!
 
 ;------------------------------------------------------------------------------
 ; BARO HANDLING (VY V6 Has NO Physical MAP Sensor!)

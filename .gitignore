@@ -11,6 +11,7 @@ priority_analysis/
 # Local-only working documents
 VERIFIED_ADDRESSES_SUMMARY.md
 chatgpt*.md
+11p_local_documentation.md
 
 # Large disassembly files (too big for GitHub)
 VX-VY_V6_$060A_Enhanced_v1.1a_HC11_disasm.asm
@@ -27,6 +28,7 @@ ghidra_projects/
 catalog_output/
 comparison_output/
 directory_tree_outputs/
+mapping_output/
 xdf_analysis/
 xdf_exports/
 xdf_inventory/
@@ -368,3 +370,6 @@ reports/
 # XDF exports/inventory
 xdfs_and_adx_and_bins_related_to_project/
 
+
+# Private documentation - DO NOT PUSH
+11p_local_documentation.md

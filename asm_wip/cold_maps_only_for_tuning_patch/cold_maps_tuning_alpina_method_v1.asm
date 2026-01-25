@@ -2,16 +2,38 @@
 ; VY V6 COLD MAPS ONLY TUNING PATCH v1 - ALPINA/OEM METHOD
 ;==============================================================================
 ; Author: Jason King (kingaustraliagg)
-; Date: January 18, 2026
-; Status: 🔬 NEEDS VERIFICATION - Concept from BMW Alpina research
+; Date: January 18, 2026 (Updated January 25, 2026)
+; Status: 📋 CONCEPT/OVERVIEW DOCUMENT - See separate patches below
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
 ; Processor: Motorola MC68HC11
 ;
 ;==============================================================================
-; THE ALPINA METHOD: "ZERO THE COMPLEX, TUNE THE SIMPLE"
+; ⭐ THIS FILE IS NOW A CONCEPT/OVERVIEW DOCUMENT
 ;==============================================================================
 ;
+; The actual patches have been split into separate files:
+;
+; 1. cold_maps_force_cold_spark_v1.asm
+;    - Forces cold spark compensation at ALL temperatures
+;    - 4-byte binary patch (0x64D1-0x64D4) + optional ASM routine
+;    - XDF-only method possible (no ASM needed)
+;    - Simplifies spark tuning
+;
+; 2. alpina_mafless_fallback_v1.asm
+;    - Forces MAF failure fallback mode (Alpha-N)
+;    - Binary patches at 0x56D4, 0x5795, 0x7F1B
+;    - For big cams, ITBs, turbo with BOV
+;    - Requires tuning "Maximum Airflow Vs RPM" table
+;
+; 3. VY_V6_COLD_MAPS_ONLY_XDF_PATCH.md
+;    - Documentation for XDF-only cold maps method
+;    - No ASM or code injection required
+;    - TunerPro-based tuning workflow
+;
+;==============================================================================
+; THE ALPINA METHOD: "ZERO THE COMPLEX, TUNE THE SIMPLE"
+;==============================================================================
 ; Key Discovery from Alpina B3 3.3L Stroker (M52TUB33) vs Stock M52TUB28:
 ;
 ; Problem: Stock ECU has 50+ interacting tables
@@ -139,25 +161,32 @@ ECT_FAKE_COLD       EQU $40         ; 64 = ~20°C (forces cold tables active)
 ; OPTION B: ZERO WARM CORRECTION MULTIPLIERS (ALPINA METHOD)
 ;------------------------------------------------------------------------------
 ;
-; Set the warm-side multipliers to zero so corrections don't apply
+; Set the warm-side multipliers to 1.0 so cold corrections always apply
 ; Cold tables remain active even when engine is warm
 ;
-; Target: MAIN SPARK COLD LOAD MULTIPLIER VS ECT (Line 1318)
+; Target: MAIN SPARK COLD LOAD MULTIPLIER VS ECT @ $64CF (6 bytes)
 ;
-; Stock table:
-;   Coolant:   -40°C  -20°C   0°C   20°C   40°C   60°C   80°C
-;   Multiplier: 1.0    1.0    0.9   0.7    0.5    0.3    0.0
+; Stock table (VERIFIED from VX-VY_V6_$060A_Enhanced_v1.0a.bin January 25, 2026):
+;   Coolant:   -40°C  -16°C    8°C   32°C   56°C   80°C
+;   Raw:        0xFF   0xFF   0xFF   0xAB   0x55   0x00
+;   Multiplier: 1.00   1.00   1.00   0.67   0.33   0.00
 ;
-; Modified (keep cold active):
-;   Coolant:   -40°C  -20°C   0°C   20°C   40°C   60°C   80°C
-;   Multiplier: 1.0    1.0    1.0   1.0    1.0    1.0    1.0
-;                                   ^^^    ^^^    ^^^    ^^^
-;                                   Changed from 0.7, 0.5, 0.3, 0.0
+; Modified (keep cold active at ALL temps):
+;   Coolant:   -40°C  -16°C    8°C   32°C   56°C   80°C
+;   Raw:        0xFF   0xFF   0xFF   0xFF   0xFF   0xFF
+;   Multiplier: 1.00   1.00   1.00   1.00   1.00   1.00
+;                                    ^^^^   ^^^^   ^^^^
+;                           Changed from 0xAB, 0x55, 0x00
 ;
-; Result: Cold spark correction always applies 100%
+; Result: Cold spark correction always applies 100% even when hot
+;
+; Binary patch (only 3 bytes change):
+;   0x64D2: AB → FF (32°C multiplier)
+;   0x64D3: 55 → FF (56°C multiplier)
+;   0x64D4: 00 → FF (80°C multiplier) ← MOST IMPORTANT!
 ;
 
-COLD_SPARK_MULT_TABLE   EQU $????   ; TODO: Find actual address
+COLD_SPARK_MULT_TABLE   EQU $64CF   ; VERIFIED address (6-byte table)
 
 ;------------------------------------------------------------------------------
 ; OPTION C: EXTEND CLOSED-LOOP DISABLE TEMPERATURE
@@ -186,12 +215,14 @@ COLD_SPARK_MULT_TABLE   EQU $????   ; TODO: Find actual address
 ; sometimes combined with cold maps only patch and then cold start enrichment to get the perfect start first shot with no misfires at the price of blowing a puff of black smoke instead when it first starts.
 ;==============================================================================
 STFT_ENABLE_ECT     EQU $752C       ; STFT enable coolant temp
-STFT_STOCK          EQU $50         ; 80 = ~50°C
-STFT_TUNING         EQU $78         ; 120 = ~100°C (never enables)
+STFT_STOCK          EQU $A0         ; 0xA0 = 90°C (formula: (X-40)/256*192)
+STFT_TUNING         EQU $D0         ; 0xD0 ≈ 113°C (never enables)
 
-LTFT_ENABLE_ECT     EQU $7635       ; LTFT enable coolant temp
-LTFT_STOCK          EQU $46         ; 70 = ~60°C
-LTFT_TUNING         EQU $78         ; 120 = ~100°C (never enables)
+LTFT_ENABLE_ECT     EQU $7635       ; LTFT enable coolant temp  
+LTFT_STOCK          EQU $50         ; 0x50 = 20°C (formula: X/256*192-40)
+LTFT_TUNING         EQU $D0         ; 0xD0 ≈ 120°C (never enables)
+;
+; VERIFIED from 92118883_STOCK.bin January 25, 2026
 
 ;==============================================================================
 ; COLD SPARK TABLE TUNING STRATEGY
@@ -237,10 +268,12 @@ LTFT_TUNING         EQU $78         ; 120 = ~100°C (never enables)
 ;
 ; These patches delay closed-loop fuel forever, forcing open-loop tuning:
 ;
-; | Offset | Stock | Tuning | Parameter                    |
-; |--------|-------|--------|------------------------------|
-; | 0x752C | 0x50  | 0x78   | STFT Enable ECT (50→100°C)   |
-; | 0x7635 | 0x46  | 0x78   | LTFT Enable ECT (60→100°C)   |
+; | Offset | Stock | Tuning | Parameter                          |
+; |--------|-------|--------|-------------------------------------|
+; | 0x752C | 0xA0  | 0xD0   | STFT Enable ECT (90°C → 113°C)      |
+; | 0x7635 | 0x50  | 0xD0   | LTFT Enable ECT (20°C → 120°C)      |
+;
+; VERIFIED from 92118883_STOCK.bin January 25, 2026
 ;
 ; Then tune these tables via XDF:
 ;   - OPEN LOOP IDLE AFR VS ENGINE TEMP

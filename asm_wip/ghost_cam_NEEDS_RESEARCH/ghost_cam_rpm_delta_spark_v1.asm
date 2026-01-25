@@ -244,7 +244,7 @@ RPM_DELTA           EQU $0201               ; RAM: Calculated RPM delta
      - and then cranked/started fuel trims can reach over 10 
      - but start up will be great sound and no flames.
 ; 5. Add P/N vs Drive differentiation
-;    - Ghost cam in P/N only, smooth in Drive
+;    - Ghost cam in P/N only, smooth in Drive (will get it to chop at idle in drive or gear. we need a new method or .asm file)
 ;    - Need GEAR_STATE flag address
 ;    - if the concept is ported to other memcal based ecotecs the moates could 
 ;      theoretically let this be on bank 2 but again different cpu address and xdf addresses.

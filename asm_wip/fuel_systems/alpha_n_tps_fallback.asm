@@ -69,12 +69,19 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP (CORRECTED January 25, 2026 from 92118883_STOCK.bin)
 ;------------------------------------------------------------------------------
-; XDF-Verified Addresses
-MAF_FAILURE_FLAG    EQU $56D4   ; M32 MAF Failure
-MAF_BYPASS_FLAG     EQU $5795   ; Bypass MAF filtering
-MIN_AIRFLOW_ROM     EQU $7F1B   ; Minimum Airflow base value
+; ⚠️ CRITICAL CORRECTION: 0x56D4 is a DTC ENABLE mask, NOT a failure flag!
+;    To enable MAFless fallback, set 0x56F3 bit 6 = 1
+
+; DTC Mask Bytes (ROM calibration data)
+M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC)
+M32_CEL_MASK        EQU $56DE   ; Check Trans Light bit 6 = M32 CEL (stock=0xC0)
+M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00) ← KEY!
+MAF_OPTION_WORD     EQU $5795   ; Option word, multiple bits (stock=0xFC)
+
+; Fallback Fuel Tables
+MIN_AIRFLOW_ROM     EQU $7F1B   ; Minimum Airflow base value (16-bit, stock=0x01C0)
 ALPHA_N_TABLE       EQU $6E00   ; Alpha-N table (TPS vs RPM)
 
 ; RAM Variables
@@ -112,10 +119,10 @@ ALPHA_N_CALC:
     LDAA ALPHA_N_ENABLE         ; B6 78 50
     BEQ USE_STOCK_MAF_AN        ; 27 XX
     
-    ; Force MAF failure mode
-    LDAA #$01                   ; 86 01
-    STAA MAF_FAILURE_FLAG       ; B7 56 D4
-    STAA MAF_BYPASS_FLAG        ; B7 57 95
+    ; Enable M32 fallback action (set bit 6 at 0x56F3)
+    LDAA    M32_ACTION_MASK     ; B6 56 F3 - Load current value
+    ORAA    #$40                ; 8A 40 - Set bit 6 (enable M32 action)
+    STAA    M32_ACTION_MASK     ; B7 56 F3 - Store back
     
     ;--------------------------------------------------------------------------
     ; Step 1: Read TPS and RPM

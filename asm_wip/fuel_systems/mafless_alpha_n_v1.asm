@@ -55,11 +55,19 @@
 ;   4. TPS + RPM tables calculate fuel delivery
 ;   5. Tune VE tables to match actual airflow
 ;
-; XDF Evidence:
-;   - 0x56D4: "M32 MAF Failure" flag
-;   - 0x5795: "BYPASS MAF FILTERING LOGIC DURING CRANK" flag
-;   - 0x7F1B: "Minimum Airflow For Default Air" = 3.5 g/s (base value)
+; XDF Evidence (CORRECTED January 25, 2026):
+;   - 0x56D4: KKMASK4 "M32 MAF Failure" DTC ENABLE mask (bit 6=1 logs DTCs)
+;   - 0x56DE: Check Trans Light mask (bit 6=1 lights CEL on M32)
+;   - 0x56F3: KKACT3 "M32" ACTION mask (bit 6=1 takes fallback action) ← KEY!
+;   - 0x7F1B: "Minimum Airflow For Default Air" = 3.5 g/s (16-bit, stock=0x01C0)
+;   - 0x7F2A: "Default Airflow Vs RPM & TPS %" (7×5 table, 35 bytes)
 ;   - 0x6D1D: "Maximum Airflow Vs RPM" table (VE approximation)
+;
+; ⚠️ CRITICAL CORRECTION:
+;   - 0x56D4 is NOT a failure flag! It's a DTC ENABLE mask (stock=0xCC)
+;   - 0x56F3 is the ACTION mask - setting bit 6 ENABLES fallback mode
+;   - Stock has ACTION disabled (0x00), so ECU does NOT enter fallback on MAF fail!
+;   - Setting 0x56F3 bit 6 = 1 is the KEY PATCH for MAFless operation!
 ;
 ; Tuning Requirements After Patch:
 ;   1. Increase "Minimum Airflow For Default Air" from 3.5 to ~150-200 g/s
@@ -73,11 +81,16 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP (CORRECTED January 25, 2026 from 92118883_STOCK.bin)
 ;------------------------------------------------------------------------------
-MAF_FAILURE_FLAG    EQU $56D4   ; M32 MAF Failure flag (0=OK, 1=Failed)
-MAF_BYPASS_FLAG     EQU $5795   ; Bypass MAF filtering during crank
-MIN_AIRFLOW_CAL     EQU $7F1B   ; Minimum Airflow For Default Air (ROM constant)
+; DTC Mask Bytes (ROM calibration data, not runtime flags!)
+M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC)
+M32_CEL_MASK        EQU $56DE   ; Check Trans Light bit 6 = M32 CEL (stock=0xC0)
+M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00) ← KEY!
+MAF_OPTION_WORD     EQU $5795   ; Option word, multiple bits (stock=0xFC)
+
+; Fallback Fuel Tables
+MIN_AIRFLOW_CAL     EQU $7F1B   ; Minimum Airflow For Default Air (16-bit, stock=0x01C0 = 3.5 g/s)
 MAX_AIRFLOW_TABLE   EQU $6D1D   ; Maximum Airflow Vs RPM table address
 
 ;------------------------------------------------------------------------------
