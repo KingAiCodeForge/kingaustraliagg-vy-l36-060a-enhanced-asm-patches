@@ -119,11 +119,15 @@ asm_wip/
 │   ├── shift_launch_v1.asm                 # "AK47" rapid cycle pattern
 │   └── timing_retard_soft.asm              # Soft timing retard limiter
 │
-├── ghost_cam_NEEDS_RESEARCH/       # 👻 Lopey idle effect
-│   │   # NOTE: XDF TUNING PREFERRED - See ASM vs XDF table below
-│   │   # VY V6 has no VVT - uses spark modulation not valve overlap
-│   ├── ghost_cam_rpm_delta_spark_v1.asm    # RPM delta spark concept
-│   └── ghost_cam_xdf_parameter_patch_v2.asm # XDF parameters reference
+├── ghost_cam_ASM_PATCH/            # 👻 True ghost cam (fast aggressive lope)
+│   │   # TRUE GHOST CAM: ASM patch with BMW-style RPM-delta lookup table
+│   │   # For LUMPY IDLE (XDF-only, slow lope) see lumpy_idle_XDF_ONLY/
+│   └── ghost_cam_rpm_delta_spark_v1.asm    # RPM delta spark lookup table
+│
+├── lumpy_idle_XDF_ONLY/            # 🎚️ Lumpy idle (XDF parameters only)
+│   │   # LUMPY IDLE: Rhysk94's approach - XDF changes only, no ASM
+│   │   # Result: Slow ~1Hz "lope every second"
+│   └── lumpy_idle_xdf_parameters_v2.asm    # XDF parameters reference
 │
 ├── cold_maps_only_for_tuning_patch/# ❄️ Alpina/OEM tuning method
 │   │   # NOTE: XDF TUNING PREFERRED - Disables STFT/LTFT for OL tuning
@@ -176,7 +180,8 @@ xdfs_and_adx_and_bins_related_to_project/
 | Feature | Method | Notes |
 |---------|--------|-------|
 | **Spark Cut Limiter** | ⚙️ ASM Required | Not in XDF - needs code injection |
-| **Ghost Cam / Lopey Idle** | 📊 XDF Preferred | Idle Spark Correction tables, RPM Error Limit (get a real cam they say) |
+| **Lumpy Idle** | 📊 XDF Only | Rhysk94's approach: KSARPMHI/KSARPMLO multipliers, slow ~1Hz lope |
+| **Ghost Cam (fast lope)** | ⚙️ ASM Required | BMW-style RPM-delta lookup table, aggressive 45°+ swing |
 | **Cold Maps Tuning** | 📊 XDF Preferred | Cold Spark Multiplier, STFT/LTFT temps |
 | **MAFless / Alpha-N** | ⚙️ ASM Required | Force TPS-based load calculation |
 | **Speed Density** | ⚙️ ASM Required | VE table + MAP-based fueling |
@@ -188,7 +193,7 @@ xdfs_and_adx_and_bins_related_to_project/
 | **Idle RPM Target** | 📊 XDF Available | P/N and Drive idle tables |
 | **Timing Maps** | 📊 XDF Available | Main spark tables |
 
-> **VY V6 has no VVT/VANOS** - Ghost cam is achieved via aggressive idle spark correction, not valve overlap like BMW MS42/MS43.
+> **Lumpy Idle vs Ghost Cam:** Lumpy idle (XDF) creates slow 1Hz lope. Ghost cam (ASM) creates fast aggressive lope like LS/BMW. VY V6 has no VVT - both use spark modulation, not valve overlap.
 
 ---
 

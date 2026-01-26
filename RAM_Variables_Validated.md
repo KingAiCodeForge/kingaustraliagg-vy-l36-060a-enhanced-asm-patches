@@ -331,6 +331,42 @@ Result: dwell + burn = 0 → no spark
 
 ---
 
+## IAT and BARO Sensor Addresses (Validated Nov 24, 2025)
+
+### IAT (Intake Air Temperature) Sensor
+
+**Validation Status**: VALIDATED | **Confidence**: 100%
+
+**ALDL Datastream Packets:**
+- **0x06**: Intake Air Temp Sensor Voltage - Formula: `X * 0.019608 Volts`
+- **0x07**: Intake Air Temp - Formula: `X * 0.750000 + -40.000000 Deg C`
+
+**XDF Calibration Tables:**
+- **0x66DB**: Spark IAT Table
+- **0x674B**: Spark IAT Multiplier
+
+### BARO (Barometric Pressure) Sensor
+
+**Validation Status**: VALIDATED | **Confidence**: 100%
+
+**ALDL Datastream Packets:**
+- **0x0A**: Barometric Pressure - Formula: `X * 0.312500 + 20.000000 KPA` (Range: 20-105 kPa)
+
+**XDF Calibration Tables:**
+- **0x4D49**: Barometric Pressure Vs AD Counts Lookup Table
+- **0x4D5A**: Barometric Pressure Filter Coefficient
+- **0x571B**: Barometric Sensor High Reading Limit
+- **0x571F**: Barometric Sensor Low Reading Limit
+
+### External SPI ADC Architecture
+
+**Critical Finding (Nov 21, 2025):**
+- 28 SPI register accesses found, 12 SPI transaction sequences
+- ZERO PE0-PE7 internal ADC channel selections found
+- **IAT and BARO use external SPI ADC chip via PD2-PD5 SPI bus**
+
+---
+
 ## Cross-Reference Documents
 
 ### HC11 Reference Sources
@@ -349,5 +385,5 @@ Result: dwell + burn = 0 → no spark
 
 ---
 
-**Last Updated:** January 18, 2026  
+**Last Updated:** January 26, 2026  
 **Maintainer:** KingAI Tuning Project

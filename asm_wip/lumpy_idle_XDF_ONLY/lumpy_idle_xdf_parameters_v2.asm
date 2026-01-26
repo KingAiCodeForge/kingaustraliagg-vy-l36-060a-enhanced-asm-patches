@@ -1,5 +1,5 @@
 ;==============================================================================
-; VY V6 GHOST CAM v2 - XDF PARAMETER MULTIPLIER APPROACH
+; VY V6 LUMPY IDLE v2 - XDF PARAMETER APPROACH (NO ASM REQUIRED)
 ;==============================================================================
 ; Author: Jason King (kingaustraliagg)
 ; Date: January 18, 2026
@@ -8,14 +8,24 @@
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
 ; Processor: Motorola MC68HC11
 ;
+; TERMINOLOGY:
+;   "Lumpy Idle" = THIS FILE - XDF parameter changes only, slow ~1Hz lope
+;   "Ghost Cam"  = ASM patch with BMW-style lookup table (see ghost_cam_ASM_PATCH/)
+;
+; This is the SAME APPROACH Rhysk94 (RKGarage) used on VY L67.
+; He exposed idle spark multipliers in XDF and modified them in TunerPro.
+; Result: "loped every second" - works but slow due to linear P-gain algorithm.
+;
+; NO ASM PATCHING REQUIRED - just modify values in TunerPro!
 ; ⚠️ WARNING: EXPERIMENTAL - NOT TESTED ON HARDWARE
 ;
 ;==============================================================================
-; APPROACH: MODIFY XDF PARAMETERS IN ROM
+; APPROACH: MODIFY XDF PARAMETERS IN ROM (VIA TUNERPRO)
 ;==============================================================================
 ;
-; Directly modify the idle spark parameters in ROM to create ghost cam.
+; Directly modify the idle spark parameters in ROM to create lumpy idle.
 ; VY V6 XDF v2.09a verified addresses used below.
+; ALL THESE PARAMETERS ARE ALREADY EXPOSED IN v2.09a XDF!
 ;
 ; VERIFIED PARAMETERS FROM VY V6 XDF:
 ; - Idle Spark Advance vs Coolant Temp: 0x6536 (11 cells)

@@ -4,7 +4,7 @@
 
 **⚠️ WARNING: UNTESTED RESEARCH CODE FOR VEHICLE ECU MODIFICATION**
 This analysis is for educational/research purposes only. Implementation may cause ECU damage or vehicle malfunction. Requires bench testing before vehicle installation.
-
+if you see anything that is wrong in my work and analysis or assumptions let me know and why with evidence.
 **📅 FACT-CHECK STATUS (January 20, 2026):**
 - ✅ VL Walkinshaw uses 1227808 ECU with AMBX6968 $5D memcal (verified PCMHacking)
 - ✅ Released **March 1988** (Wikipedia), not 1989

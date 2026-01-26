@@ -1,5 +1,5 @@
 ;==============================================================================
-; VY V6 GHOST CAM / LUMPY IDLE v1 - RPM DELTA SPARK MODULATION
+; VY V6 GHOST CAM v1 - RPM DELTA SPARK MODULATION (ASM PATCH)
 ;==============================================================================
 ; Author: Jason King (kingaustraliagg)
 ; Date: January 18, 2026
@@ -7,6 +7,17 @@
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
 ; Processor: Motorola MC68HC11
+;
+; TERMINOLOGY - TWO DIFFERENT THINGS:
+;   "Lumpy Idle" = Rhysk94's XDF-only approach, slow ~1Hz lope, no ASM patch
+;   "Ghost Cam"  = THIS PROJECT - ASM patch with BMW-style lookup table, fast lope
+;
+; Rhysk94 (RKGarage) did LUMPY IDLE on VY L67 - XDF parameter changes only.
+; He exposed idle spark multipliers and modified them in TunerPro.
+; Result: "loped every second" - slow response due to linear P-gain limits.
+;
+; THIS PATCH aims for TRUE GHOST CAM - fast aggressive cam-like sound.
+; Requires ASM patch to add non-linear RPM-delta lookup table (like BMW/LS).
 ;
 ; ⚠️ WARNING: EXPERIMENTAL - Creates intentional misfires for "lopey" sound
 ; ⚠️ WARNING: Improper tuning = exhaust pops, flames, CAT damage!

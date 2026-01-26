@@ -13,6 +13,10 @@ VERIFIED_ADDRESSES_SUMMARY.md
 chatgpt*.md
 11p_local_documentation.md
 
+# Work-in-progress documents (not ready for GitHub yet)
+VY_V6_SPARK_CUT_IMPLEMENTATION_GUIDE.md
+exports/RKGarage_L67_comparison/
+
 # Large disassembly files (too big for GitHub)
 VX-VY_V6_$060A_Enhanced_v1.1a_HC11_disasm.asm
 92118883_STOCK_HC11_disasm.asm
