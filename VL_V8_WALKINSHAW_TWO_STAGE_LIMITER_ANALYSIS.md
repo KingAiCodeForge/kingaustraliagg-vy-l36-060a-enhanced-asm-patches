@@ -274,7 +274,7 @@ Shift Light Activation Logic:
 
 ## 4. Comparison: VL V8 vs VY V6 Rev Limiter
 
-| Feature | VL V8 (1989 Delco 808) | VY V6 (2001-2004 HC11) | notes |
+| Feature | VL V8 (1988 Delco 808) | VY V6 (2001-2004 HC11) | notes |
 |---------|------------------------|------------------------|-------|
 | **Architecture** | MEMCAL-based (16KB EPROM + NetRes) | Integrated Flash PCM (128KB) | |
 | **Processor** | MC68HC11 8-bit | MC68HC11 8-bit | |
@@ -368,7 +368,7 @@ Port two-stage limiter logic to VY V6:
 
 ## 8. Code Archaeology: XDF Analysis
 
-**Source**: `2bar_5d_V2.xdf` (3880 lines), VL V8 Walkinshaw $5D mask (1989)
+**Source**: `2bar_5d_V2.xdf` (3880 lines), VL V8 Walkinshaw $5D mask (1988)
 
 ### 8.1 Shift Light Parameters (Category: Shift light params)
 - **Count**: 20+ parameters spanning 0x21F-0x232 (20 bytes)
@@ -494,7 +494,7 @@ SHIFT_DONE:
 
 ## 11. Conclusion
 
-The VL V8 Walkinshaw (1989 Delco 808) implements a **BMW MS43-style two-stage fuel cutoff limiter with 94 RPM hysteresis**, despite being 12+ years older than the VY V6 (2001-2004 HC11) which only has a simple single-threshold limiter.
+The VL V8 Walkinshaw (1988 Delco 808) implements a **BMW MS43-style two-stage fuel cutoff limiter with 94 RPM hysteresis**, despite being 13+ years older than the VY V6 (2001-2004 HC11) which only has a simple single-threshold limiter.
 
 **Why VL V8 is more sophisticated**:
 1. **MEMCAL architecture** - separate EPROM allowed complex logic without core ECU changes

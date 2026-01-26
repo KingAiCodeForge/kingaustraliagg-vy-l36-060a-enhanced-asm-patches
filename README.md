@@ -6,7 +6,7 @@
 
 > **Holden VY V6 Ecotec L36 (3.8L) - Assembly Patches for Delco $060A 92118883 ECU**
 >
-> Research-based 68HC11 assembly patches based on Chr0m3 Motorsport and The1's Enhanced OS.
+> Research-based 68HC11 assembly patches based on Chr0m3 Motorsport and The1's Enhanced OS, made by me and a computer robot.
 
 ⚠️ **ALL CODE IS UNTESTED - RESEARCH ONLY** ⚠️
 

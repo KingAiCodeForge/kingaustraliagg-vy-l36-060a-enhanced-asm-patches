@@ -1074,7 +1074,7 @@ Based on verified XDF data:
 
 | Feature | OSE12P | OSE11P | VS/VT Enhanced | VY Flash |
 |---------|--------|--------|----------------|----------|
-| **Hardware** | MC68HC808 (VN/VP) | MC68HC424 (VR) | MC68HC11 | MC68HC12 |
+| **Hardware** | MC68HC808 (VN/VP) | MC68HC424 (VR) | MC68HC11 | MC68HC11 |
 | **Binary Size** | 32KB Memcal | 64KB NVRAM | 128KB Memcal | 128KB Flash |
 | **Spark Control** | External IC (TCTL1) | CPU-based | CPU-based | CPU-based |
 | **Spark Cut Support** | ✅ Via TCTL1 bit 1 | ✅ Via dwell reduction | ❌ Not in XDF | 🔄 In development |
@@ -1144,14 +1144,14 @@ Method: Dwell reduction to 200µs (0.2ms)
 | MC68HC808 | VN/VP Memcal | External timer IC | TCTL1 bit 1 toggle or dwell ~0.3ms |
 | MC68HC424 | VR NVRAM | CPU-based | Dwell = 200µs |
 | MC68HC11 | VS/VT Memcal | CPU-based | Dwell reduction (untested) |
-| MC68HC12 | VT-VZ Flash | CPU-based | Dwell reduction + code patch |
+| MC68HC11 | VT-VZ Flash | CPU-based | Dwell reduction + code patch |
 
 **Critical Insight from antus:**
 > "'424 based computers (and later, such as all the1's enhanced bins use) moved spark on to the main CPU so 11P and these operating systems can with software mods."
 
 This means:
 - **VS/VT (MC68HC11)** = Similar to 424, spark control in CPU = dwell method should work
-- **VY Flash (MC68HC12)** = Same architecture = dwell method applies
+- **VY Flash (MC68HC11)** = Same architecture = dwell method applies
 
 ### VT-VY Spark Cut Development (Topic 8567 - Chr0m3)
 
