@@ -51,6 +51,8 @@ if you see anything that is wrong in my work and analysis or assumptions let me 
 
 ## OSID Naming Clarification (Added Jan 17 2026)
 
+> **Note:** $5D is a **Delco 808** ECU (also known as "1227808" service number). The "808" refers to the ECU hardware platform, while "$5D" is the OSID mask that identifies the specific calibration/firmware variant.
+
 | OSID Mask | Platform | ECU Hardware | Binary Size | Notes |
 |-----------|----------|--------------|-------------|-------|
 | **$5D** | VL/VN/VP/VR V6/V8 | Delco 808 MEMCAL | 16-32KB | Stock firmware masks |
@@ -59,7 +61,7 @@ if you see anything that is wrong in my work and analysis or assumptions let me 
 | **$12P** | VN-VS (OSE custom) | Delco 808 PCM | 32KB | OSE enhanced, soft-touch limiter |
 
 **Key Distinction:**
-- **$5D/$51** = Factory OSID masks (stock GM firmware)
+- **$5D/$51** = Factory OSID masks (stock GM firmware) running on Delco 808 hardware
 - **$11P/$12P** = OSE (Open Source ECU) **complete firmware replacements**
 
 OSE replaces the ENTIRE ECU code with custom algorithms, not just calibration. That's why they have features the stock masks don't.

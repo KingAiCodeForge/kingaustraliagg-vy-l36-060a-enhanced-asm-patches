@@ -127,6 +127,28 @@ BSET  $46,#$80           ; Set bit 7 (activate limiter)
 BCLR  $46,#$80           ; Clear bit 7 (deactivate limiter)
 ```
 
+### Other Key Mode Flag Bytes (Discovered January 26, 2026)
+
+Binary analysis using BRSET/BRCLR/BSET/BCLR opcode scanning revealed the most heavily-tested flag bytes:
+
+| Byte | Most Used Bit | Tests | Inferred Function | FREE Bits |
+|------|---------------|-------|-------------------|-----------|
+| **$29** | bit 7 ($80) | **65** | Diagnostic Mode | $02, $04, $08, $10 |
+| **$05** | bit 3 ($08) | **59** | Fuel/Shift Cut? | $20 only |
+| **$3D** | bit 7 ($80) | 50 | Unknown | TBD |
+| **$24** | bit 0 ($01) | **49** | MAF Enable | NONE (all used) |
+| **$41** | bit 0 ($01) | 32 | Unknown | $02, $04, $10, $20, $40, $80 |
+| **$46** | bits 0-4 | 20 total | Engine Mode | **$08, $20, $40, $80** |
+
+**Best bytes for custom patches:**
+- **$46** - 4 FREE bits, already used for engine modes
+- **$41** - 6 FREE bits (only bits 0 and 3 are used)
+- **$29** - 4 FREE bits (bit 7 is heavily used for diagnostics)
+
+**Script:** `tools/mode_byte_flag_mapper.py` (needs path fix from R: to A:)
+
+---
+
 ### 3X Period Storage
 
 | Address | Name | Size | Access | Description |
