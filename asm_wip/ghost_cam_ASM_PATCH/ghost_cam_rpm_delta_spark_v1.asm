@@ -10,14 +10,14 @@
 ;
 ; TERMINOLOGY - TWO DIFFERENT THINGS:
 ;   "Lumpy Idle" = XDF-only approach, slow ~1Hz lope, no ASM patch
-;   "Ghost Cam"  = THIS PROJECT - ASM patch with BMW-style lookup table, fast lope
+;   "Ghost Cam"  = Fast aggressive lopey sound (method TBD)
 ;
-; RKGarage created VY L67 XDFs with idle spark control parameters.
-; Topic 8605 discusses porting VT L67 idle spark adjustments to VY.
-; NOTE: RKGarage and Rhysk94 are DIFFERENT PEOPLE - do not confuse them.
+; ⚠️ CORRECTION (Jan 27, 2026): Rhysk94 (RKGarage / Rhys Kirkham) states that
+; ghost cam on these PCMs is NOT done with timing - timing does not get touched.
+; Topic 8605 is about VY L67 idle spark XDFs, NOT ghost cam.
+; The actual ghost cam method for VY/VX PCMs needs to be clarified by Rhysk94.
 ;
-; THIS PATCH aims for TRUE GHOST CAM - fast aggressive cam-like sound.
-; Requires ASM patch to add non-linear RPM-delta lookup table (like BMW/LS).
+; THIS FILE IS THEORETICAL - based on BMW/LS methods which MAY NOT APPLY HERE.
 ;
 ; ⚠️ WARNING: EXPERIMENTAL - Creates intentional misfires for "lopey" sound
 ; ⚠️ WARNING: Improper tuning = exhaust pops, flames, CAT damage!
