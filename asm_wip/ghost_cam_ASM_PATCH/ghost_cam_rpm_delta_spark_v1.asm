@@ -9,12 +9,12 @@
 ; Processor: Motorola MC68HC11
 ;
 ; TERMINOLOGY - TWO DIFFERENT THINGS:
-;   "Lumpy Idle" = Rhysk94's XDF-only approach, slow ~1Hz lope, no ASM patch
+;   "Lumpy Idle" = XDF-only approach, slow ~1Hz lope, no ASM patch
 ;   "Ghost Cam"  = THIS PROJECT - ASM patch with BMW-style lookup table, fast lope
 ;
-; Rhysk94 (RKGarage) did LUMPY IDLE on VY L67 - XDF parameter changes only.
-; He exposed idle spark multipliers and modified them in TunerPro.
-; Result: "loped every second" - slow response due to linear P-gain limits.
+; RKGarage created VY L67 XDFs with idle spark control parameters.
+; Topic 8605 discusses porting VT L67 idle spark adjustments to VY.
+; NOTE: RKGarage and Rhysk94 are DIFFERENT PEOPLE - do not confuse them.
 ;
 ; THIS PATCH aims for TRUE GHOST CAM - fast aggressive cam-like sound.
 ; Requires ASM patch to add non-linear RPM-delta lookup table (like BMW/LS).

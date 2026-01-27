@@ -7,6 +7,7 @@ priority_analysis/
 68HC11_Reference/techedge_tools/
 68HC11_Reference/README.md
 68HC11_Reference/udis/
+68HC11_Reference/capstone_m680x/
 
 # Local-only working documents
 VERIFIED_ADDRESSES_SUMMARY.md
@@ -25,6 +26,7 @@ DISASSEMBLY_OUTPUTS_ANALYSIS.md
 
 # Analysis Output (generated files)
 analysis_output/
+analysis/
 discovery_reports/
 disassembly_output/
 ghidra_output/
@@ -265,6 +267,8 @@ Web_Research_Summary_*.md
 XDF_*.md
 ZERO_PARAMETERS_ANALYSIS.txt
 topic_8852_VX _ VY_V6_$060A_Enhanced_v2.04 - Dwell - Spark Cut Beta.md
+# Add Innovate Wideband guide to ignore
+how_to_add_innovate_wideband_to_vs_vt_vx_vy_v6.md
 # Session/work files
 adding_dwell_est_3x_to_xdf.md
 asm_audit.txt

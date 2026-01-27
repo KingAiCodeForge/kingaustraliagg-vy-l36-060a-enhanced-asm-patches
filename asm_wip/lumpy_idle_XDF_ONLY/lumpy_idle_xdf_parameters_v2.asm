@@ -12,9 +12,9 @@
 ;   "Lumpy Idle" = THIS FILE - XDF parameter changes only, slow ~1Hz lope
 ;   "Ghost Cam"  = ASM patch with BMW-style lookup table (see ghost_cam_ASM_PATCH/)
 ;
-; This is the SAME APPROACH Rhysk94 (RKGarage) used on VY L67.
-; He exposed idle spark multipliers in XDF and modified them in TunerPro.
-; Result: "loped every second" - works but slow due to linear P-gain algorithm.
+; RKGarage created VY L67 XDFs with idle spark control parameters (Topic 8605).
+; These XDFs expose idle spark multipliers for modification in TunerPro.
+; NOTE: RKGarage and Rhysk94 are DIFFERENT PEOPLE - do not confuse them.
 ;
 ; NO ASM PATCHING REQUIRED - just modify values in TunerPro!
 ; ⚠️ WARNING: EXPERIMENTAL - NOT TESTED ON HARDWARE
