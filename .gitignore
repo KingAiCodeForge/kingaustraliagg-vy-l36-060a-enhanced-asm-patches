@@ -1,6 +1,19 @@
+# Test Binaries (patched BINs - copyrighted ECU code, DO NOT PUSH)
+bin_patch_test/
+
 # Development Tools (local only - not for GitHub)
 tools/
 priority_analysis/
+
+# Analysis scripts (generated during RAM mapping)
+check_xdf_coverage.py
+disassemble_subroutines.py
+find_more_addresses.py
+map_more_addresses.py
+map_unknown_addresses.py
+verify_addresses_quick.py
+spi_adc_mapping_*.txt
+spi_adc_mapping_*.json
 
 # Third-party tools (not ours to redistribute)
 68HC11_Reference/JBug11_F1/
@@ -8,15 +21,24 @@ priority_analysis/
 68HC11_Reference/README.md
 68HC11_Reference/udis/
 68HC11_Reference/capstone_m680x/
+68HC11_Reference/PIS/
 
 # Local-only working documents
 VERIFIED_ADDRESSES_SUMMARY.md
 chatgpt*.md
 11p_local_documentation.md
+LOCAL_ONLY_XDF_Axis_Linking_Reference.md
+TunerPro_XDF_Axis_Linking_Guide.md
+hardlimits_microcode.md
+vy_v6_na_pointers.md
+DTC_FLAGS_MASKS_LOCAL.md
+UNKNOWN_BYTES_ANALYSIS_LOCAL.md
+mode 4 vy v6.md
 
 # Work-in-progress documents (not ready for GitHub yet)
 VY_V6_SPARK_CUT_IMPLEMENTATION_GUIDE.md
 exports/RKGarage_L67_comparison/
+VY_V6_128KB_BINARY_SPLITTING_AND_PATCHING_GUIDE.md
 
 # Large disassembly files (too big for GitHub)
 VX-VY_V6_$060A_Enhanced_v1.1a_HC11_disasm.asm
@@ -381,3 +403,35 @@ xdfs_and_adx_and_bins_related_to_project/
 
 # Private documentation - DO NOT PUSH
 11p_local_documentation.md
+
+DISASSEMBLY_TOOL_STATUS_JAN26.md
+asm_wip/ASM_VALIDATION_REPORT_JAN27.md
+
+DOCUMENT_CONSOLIDATION_PLAN.md
+chatgpt again.md
+"chatgpt again.md"
+
+# Ignore HC11 reference files (external)
+68HC11_Reference/DARChigh.asm
+68HC11_Reference/DARClow.asm
+68HC11_Reference/makefile
+68HC11_Reference/memory.x
+68HC11_Reference/readme.txt
+
+# Ignore forum research validation
+FORUM_RESEARCH_VALIDATION_JAN28.md
+# Ignore backup files from FIX_RAM_ADDRESSES.py
+*_BACKUP_*.asm
+
+# Working documents not for GitHub
+ENHANCED_V1.0A_RAM_MAP_COMPLETE.md
+BENCH_TESTING_SETUP.md
+DEEP_DIVE_INVESTIGATION_TARGETS.md
+
+# 68HC11 Reference materials (third-party, not for redistribution)
+68HC11_Reference/PIS/
+68HC11_Reference/DARC_vtsc_disasm_frompcmhacking/
+
+# BANK_SWITCHING_AND_ISR_ANALYSIS.md - REMOVED FROM IGNORE (now pushed to GitHub)
+SPARK_CUT_PATCH_ANALYSIS.md
+icv_iac_delete_patch.md

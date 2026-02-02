@@ -33,15 +33,15 @@ Use the verified hook point instead:
 ## 📍 ISR ADDRESSES CONFIRMED
 
 | ISR | Vector | Jump Table | Actual Code | Purpose |
-|-----|--------|------------|-------------|---------|
-| TIC3 | 0x1FFEA → 0x200F | JMP $35FF | **0x35FF** | 3X Crank Handler |
-| TIC2 | 0x1FFEC → 0x2012 | JMP $358A | **0x358A** | 24X Crank Handler |
+|-----|--------|------------|-------------|---------||
+| TIC3 | 0x1FFEA → 0x200F | JMP $35FF | **0x35FF** | **24X Crank Handler** |
+| TIC2 | 0x1FFEC → 0x2012 | JMP $358A | **0x358A** | CAM/SYNC Handler |
 | TOC3 | 0x1FFE4 → 0x2009 | JMP $35BD | **0x35BD** | EST Output Handler |
 | TOC4 | 0x1FFE2 → 0x2006 | JMP $35DE | **0x35DE** | Timer 4 Handler |
 
 ---
 
-## 🔥 TIC3 ISR ANALYSIS (3X Crank - Spark Cut Point)
+## 🔥 TIC3 ISR ANALYSIS (24X Crank - Spark Cut Point)
 
 ### Code Flow at 0x35FF:
 
@@ -91,20 +91,25 @@ The code at $363E stores to $0178, but **Chr0m3's method targets the STD $017B a
 
 ## 📊 IDENTIFIED RAM VARIABLES
 
-| Address | Purpose | Confidence |
-|---------|---------|------------|
-| **$017B** | 3X Period Storage (HOOK POINT) | 🟢 HIGH - STD at 0x101E1 VERIFIED |
-| $0178 | Secondary period variable | 🟡 MEDIUM - STD at $363E |
-| $017D | Period calculation result | 🟢 HIGH |
-| $0171 | Cylinder index counter | 🟢 HIGH |
-| $01B3 | Previous TIC3 capture | 🟡 MEDIUM |
-| $1B7A | Reference value for period calc | 🟡 MEDIUM |
-| $1B7C-$1B86 | Period differences per cylinder | 🟢 HIGH |
-| $1B8C | 3X pulse counter | 🟢 HIGH |
-| $18E5 | Secondary counter | 🟢 HIGH |
-| $0046 | Engine mode flags | 🟢 HIGH |
-| $0048 | Engine state flags | 🟢 HIGH |
-| $0044 | Control flags | 🟢 HIGH |
+| Address | Purpose | Confidence | Notes |
+|---------|---------|------------|-------|
+| **$017B** | **DWELL INTERMEDIATE** (HOOK POINT) | 🟢 HIGH | STD at 0x101E1 VERIFIED - NOT crank period! |
+| **$194C** | **24X Crank Period** | 🟢 HIGH | STD at $3618 in TIC3 ISR (verified 2026-01-31) |
+| $0178 | Secondary period variable | 🟡 MEDIUM | STD at $363E (Enhanced only?) |
+| $017D | Period calculation result | 🟢 HIGH | STAA in TIC3 ISR |
+| $0171 | Cylinder index counter | 🟢 HIGH | Reference unclear |
+| $016D | Cylinder index | 🟢 HIGH | LDAB $016D in ISR |
+| $01B3 | Previous TIC3 capture | 🟡 MEDIUM | LDD $01B3 in ISR |
+| $0044 | Mode flag byte | 🟡 MEDIUM | Bit 4 tested by BRCLR |
+| $0046 | Engine mode flags | 🟢 HIGH | Bit 0 tested, bit 7 FREE |
+| $0048 | State flag byte | 🟡 MEDIUM | Bit 0 BRSET/BCLR |
+| $01B3 | Previous TIC3 capture | 🟡 MEDIUM | LDD $01B3 in ISR |
+| $1B7A | Reference value for period calc | 🟡 MEDIUM | |
+| $1B7C-$1B86 | Period differences per cylinder | 🟢 HIGH | |
+| $1B8C | 24X pulse counter | 🟢 HIGH | INC in ISR |
+| $18E5 | Secondary counter | 🟢 HIGH | INC in ISR |
+
+**Cross-Reference:** See [`RAM_Variables_Validated.md`](RAM_Variables_Validated.md) for complete RAM map with XDF validation status.
 
 ---
 
@@ -206,11 +211,11 @@ The actual **TIC3 hardware register** is at $1014, but the code reads from $15CA
 
 ## 📝 Next Steps
 
-1. **Update ignition_cut_patch.asm** - Change target from $00C2 to $0178
-2. **Find free space** - Need to locate actual 0xFF regions for patch code
-3. **Verify subroutine $371A** - This does the period math
-4. **Test RPM address** - Confirm $005F is really RPM/25
-5. **Update XDF** - Add new RAM variable definitions
+1. ✅ **COMPLETED** - Hook point verified at 0x101E1 (STD $017B = dwell intermediate)
+2. ✅ **COMPLETED** - Free space found at $0C468-$0FFBF (15KB+)
+3. ✅ **COMPLETED** - RPM at $00A2 verified (8-bit, ×25 scaling)
+4. ✅ **COMPLETED** - 24X crank period at $194C verified (TIC3 ISR)
+5. **DONE** - See spark_cut_chr0m3_method_VERIFIED_v38.asm for working patch
 
 ---
 
@@ -218,27 +223,35 @@ The actual **TIC3 hardware register** is at $1014, but the code reads from $15CA
 
 | Previous Doc Says | Actual Finding | Status |
 |-------------------|----------------|--------|
-| Period at $00C2 | Period at $0178 | ❌ WRONG - Corrected |
-| TIC3 ISR at $2000 | TIC3 ISR at $35FF (via jump table) | ❌ WRONG - Corrected |
-| RPM at $005F | Needs verification | 🟡 Unconfirmed |
-| TCTL1 writes | Not in this ISR | 🔍 Check other code |
+| Period at $00C2 | **$194C** = 24X crank period, **$017B** = dwell intermediate | ✅ VERIFIED 2026-01-31 |
+| TIC3 ISR at $2000 | TIC3 ISR at $35FF (via jump table at $200F) | ✅ VERIFIED |
+| RPM at $005F | **RPM at $00A2** (8-bit, ×25 scaling) | ✅ VERIFIED (82 reads in binary) |
+| TCTL1 writes | 3 locations in VY binary | ✅ VERIFIED |
 
 ---
 
 ## ✅ What This Means for Spark Cut Patch
 
-The patch injection needs to happen **AFTER** address $363E (where period is stored) but **BEFORE** the timing calculation uses it.
+**Two valid hook approaches (verified 2026-01-31/02-02):**
 
-**Best injection point:** Immediately after `STD $0178`
+**Option 1: Dwell Intermediate Hook ($017B) - RECOMMENDED**
+- Hook at file offset 0x101E1 (replaces STD $017B with JSR $C500)
+- Easier to debug (main code, not ISR)
+- See: `spark_cut_chr0m3_method_VERIFIED_v38.asm`
+
+**Option 2: Crank Period Hook ($194C)**  
+- Hook at file offset 0x13618 (in TIC3 ISR)
+- Manipulates actual crank period
 
 ```asm
-; At $3641, insert our check
-    LDAA   $005F          ; Load RPM
-    CMPA   #$FA           ; 6250 RPM limit
-    BLO    skip_cut
-    LDD    #$FFFF
-    STD    $0178          ; Override period with max value
-skip_cut:
-    ; Continue with original code at $3641
-    F6 01 71              ; LDAB $0171 (original instruction)
+; Working patch at $C500 (Option 1 - dwell hook)
+    LDAA   $00A2          ; Load RPM/25 (VERIFIED address)
+    CMPA   #$F0           ; Compare to 240 = 6000 RPM
+    BLO    normal_exit
+    LDD    #$3E80         ; Fake period (16000)
+    STD    $017B          ; Store to dwell intermediate
+    RTS
+normal_exit:
+    STD    $017B          ; Store real value (original instruction)
+    RTS
 ```

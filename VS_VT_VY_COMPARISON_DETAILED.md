@@ -1,8 +1,17 @@
 # VS/VT Memcal vs VY Flash ECU - Technical Reference
 
-**Last Updated:** January 20, 2026  
+**Last Updated:** January 29, 2026  
 **Purpose:** Binary architecture comparison for ignition cut porting  
 **Author:** Jason King (kingaustraliagg)
+
+> ⚠️ **WORK IN PROGRESS:** This document is research-focused and being actively corrected based on feedback from PCMHacking community (Topic 8845). Key corrections applied:
+> - VS\VT v6 l36 and l67 uses MEMCAL (not flash) — Service# vt is 16234531
+> - VS/VT/VX/VY L67 SC uses MEMCAL — Service# several including 16233396  
+> - Only VX/VY N/A V6 uses flash — Service# 09356445
+> - VX/VY flash chip type is UNKNOWN (not AM29F400BB)
+> - Removed unverified CobraRTP/Holden compatibility claims
+> 
+> Corrections with evidence are welcome — see [PCMHacking Topic 8845](https://pcmhacking.net/forums/viewtopic.php?t=8845).
 
 ---
 
@@ -10,11 +19,11 @@
 
 | Source | URL | Content |
 |--------|-----|---------|
+| **PCMHacking Hardware Guide v1.04** | [Topic 1396](https://pcmhacking.net/forums/viewtopic.php?t=1396) | antus's authoritative hardware/software reference |
 | **Mr Module** | [mrmodule.com.au/holden-delco](https://mrmodule.com.au/holden-delco/) | Delco ECU hardware specs, memcal types |
 | **PCMHacking Forums** | [pcmhacking.net](https://pcmhacking.net/forums/) | Community reverse engineering, OSE code |
 | **Moates Shop** | [shop.moates.net](https://shop.moates.net/collections/gm) | G6 adapter, Ostrich 2.0 specs |
 | **Motorola/NXP** | MC68HC11 Reference Manual | Timer registers, TCTL1, instruction timing |
-| **CobraRTP** | [cobrartp.com](https://cobrartp.com) | Flash Online, MotronicRT specs |
 
 ---
 
@@ -33,11 +42,12 @@
 | VN/VP | 1227808 | 2× Black | Long Memcal (28-pin) | 27C128 | 16KB |
 | VR Manual | 16183082 | 2× Black | Long Memcal (28-pin) | 27C256 | 32KB |
 | VR/VS Auto | 16176424 | 2× Lt Blue | Long Memcal (28-pin) | 27C512 | 64KB |
-| VS V6 | 16199728 | 2× Pink, 1× Blue | Short Memcal (32-pin) | 27C010 | 128KB |
-| VT V6 | 16233396 | 2× Pink, 1× Blue | Short Memcal (32-pin) | 27C010 | 128KB |
-| **VX/VY V6** | **09356445** | 2× Brown, 1× Tan | **Flash (soldered)** | **AM29F400** | **128KB** |
+| VS V6 S3 | 16234531 | 2× Pink, 1× Blue | Short Memcal (32-pin) | 27C010 | 128KB |
+| VT V6/V8 | 16234531 | 2× Pink, 1× Blue | Short Memcal (32-pin) | 27C010 | 128KB |
+| VT/VX/VY L67 SC | 16233396 | 2× Pink, 1× Blue | Short Memcal (32-pin) | 27C010 | 128KB |
+| **VX/VY V6 N/A** | **09356445** | 2× Brown, 1× Tan | **Flash (soldered)** | **Unknown** | **128KB** |
 
-> **Sources:** Mr Module (memcal types), PCMHacking Topic 655 (EPROM sizes), Topic 3281 (VR auto = 27C512)
+> **Sources:** PCMHacking Hardware Guide v1.04 (antus), Topic 3281
 
 ### Processor: Motorola MC68HC11 (All Generations)
 
@@ -87,9 +97,9 @@ FILE OFFSET   HC11 VECTOR   TRAMPOLINE   FUNCTION                    NOTES
 
 **CRITICAL:** VY uses a **pseudo-vector bridge** at $2000+. Each ISR vector points to a JMP instruction at $20xx, which then jumps to the actual handler code. This allows the ROM to be relocated without changing the vector table.
 
-- **$200F** = TIC3 trampoline → actual handler TBD (needs trace)
-- **$2012** = TIC2 trampoline → actual handler TBD
-- The hook point for spark cut is at the **TIC3 handler** (3X crank reference)
+- **$200F** = TIC3 trampoline → actual handler at **$35FF** (verified)
+- **$2012** = TIC2 trampoline → actual handler at **$358A** (CAM/SYNC)
+- The hook point for spark cut is at the **TIC3 handler** (24X crank reference)
 
 ### VS/VT ISR Vectors (for comparison)
 
@@ -202,7 +212,8 @@ DONE:
 | Item | VS/VT Location | VY Location | Status |
 |------|----------------|-------------|--------|
 | **RPM variable** | $00A2 | ✅ **$00A2** | VERIFIED (×25 scaling) |
-| **3X Period** | $017B | ✅ **$017B** | VERIFIED (16-bit) |
+| **Dwell Intermediate** | $017B | ✅ **$017B** | VERIFIED (NOT crank period!) |
+| **24X Crank Period** | N/A | ✅ **$194C** | VERIFIED (STD @ $3618 in TIC3) |
 | **TIC3 ISR code** | $6951 | ✅ **$35FF** | VERIFIED (via trampoline) |
 | **TCTL1 writes** | Various | ✅ 3 locations | Disassembly confirmed |
 | **Free space** | $F000+ | ✅ **$0C468-$0FFBF** | 15KB+ confirmed |
@@ -216,7 +227,7 @@ R:\VY_V6_Assembly_Modding\VY_V6_Enhanced.bin
 
 ```bash
 # 1. Extract TI3 ISR region from VY binary
-dd if=R:\VY_V6_Assembly_Modding\VY_V6_Enhanced.bin of=vy_ti3_isr.bin bs=1 skip=8192 count=1024
+dd if=A:\repos\VY_V6_Assembly_Modding\xdfs_and_adx_and_bins_related_to_project\VY_V6_Enhanced.bin of=vy_ti3_isr.bin bs=1 skip=8192 count=1024
 # (skip=$2000 in decimal, count=1KB)
 
 # 2. Disassemble with m68hc11 tools
@@ -234,7 +245,7 @@ m6811-elf-objdump -D -b binary -m m68hc11 vy_ti3_isr.bin
 
 ```python
 # Extract VY TI3 ISR
-with open('R:\VY_V6_Assembly_Modding\VY_V6_Enhanced.bin', 'rb') as f:
+with open('A:\\repos\\VY_V6_Assembly_Modding\\xdfs_and_adx_and_bins_related_to_project\\VY_V6_Enhanced.bin', 'rb') as f:
     f.seek(0x2000)  # TI3 ISR location
     ti3_code = f.read(512)  # Read 512 bytes
     
@@ -1144,20 +1155,20 @@ Method: Dwell reduction to 200µs (0.2ms)
 | MC68HC808 | VN/VP Memcal | External timer IC | TCTL1 bit 1 toggle or dwell ~0.3ms |
 | MC68HC424 | VR NVRAM | CPU-based | Dwell = 200µs |
 | MC68HC11 | VS/VT Memcal | CPU-based | Dwell reduction (untested) |
-| MC68HC11 | VT-VZ Flash | CPU-based | Dwell reduction + code patch |
+| MC68HC11 | VX/VY N/A Flash | CPU-based | Dwell reduction + code patch |
 
 **Critical Insight from antus:**
 > "'424 based computers (and later, such as all the1's enhanced bins use) moved spark on to the main CPU so 11P and these operating systems can with software mods."
 
 This means:
-- **VS/VT (MC68HC11)** = Similar to 424, spark control in CPU = dwell method should work
-- **VY Flash (MC68HC11)** = Same architecture = dwell method applies
+- **VS/VT (MEMCAL)** = Similar to 424, spark control in CPU = dwell method should work
+- **VX/VY Flash** = Same architecture = dwell method applies
 
-### VT-VY Spark Cut Development (Topic 8567 - Chr0m3)
+### VX/VY Spark Cut Development (Topic 8567 - Chr0m3)
 
 **Current Status (Jan 2026):** In Development
 
-Chr0m3's approach for VT-VY Flash ECUs:
+Chr0m3's approach for VX/VY Flash ECUs:
 
 1. **RPM Limitation Discovery:**
    - Factory code uses 8-bit RPM value (25 RPM per bit)
@@ -1212,6 +1223,189 @@ From antus:
 | **Development Status** | Mature, complete | Mature, complete | Stalled | Active (Chr0m3) |
 | **Source Code Available** | No (VL400 has it) | No (VL400 has it) | No | No |
 | **Community Support** | Limited (VL400 gone) | Limited (VL400 gone) | Active (The1) | Active (Chr0m3) |
+
+---
+
+## OSE 11P Two-Stage Spark Cut Limiter (Detailed Analysis)
+
+> **Source:** Binary pattern analysis of OSE 11P V104 firmware, PCMHacking Topic 3798 forum posts, and comparison with VL $5D two-stage limiter architecture.
+
+### OSE 11P Limiter Implementation Pattern
+
+Based on forum descriptions and binary structure analysis, OSE 11P implements a **two-stage progressive limiter** similar to the VL Walkinshaw pattern but using spark control instead of fuel cut:
+
+| Stage | Description | RPM Band | Action |
+|-------|-------------|----------|--------|
+| **Soft Zone** | Progressive spark retard | Limit - SoftWidth to Limit | Apply 5-6° retard |
+| **Hard Cut** | Full spark cut (200µs dwell) | At Limit RPM | Dwell starves coil |
+| **Resume** | Fuel/spark restore | Below Return RPM | Normal operation |
+
+### OSE 11P vs VL V8 Limiter Architecture Comparison
+
+| Feature | VL V8 $5D (808) | OSE 11P (424) | VY V6 Stock |
+|---------|-----------------|---------------|-------------|
+| **Primary Method** | Fuel cut | Spark cut (dwell) | Fuel cut |
+| **Hysteresis** | ✅ 94 RPM band | ✅ ~100 RPM (Return RPM) | ❌ None |
+| **Soft Zone** | ❌ None (instant cut) | ✅ 150 RPM spark retard | ❌ None |
+| **Delay Timer** | ✅ 0.1 sec KFCOTIME | ❌ Instant | ❌ Instant |
+| **Dual Mode** | ❌ Single mode | ✅ Econ/Power split | ❌ Single mode |
+| **Sound Character** | "Valve bounce" | Smooth progressive | Harsh stutter |
+| **Hardware Required** | None | None (CPU-based) | ASM patch needed |
+
+### OSE 11P Limiter Logic (Forum-Derived Pseudocode)
+
+Based on VL400's forum descriptions:
+
+```
+; OSE 11P Limiter Logic (reverse-engineered from descriptions)
+; 
+; This is NOT actual code - it's reconstructed from forum quotes:
+; - "Tick the spark cut option flag and it disables the fuel cut code"
+; - "Dwell is set to 200us so cant ignite and keeps things happy"
+; - "It also disables some of the EST error logic only during spark cut"
+
+LIMITER_CHECK:
+    ; Check if spark cut mode enabled
+    BRCLR  spark_cut_flag, #$20, FUEL_CUT_ONLY
+    
+    ; Load current RPM
+    LDD    current_rpm_16bit
+    
+    ; Check against upper limit
+    CPD    rpm_upper_limit          ; e.g., 5800 RPM
+    BHS    HARD_CUT
+    
+    ; Check if in soft zone (within X RPM of limit)
+    SUBD   rpm_soft_zone_width      ; e.g., 150 RPM below
+    CPD    current_rpm_16bit
+    BLO    NORMAL_OPERATION
+    
+    ; In soft zone: apply progressive spark retard
+    LDAB   spark_retard_value       ; e.g., 0x11 = 5.98°
+    STAB   spark_reduction_active
+    BRA    CHECK_RETURN
+
+HARD_CUT:
+    ; Force dwell to 200µs (too short to fire coil)
+    LDD    #$0014                   ; 20 × 10µs = 200µs
+    STD    forced_dwell_override
+    
+    ; Disable EST error detection to prevent DTC 41/42
+    BSET   est_error_mask, #$01
+    BRA    EXIT
+
+CHECK_RETURN:
+    ; Check if below return RPM (hysteresis)
+    LDD    current_rpm_16bit
+    CPD    rpm_return_limit         ; e.g., 5700 RPM
+    BHS    EXIT
+    
+NORMAL_OPERATION:
+    ; Clear all limiter states
+    CLR    spark_reduction_active
+    BCLR   est_error_mask, #$01
+    
+EXIT:
+    RTS
+```
+
+### Why OSE 11P Sounds Better Than VY Stock
+
+| Characteristic | OSE 11P | VY Stock | Result |
+|---------------|---------|----------|--------|
+| **Soft zone exists** | ✅ 150 RPM | ❌ None | Gradual power reduction before cut |
+| **Spark retard in zone** | ✅ ~6° | ❌ N/A | Power drops progressively |
+| **Hysteresis band** | ✅ 100 RPM | ❌ 0 RPM | Smooth on/off cycling |
+| **Method** | Spark starvation | Fuel cut | Smoother, less harsh |
+
+### OSE 11P Limiter Addresses (Binary Pattern Analysis)
+
+> **Note:** These patterns are inferred from comparing OSE 11P binary structure with documented VL $5D and OSE 12P patterns. Exact addresses may vary between versions.
+
+The limiter parameters appear to follow this memory layout pattern (64KB bin):
+
+| Parameter Type | Likely Region | Size | Notes |
+|---------------|---------------|------|-------|
+| Enable flags | 0x6000-0x6070 | 1 byte each | Bit-field flags |
+| RPM thresholds | 0x60B0-0x60D0 | 2 bytes each | Big-endian, Econ then Power |
+| Soft zone width | Near RPM params | 2 bytes | Same region |
+| Spark retard | After zone width | 1 byte | 0.35° per bit scaling |
+| Speed limiter | 0x62B0-0x62C0 | 1 byte each | KPH direct value |
+
+### Applying 11P Concepts to VY V6 Spark Cut
+
+**What VY V6 needs to match OSE 11P behavior:**
+
+1. **Enable Flag:** Add a calibration bit to enable/disable spark cut mode
+2. **Soft Zone:** Implement progressive timing retard zone before hard cut
+3. **Hysteresis:** Add return RPM threshold ~100 RPM below cut threshold
+4. **Dwell Override:** Force minimum dwell (200-300µs) at hard cut
+5. **EST Error Bypass:** Suppress DTC 41/42 during spark cut events
+
+**Proposed VY ASM Implementation:**
+
+```asm
+; VY V6 Two-Stage Limiter (OSE 11P style)
+; Hook into existing limiter check routine
+;
+VY_LIMITER_TWO_STAGE:
+    ; Check spark cut enable flag (calibration bit)
+    LDAA    $XXXX               ; Spark cut enable flag address
+    ANDA    #$20                ; Bit 5 = enable
+    BEQ     STOCK_FUEL_CUT      ; If not enabled, use stock behavior
+    
+    ; Load RPM (8-bit, ×25 scaling)
+    LDAA    $00A2               ; Current RPM
+    
+    ; Check if above hard cut threshold
+    CMPA    $YYYY               ; Hard cut RPM calibration
+    BHS     HARD_SPARK_CUT
+    
+    ; Check if in soft zone
+    SUBA    $ZZZZ               ; Soft zone width (e.g., 6 = 150 RPM)
+    CMPA    $00A2               ; Compare adjusted threshold
+    BLO     CHECK_RETURN_RPM
+    
+    ; In soft zone: apply spark retard
+    LDAB    $WWWW               ; Spark retard value (0.35° per bit)
+    STAB    spark_retard_temp   ; Apply to timing calculation
+    BRA     EXIT_LIMITER
+
+HARD_SPARK_CUT:
+    ; Force minimum dwell to starve coil
+    LDD     #$000C              ; 12 × ~16µs = ~200µs
+    STD     dwell_override      ; Inject into dwell calculation
+    BRA     EXIT_LIMITER
+
+CHECK_RETURN_RPM:
+    LDAA    $00A2               ; Current RPM
+    CMPA    $VVVV               ; Return RPM threshold
+    BHS     EXIT_LIMITER        ; Stay in limiter state
+    
+    ; Below return RPM: resume normal operation
+    CLR     limiter_active_flag
+    
+EXIT_LIMITER:
+    RTS
+
+STOCK_FUEL_CUT:
+    JMP     $77DD               ; Original stock limiter routine
+```
+
+### Cross-Reference: VL V8 Two-Stage Pattern
+
+**See also:** `VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md`
+
+The VL V8 Walkinshaw ($5D mask) implements a similar hysteresis pattern but for **fuel cut**:
+
+| Parameter | VL $5D | OSE 11P | Purpose |
+|-----------|--------|---------|---------|
+| High threshold | KFCORPMH (5617 RPM) | Upper RPM (~5800) | Activation point |
+| Low threshold | KFCORPML (5523 RPM) | Return RPM (~5700) | Deactivation point |
+| Hysteresis | 94 RPM | ~100 RPM | Prevents oscillation |
+| Delay | KFCOTIME (0.1s) | None (instant) | False trigger prevention |
+
+The VL's "amazing hardcut sound" comes from its 94 RPM hysteresis band causing smooth 1-2 Hz cycling at the limiter. OSE 11P achieves similar smoothness through progressive spark retard in the soft zone.
 
 ### Porting Path: OSE11P Method → VS/VT/VY
 
@@ -1392,11 +1586,11 @@ please edit this if you know more that work you have tried.
 
 > **DS1245Y Note:** 1Mbit (128KB), 70ns access time, 5V, 32-pin EDIP. Reliable for 6+ years per PCMHacking reports (Topic 8005).
 
-### Flash PCM Tuning Tools (VT-VZ)
+### Flash PCM Tuning Tools (VX/VY/VZ N/A V6)
 
 | Tool | Type | Notes |
 |------|------|-------|
-| **OSE Flash Tool V1.51** | Standalone Program | Primary method for VX/VY/VZ V6 flash PCMs — [PCMHacking Topic 82](https://pcmhacking.net/forums/viewtopic.php?t=82) |
+| **OSE Flash Tool V1.51** | Standalone Program | Primary method for VX/VY/VZ V6 flash PCMs — Topic 82 |
 | **TunerPro RT** | Bin Editor | Used for editing tune files, NOT flashing (separate from OSE Flash Tool) |
 | **PCM Hammer** | Standalone Program | Alternative for LS1 V8 ECUs, works with OBDX Pro VT scantool |
 | **ALDL Cable** | Hardware | Required for all flash methods — Envyous Customs, DIY, or Moates ALDU1 |
@@ -1404,6 +1598,8 @@ please edit this if you know more that work you have tried.
 > **Workflow:** Edit bin in TunerPro RT → Flash to ECU with OSE Flash Tool via ALDL cable.
 > 
 > **Important:** OSE Flash Tool is NOT a TunerPro plugin — it's a separate standalone application. Flash & Burn is for chip burning only (Burn1/Burn2/AutoProm), not flash PCMs.
+>
+> **Note:** VT uses MEMCAL (not flash). VX/VY L67 SC also uses MEMCAL. Only VX/VY/VZ N/A V6 use flash.
 
 ### OSEPlugin for TunerPro RT (MEMCAL Real-Time Tuning)
 
@@ -1416,15 +1612,16 @@ please edit this if you know more that work you have tried.
 | **Total Posts** | 323 |
 | **Downloads v1.80** | 3,670+ |
 | **Purpose** | Real-time tuning & logging via NVRAM for MEMCAL ECUs |
-| **Supports** | VR/VS/VT/VX SC/VY SC, OSE $12P, OSE $11P |
+| **Supports** | VR/VS/VT MEMCAL, VX/VY L67 SC MEMCAL, OSE $12P, OSE $11P |
 
 > **OSEPlugin** enables real-time emulation (upload/download cal while running) and datalogging via TunerPro RT. Requires:
 > - NVRAM installed in ECU (Dallas DS1230/DS1245 or Ostrich 2.0)
-> - Enhanced bin with real-time code (OSE $12P, $11P, or VT-VZ Enhanced)
+> - Enhanced bin with real-time code (OSE $12P, $11P, or Enhanced)
 > - ALDL interface (ALDU1, Envyous Customs USB, DIY)
+> - **MEMCAL-based ECU** (VT/VX L67/VY L67 — NOT VX/VY N/A flash PCMs!)
 
-**Known Issues (VT-VZ Flash PCMs):**
-> "On VT-VZ ALDL commodores oseplugin struggles to silence the bus and operate normally. It is supposed to work and can work, but its not uncommon on some cars that it wont. [...] There is a hardware fix, you can disconnect the BCM or put a switch on the serial (aldl) data line from the BCM and disconnect it when you log." — antus, 2024-07-08
+**Known Issues (VX/VY/VZ N/A Flash PCMs):**
+> "On VX-VZ ALDL commodores oseplugin struggles to silence the bus and operate normally. It is supposed to work and can work, but its not uncommon on some cars that it wont. [...] There is a hardware fix, you can disconnect the BCM or put a switch on the serial (aldl) data line from the BCM and disconnect it when you log." — antus, 2024-07-08
 
 ### DIY Ostrich/NVRAM on VX-VY Flash PCMs (Experimental)
 
@@ -1517,61 +1714,147 @@ Some users have converted VX-VY flash PCMs to use Ostrich or NVRAM by desolderin
 - LPG vs petrol dual-fuel systems
 - Staged development (progressive tune testing)
 
-### Cobra RTP — Alternative to Moates (Research Notes)
+### Cobra RTP — Alternative to Moates (Detailed Research)
 
 **Manufacturer:** CobraRTP ([cobrartp.com](https://cobrartp.com))
 
 | Product | Memory Type | Supported | Notes |
 |---------|-------------|-----------|-------|
-| **MotronicRT R6** | 8-bit EPROM | 27C128-27C512, 28F512 | OBD1 cars ~1984-1997 |
-| **Flash Online** | 16-bit Flash | 28F200/400/800, 29F200/400/800 | BMW MS41/MS42/MS43, E38 LS |
+| **MotronicRT R6** | 8-bit EPROM | 27C128-27C512, 28F512 | OBD1 cars ~1984-1997, USB/Bluetooth |
+| **Flash Online** | 16-bit Flash | 28F200/400/800, 29F200/400/800 | BMW MS42/MS43, SOP44 adapter required |
 
-**MotronicRT R6 — Compatible with Holden MEMCAL ECUs:**
+#### MotronicRT R6 — Technical Specs (from Manual Rev 1.3)
 
-GM ECUs explicitly listed: `1227727, 1227730, 1227748, 1227749, 1228321, 1227752, 1228253, 1227165, 1227277, 16195699, 16197427` (TunerPro RT compatible)
+**Verified from:** `Manual_MotronicRT(EN).pdf`
 
-> "Note: to emulate a 16 bit (2 chip) ECU, you need 2 CobraRTP emulators and an expansion board (daughterboard)."
+| Feature | Specification |
+|---------|---------------|
+| **Supply Voltage** | 5V ±10% |
+| **Supply Current** | 150mA |
+| **Memory Access Time** | ≤90ns |
+| **Analog Inputs** | 3× channels, 0-6.34V range |
+| **Temperature Range** | -20 to +50°C |
+| **Connectivity** | USB-B or Bluetooth (10m range) |
+| **Software** | TunerPro RT, Nistune, CobraRTP Utility |
 
-**Flash Online — For BMW MS42/MS43/E38:**
-- Emulates 29F400/29F800 (256KB–1MB)
-- Real-time map editing via TunerPro RT
-- **Dual-mode:** Upload 2 full firmwares, switch without PC (map switching!)
-- Hardware map/table tracing supported
-- Requires desoldering original flash chip and installing SOP44 adapter
+**Key Features:**
+- **Address Hit Tracing:** Hardware-level table/map tracing without external equipment
+- **Dual-Mode (DualMap):** Store 2 different firmwares, switch via jumper while engine running
+- **Analog Inputs:** Connect wideband O2, TPS, or MAF sensors for datalogging
+- **3 Analog Channels:** Independent voltage monitoring (0-5V typical, 6.34V max)
 
-> **⚠️ RESEARCH FINDINGS (Partially Answered):**
+**GM ECUs Explicitly Listed (TunerPro RT Compatible):**
+`1227727, 1227730, 1227748, 1227749, 1228321, 1227752, 1228253, 1227165, 1227277, 16195699, 16197427`
+
+> "To emulate a 16 bit (2 chip) ECU, you need 2 CobraRTP emulators and an expansion board (daughterboard)."
+
+**28F512 (32-pin) ECU Notes:**
+- Requires offset connection of emulator cable (pins 30+32 jumpered for power)
+- Examples: Siemens MS40.1, IAW 1AP.40
+
+#### Flash Online — Technical Specs (from User Manual Rev 2.1)
+
+**Verified from:** `FlashOnline_(EN).pdf`
+
+| Feature | Specification |
+|---------|---------------|
+| **Supply Voltage** | 4.7-5.5V |
+| **Supply Current** | 70mA |
+| **Temperature Range** | 0-50°C |
+| **Bluetooth Range** | 10m (optional module) |
+| **Weight** | 80g |
+| **Battery Backup** | CR2032 (1.5-2 years retention) |
+| **Memory** | 1024KB (512×16-bit organization) |
+| **Emulated Chips** | 28F200, 29F200 (256KB), 29F400 (512KB), 29F800 (1MB) |
+
+**Key Features:**
+- **Address Hit Tracing:** Track ECU memory access in real-time via TunerPro RT
+- **Dual-Mod:** 2× 512KB firmwares switchable via jumper (works with 256-512KB bins)
+- **Big/Little Endian Support:** Configurable for Motorola (MSS52-54) or Intel CPUs
+- **Siemens Encoding:** Optional data bus encoding for Siemens ECUs (ME3.8.3 etc.)
+- **Autoupload:** Firmware auto-loads when bin file saved to disk (via CobraRTP Utility)
+
+**⚠️ Limitations:**
+1. **Read-only to ECU:** Cannot be flashed via OBD2 — uploads only via USB
+2. **No adaptation storage:** ECU adaptations/calibrations won't persist if ECU writes to flash
+3. **Dual-mod only for 256-512KB:** Not available when emulating 29F800 (1024KB)
+4. **Battery life:** CR2032 lasts 1.5-2 years; data corrupts if voltage drops below 1.5V
+
+**Installation Requirements:**
+- Desolder original flash chip from ECU board (hot air station recommended)
+- Solder SOP44 adapter to pads
+- Connect via ribbon cable to Flash Online board
+- Configure jumpers J1/J2 for chip type if needed (Bosch ME3.8.3 requires J1+J2 open)
+
+**Supported ECU Architectures:**
+- BMW MS42/MS43/MSS52/MSS54 (C167CR processor, 29F400/29F800)
+- Bosch ME3.8.3
+- Other 16-bit flash ECUs with 28F/29F chips
+
+> ⚠️ **NOT verified for Holden VX/VY flash PCMs.** The Holden 09356445 uses 68HC11 (8-bit), different architecture from BMW C167CR (16-bit). Flash chip type in Holden VX/VY is unknown.
+
+#### MotronicRT R6 — Compatibility with Holden
+
+**Potential Compatibility (UNVERIFIED):**
+- MotronicRT emulates 8-bit EPROMs (27C128-27C512) up to 64KB
+- Holden VR/VS long memcal uses 27C128-27C512 (16-64KB) ✅ Compatible pinout
+- Holden VS S3/VT short memcal uses 27C010 (128KB) — **exceeds MotronicRT capacity**
+
+| ECU | Chip | Size | MotronicRT Compatible? |
+|-----|------|------|------------------------|
+| VN/VP/VR Long Memcal | 27C128/256/512 | 16-64KB | ✅ YES (with adapter) |
+| VR/VS Auto Long Memcal | 27C512 | 64KB | ✅ YES (with adapter) |
+| VS S3/VT Short Memcal | 27C010 | 128KB | ❌ NO (chip too large) |
+| VX/VY L67 SC Memcal | 27C010 | 128KB | ❌ NO (chip too large) |
+| VX/VY V6 N/A Flash | Unknown | 128KB | ❌ NO (flash, not EPROM) |
+
+> **Conclusion:** MotronicRT works with VN-VS long memcal ECUs (16-64KB). For VS S3/VT (128KB), use Moates Ostrich 2.0 or G6 adapter instead.
+
+**MotronicRT vs Moates Ostrich 2.0 Comparison:**
+
+| Feature | MotronicRT R6 | Moates Ostrich 2.0 |
+|---------|---------------|-------------------|
+| **Max Chip Size** | 64KB (27C512) | 512KB (29F040) |
+| **Pin Modes** | 28-pin, 32-pin (with offset) | 24/28/32-pin |
+| **128KB Support** | ❌ No | ✅ Yes |
+| **Bluetooth** | ✅ Optional | ❌ No |
+| **Analog Inputs** | ✅ 3× channels | ❌ No |
+| **Address Tracing** | ✅ Yes | ✅ Yes |
+| **Dual-Map Switching** | ✅ Yes (jumper) | ❌ No (use G6 rotary) |
+| **Price** | ~$180 USD | ~$251 USD |
+| **Holden VS S3/VT** | ❌ Not compatible | ✅ Compatible |
+
+> **⚠️ RESEARCH FINDINGS (Updated Jan 2026):**
 >
 > **Q: Does Flash Online have on-the-fly bank/map switching like G6 rotary?**
-> A: ✅ YES — "upload two firmware (ROMs), followed by switching between them, for example using a switch or a jumper (without a PC)" — BoostedNW/CobraRTP
+> A: ✅ YES — supports dual firmware with physical switch/jumper
 >
 > **Q: Is there a standalone map switching solution without PC?**
-> A: ✅ YES — Both MotronicRT R6 and Flash Online support dual-mode with physical switch/jumper
+> A: ✅ YES — Both MotronicRT R6 and Flash Online support dual-mode
 >
 > **Q: What chip is in VX/VY flash PCM?**
-> A: ⚠️ NEEDS VERIFICATION — VX/VY V6 flash PCMs:
-> - Processor: **68HC11** (same family as VS/VT)
-> - External flash: AM29F400BB or similar (512KB, replaces EPROM)
-> - No internal flash — the HC11 doesn't have on-chip flash
-> - EEPROM: Small section for VIN/VATS/trims
+> A: ⚠️ UNKNOWN — Chip type needs hardware verification by opening a VX/VY flash PCM.
+> - Service Number: 09356445
+> - Processor: 68HC11 (same as VS/VT)
+> - Binary size: 128KB
+> - Chip: NOT verified - do not assume AM29F400
 >
 > **Q: Could Flash Online work on VX/VY with adapter?**
-> A: ⚠️ MAYBE — Flash Online emulates 29F400/29F800 which matches the VY external flash chip.
-> The VY flash PCM has external flash soldered to PCB (not socketed like MEMCAL).
+> A: ⚠️ UNKNOWN — Depends on actual chip type which is unverified.
 > Would need to desolder flash and install SOP44 adapter — same as BMW MS42/MS43 process.
 
-**VX/VY Flash Chip Research (Corrected):**
+**VX/VY Flash Chip Research (Corrected from PCMHacking Hardware Guide v1.04):**
 
-| ECU | Processor | Memory Type | Chip | Cobra RTP? |
-|-----|-----------|-------------|------|------------|
-| VS MEMCAL | 68HC11 | EPROM (socketed) | 27C010 (128KB) | ✅ MotronicRT R6 |
-| VT MEMCAL | 68HC11 | Flash (socketed) | 29F040 or 27SF010 | ✅ MotronicRT R6 |
-| VX/VY V6 Flash | 68HC11 | Flash (soldered) | AM29F400BB (512KB) | ⚠️ Flash Online (untested) |
-| VX/VY L67 SC | 68HC11 | Flash (soldered) | AM29F400/STM M29F400 | ⚠️ Flash Online (untested) |
-| BMW MS42/MS43 | C167CR | Flash (soldered) | AM29F400BB (512KB) | ✅ Flash Online (tested) |
+| ECU | Processor | Memory Type | Chip | Notes |
+|-----|-----------|-------------|------|-------|
+| VS S3/VT MEMCAL | 68HC11 | EPROM (socketed) | 27C010 (128KB) | PCM NVRAM compatible |
+| VT/VX/VY L67 SC | 68HC11 | EPROM (socketed) | 27C010 (128KB) | Service# 16233396 |
+| VX/VY V6 N/A Flash | 68HC11 | Flash (soldered) | Unknown | Service# 09356445 |
+| BMW MS42/MS43 | C167CR | Flash (soldered) | AM29F400BB (512KB) | Different architecture |
 
-> **Key Insight:** VX/VY and BMW MS42/MS43 both use AM29F400BB external flash (512KB, 16-bit).
-> Flash Online is designed for AM29F400/29F800 emulation.
-> **Compatibility is theoretically possible** — needs hardware verification and correct SOP44 adapter wiring.
+> **Key Point:** VX/VY V6 N/A flash chip type is UNKNOWN - needs hardware verification.
+> The AM29F400BB claim was unverified speculation. DO NOT assume compatibility with BMW.
+> VX/VY L67 SC (supercharged) uses MEMCAL, NOT flash - this is important!
 
 ### VY/VX/VT Running OSE 12P — ECU Swap Path
 

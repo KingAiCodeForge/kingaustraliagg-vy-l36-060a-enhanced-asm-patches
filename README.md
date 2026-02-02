@@ -14,6 +14,24 @@ No patched binaries included. These are reference implementations requiring manu
 
 > **Reality Check:** Most patches will likely work if applied correctly. However, use at your own risk. If you don't understand what connects to what in the binary, how one routine calls another, how RAM variables are shared between ISRs, or how timing-critical code interacts — you can brick your ECU or damage your engine. The HC11 has no safety net.
 need to map out every thing to the bone in the binary itself and correct any mistakes i make along the way. im only human after all.
+
+---
+
+## ⚠️ CRITICAL ADDRESS CORRECTION (2026-01-31/02-02)
+
+**TIC3 ISR disassembly PROVED previous assumptions about `$017B` were WRONG:**
+
+| Old Claim | Corrected Fact |
+|-----------|----------------|
+| `$017B` = 3X crank period | **`$017B` = Intermediate dwell calculation** (NOT crank!) |
+| Unknown actual crank storage | **`$194C` = 24X crank period** (STD @ $3618 in TIC3 ISR) |
+
+**Both hooks are VALID for spark cut:**
+- **$017B hook** (@ 0x101E1) - In main code, easier to debug, manipulates dwell intermediate
+- **$194C hook** (@ 0x13618) - In TIC3 ISR, manipulates actual crank period
+
+**See:** `BANK_SWITCHING_AND_ISR_ANALYSIS.md` for full TIC3 ISR disassembly
+
 ---
 
 ## 🚨 CRITICAL PLATFORM CLARIFICATION
@@ -119,14 +137,15 @@ asm_wip/
 │   ├── shift_launch_v1.asm                 # "AK47" rapid cycle pattern
 │   └── timing_retard_soft.asm              # Soft timing retard limiter
 │
-├── ghost_cam_ASM_PATCH/            # 👻 True ghost cam (fast aggressive lope)
-│   │   # TRUE GHOST CAM: ASM patch with BMW-style RPM-delta lookup table
-│   │   # For LUMPY IDLE (XDF-only, slow lope) see lumpy_idle_XDF_ONLY/
+├── ghost_cam_ASM_PATCH/            # 👻 Ghost cam experiment (THEORETICAL)
+│   │   # OUR OWN APPROACH: BMW/LS-style RPM-delta lookup table (UNTESTED)
+│   │   # NOTE: Rhysk94 says timing is NOT used for ghost cam on Delcos
+│   │   # His working method is unknown to us - this is independent research
 │   └── ghost_cam_rpm_delta_spark_v1.asm    # RPM delta spark lookup table
 │
 ├── lumpy_idle_XDF_ONLY/            # 🎚️ Lumpy idle (XDF parameters only)
-│   │   # LUMPY IDLE: Rhysk94's approach - XDF changes only, no ASM
-│   │   # Result: Slow ~1Hz "lope every second"
+│   │   # LUMPY IDLE: XDF changes only, no ASM - produces slow ~1Hz lope
+│   │   # NOTE: Rhysk94 has working ghost cam but his method is unknown to us
 │   └── lumpy_idle_xdf_parameters_v2.asm    # XDF parameters reference
 │
 ├── cold_maps_only_for_tuning_patch/# ❄️ Alpina/OEM tuning method
@@ -180,8 +199,8 @@ xdfs_and_adx_and_bins_related_to_project/
 | Feature | Method | Notes |
 |---------|--------|-------|
 | **Spark Cut Limiter** | ⚙️ ASM Required | Not in XDF - needs code injection |
-| **Lumpy Idle** | 📊 XDF Only | Rhysk94's approach: KSARPMHI/KSARPMLO multipliers, slow ~1Hz lope |
-| **Ghost Cam (fast lope)** | ⚙️ ASM Required | BMW-style RPM-delta lookup table, aggressive 45°+ swing |
+| **Lumpy Idle** | 📊 XDF Only | Our approach: KSARPMHI/KSARPMLO multipliers, slow ~1Hz lope |
+| **Ghost Cam (fast lope)** | ❓ Unknown | Rhysk94 has working tune but method unknown to us |
 | **Cold Maps Tuning** | 📊 XDF Preferred | Cold Spark Multiplier, STFT/LTFT temps |
 | **MAFless / Alpha-N** | ⚙️ ASM Required | Force TPS-based load calculation |
 | **Speed Density** | ⚙️ ASM Required | VE table + MAP-based fueling |
@@ -193,7 +212,7 @@ xdfs_and_adx_and_bins_related_to_project/
 | **Idle RPM Target** | 📊 XDF Available | P/N and Drive idle tables |
 | **Timing Maps** | 📊 XDF Available | Main spark tables |
 
-> **Lumpy Idle vs Ghost Cam:** Lumpy idle (XDF) creates slow 1Hz lope. Ghost cam (ASM) creates fast aggressive lope like LS/BMW. VY V6 has no VVT - both use spark modulation, not valve overlap.
+> **Lumpy Idle vs Ghost Cam:** Lumpy idle (XDF) creates slow 1Hz lope using spark correction parameters. Ghost cam creates fast aggressive lope - Rhysk94 has a working VY V6 ghost cam tune but states his method does NOT use timing. We don't know his method. Our BMW/LS-inspired ASM approach is THEORETICAL and untested.
 
 ---
 
@@ -206,28 +225,30 @@ xdfs_and_adx_and_bins_related_to_project/
 | **Enhanced v1.0a** | v2.09a | ❌ NO | This repo's target |
 | **Enhanced v1.1a** | v2.04c | ✅ YES | The1's implementation (Topic 8852) |
 
-> **Note:** Enhanced v1.1a (v2.04c package, Topic 8852) includes The1's spark cut implementation. We are currently reverse-engineering that code to understand exactly what changed from v1.0a → v1.1a before documenting it publicly. Our v38 ASM patches are independent work based on Chr0m3's 3X period method.
+> **Note:** Enhanced v1.1a (v2.04c package, Topic 8852) includes The1's spark cut implementation. We are currently reverse-engineering that code to understand exactly what changed from v1.0a → v1.1a before documenting it publicly. Our v38 ASM patches are independent work based on Chr0m3's dwell intermediate method.
 
-Primary implementation based on **3X Period Injection** (Chr0m3 validated method):
+Primary implementation based on **Dwell Intermediate Injection** (Chr0m3 validated method, originally called "3X period"):
 
 | Step | Description |
 |------|-------------|
 | 1 | Hook at file offset `0x101E1` (replaces `STD $017B`) |
 | 2 | `JSR $C500` calls our patch in free space |
-| 3 | Check RPM against threshold (e.g., 6000 RPM = `$1770`) |
+| 3 | Check RPM against threshold (e.g., 6000 RPM = `$F0` for 8-bit or `$1770` for 16-bit) |
 | 4 | If over limit: inject fake period `$3E80` (16000) → starves dwell |
 | 5 | Result: Classic "pops and bangs" exhaust sound |
 
-**Start here:** [`asm_wip/spark_cut/spark_cut_3x_period_VERIFIED.asm`](asm_wip/spark_cut/spark_cut_3x_period_VERIFIED.asm)
+**Start here:** [`asm_wip/spark_cut/spark_cut_chr0m3_method_VERIFIED_v38.asm`](asm_wip/spark_cut/spark_cut_chr0m3_method_VERIFIED_v38.asm)
 
 ### Key Verified Addresses
 
 | Address | Type | Purpose |
 |---------|------|---------|
 | `$00A2` | RAM | Engine RPM (×25 scaling, 8-bit) |
-| `$017B` | RAM | 3X period storage |
+| `$017B` | RAM | ~~3X period~~ **DWELL INTERMEDIATE** (corrected 2026-01-31) |
+| `$194C` | RAM | **24X Crank Period** (actual crank storage in TIC3 ISR) |
 | `$0199` | RAM | Dwell time storage |
-| `$101E1` | ROM | Hook point (STD $017B) - **v38 method** |
+| `$101E1` | ROM | Hook point (STD $017B) - **dwell intermediate hook** |
+| `$13618` | ROM | Hook point (STD $194C) - **crank period hook** |
 | `$0C468-$0FFBF` | ROM | 15,192 bytes free space |
 
 **v1.1a (v2.04c) Additional Addresses** *(under investigation)*:
@@ -262,7 +283,7 @@ All claims verified against PCMHacking.net archive:
 | **Chr0m3** | [Topic 8567](https://pcmhacking.net/forums/viewtopic.php?t=8567) | 3X period injection method, dwell starving |
 | **The1** | [Topic 2518](https://pcmhacking.net/forums/viewtopic.php?t=2518) | Enhanced OS bins, CPD comparison method, XDF definitions |
 | **BennVenn** | [Topic 7922](https://pcmhacking.net/forums/viewtopic.php?t=7922) | OSE12P timer bit `$3FFC` discovery |
-| **Rhysk94** | [Topic 8756](https://pcmhacking.net/forums/viewtopic.php?t=8756) | 6,375 RPM max (255 × 25 = 6375) |
+| **charlay86** | [Topic 2544](https://pcmhacking.net/forums/viewtopic.php?t=2544) | 6,375 RPM max (255 � 25 = 6375) - July 2012 |
 
 ### The1's Spark Cut Method (Enhanced v1.1a)
 
@@ -354,6 +375,20 @@ print("✅ Binary verified - correct Enhanced v1.0a")
 | **Stock 92118883** | 128KB | ❌ Different internal layout |
 | **Enhanced v2.x** | 128KB | ⚠️ May have different offsets |
 | **Other OSID** | Varies | ❌ Completely different ECU |
+
+### Stock vs Enhanced Binary Differences (Verified January 29, 2026)
+
+Direct binary comparison of `92118883_STOCK.bin` vs `VY_V6_Enhanced.bin`:
+
+| Region | Stock Binary | Enhanced Binary | Interpretation |
+|--------|--------------|-----------------|----------------|
+| **>850mg High-Oct** (0x57AF) | ALL 0x00 | HAS DATA | Stock disabled, Enhanced uses |
+| **>850mg Low-Oct** (0x58C2) | ALL 0x00 | HAS DATA | Stock disabled, Enhanced uses |
+| **LPG Region** (0x58E9-0x5A20) | ALL 0x00 | HAS DATA | Stock zeroed, Enhanced repurposed |
+| **Rev Limiter** (0x77DE-0x77DF) | 0xEC 0xEB = 5900/5875 | IDENTICAL | Same factory limit |
+| **Free Space** (0x0C468-0x0FFBF) | ALL 0x00 | ALL 0x00 | 15,192 bytes available |
+
+> **Key Finding:** The "LPG tables removed" description is misleading. Stock binary has LPG region **already zeroed** (factory disabled). The Enhanced OS **repurposed** this pre-existing empty space for extended spark tuning data.
 
 ---
 
@@ -567,10 +602,8 @@ This ensures if stock code ever touches $01A0 unexpectedly, our code isn't corru
 ### 🔮 Future / Dream Features
 
 - [ ] **Ghidra processor module improvements** - Better HC11 decompilation
-- [ ] **Real-time tuning via ALDL** - Live parameter adjustment
-- [ ] **Web-based patch builder** - Select features, generate patched binary
 - [ ] **Port to other Holden ECUs** - VS, VT, VX variants
-- [ ] **CAN bus integration** - For later model Commodores
+
 
 ### 🤝 Help Wanted
 
@@ -702,7 +735,7 @@ The Holden L36/L67 **IS** the Buick 3800 (licensed from GM). Resources from Gear
 | **Hook point at $101E1** | Entry point for patches | Binary pattern analysis |
 | **15KB+ free ROM space** | Room for complex patches | Zero-byte scanning |
 | **$0046 bit 7 is FREE** | Custom flag storage | BSET/BCLR pattern analysis |
-| **3X period at $017B** | Chr0m3 method verified | ISR tracing + XDF cross-ref |
+| **3X period at $017B** | ~~Chr0m3 method verified~~ **CORRECTED: $017B = dwell intermediate, $194C = crank period** | TIC3 ISR disassembly |
 | **RPM at $00A2 (×25 scaling)** | 8-bit RPM variable | 82 references in binary |
 | **VL uses BMW MS43-style limiter** | Two-stage hysteresis | XDF parameter extraction |
 | **dis68hc11 has opcode bugs** | ADCA/ADCB modes swapped | Manual Motorola datasheet verification |
@@ -720,214 +753,39 @@ The Holden L36/L67 **IS** the Buick 3800 (licensed from GM). Resources from Gear
 
 ---
 
-## 💡 What The Gatekeepers Don't Want You To Know
+## ?? Key Technical Discoveries
 
-### Things I Learned That Aren't Documented Anywhere Else
-
-1. **The 8-bit RPM limit is hardware** - 255 × 25 = 6375 RPM max. You can't "tune around" this. You need code changes.
-
+1. **The 8-bit RPM limit is hardware** - 255 � 25 = 6375 RPM max. You need code changes to exceed this.
 2. **Zeroing dwell triggers bypass mode** - The ignition module has failsafe. Chr0m3 figured out you inject a fake period instead.
-
-3. **VY ISRs are at $2000, not $6000** - Every other platform has code at $6000+. VY is different. This matters for hooks.
-
-4. **The Enhanced bin was never documented** - The1 released it, but never explained the assembly changes. I had to reverse engineer it.
-
-5. **Buick 3800 resources apply to Holden** - Same engine family. GearheadEFI's 8F Hack documentation is gold.
-
-6. **VL Walkinshaw has BMW-style limiter** - Two-stage with hysteresis. Sounds amazing. Same pattern as MS43.
-
-7. **$0046 is a mode byte** - Bits are used as flags throughout the code. Some bits are free for custom use.
-
-8. **dis68hc11 has bugs** - The open source disassembler has ADCA/ADCB addressing modes swapped. I documented the corrections.
-
-### Why They Won't Tell You
-
-- **Business protection** - Some sell tuning services and don't want competition
-- **Ego protection** - Admitting they don't know everything hurts
-- **Guild mentality** - "I had to figure it out the hard way, so should you"
-- **Fear of liability** - If someone damages an engine, they get blamed
-
-### My Philosophy
-
-- **Share everything** - Knowledge wants to be free
-- **Document mistakes** - Future researchers benefit from knowing what doesn't work
-- **Credit sources** - Chr0m3, The1, BennVenn, Antus, Mark Mansur - legends
-- **Test before bragging** - This code is marked UNTESTED until I verify on hardware
-
-### Why Markdown?
-
-Markdown is the only format that is **diff-native** and **reviewable at speed**. People can comment line-by-line, submit PRs, and every change is attributable and reversible. PDFs, Word docs, and spreadsheets are fine for final releases but they are hostile to rapid iteration and community correction. PDF and spreadsheet outputs can be auto-generated later from the same source. For now, the repo stays in a format that supports **fast review, fast fixes, and clear history**.
+3. **VY ISRs are at $2000, not $6000** - Every other platform has code at $6000+. VY is different.
+4. **$0046 is a mode byte** - Bits 0,1,2,4,5 used by stock. **Bits 3,6,7 are FREE** for custom use.
+5. **$01A0 doesn't exist** - Was a placeholder copied across 42 ASM files. Use $0046 bit 7 instead.
+6. **VL Walkinshaw has BMW-style limiter** - Two-stage with hysteresis. Same pattern as MS43.
+7. **Buick 3800 resources apply to Holden** - Same engine family. GearheadEFI's 8F Hack documentation is useful.
 
 ---
 
-## 🔧 Bench Testing Setup (What I'm Building)
+## ?? Bench Testing Setup
 
-### Required Hardware
-
-| Item | Purpose | Status |
-|------|---------|--------|
-| **Spare VY ECU** | Test subject | ✅ Have |
-| **Moates Ostrich 2.0** | Real-time emulation | ✅ Have |
-| **12V bench power supply** | ECU power | ✅ Have |
-| **Oscilloscope** | EST signal verification | 🔴 Need |
-| **Crank sensor simulator** | Generate 3X/24X signals | 🔴 Need to build |
-| **Breakout harness** | Access ECU pins | 🔄 Building |
-
-### Test Procedure (Planned)
-
-1. Load stock binary via Ostrich
-2. Verify normal EST output on scope
-3. Load patched binary
-4. Simulate high RPM via crank signals
-5. Verify EST cuts at threshold
-6. Check for bypass mode triggering
-7. Test hysteresis behavior
-8. Document all waveforms
-
-### What Success Looks Like
-
-- **EST signal goes LOW** when RPM exceeds threshold
-- **No bypass mode trigger** (ignition module stays in ECU control)
-- **Clean recovery** when RPM drops below threshold
-- **Consistent behavior** across multiple test cycles
+See [`BENCH_TESTING_SETUP.md`](BENCH_TESTING_SETUP.md) for hardware requirements and test procedures.
 
 ---
 
-## My Other Repositories
+## ?? Why This Project Exists
 
-| Repository | Description |
-|------------|-------------|
-| [TunerPro-XDF-BIN-Universal-Exporter](https://github.com/KingAiCodeForge/TunerPro-XDF-BIN-Universal-Exporter) | Export XDF/BIN data to various formats |
-
-
-### 68HC11 Development Resources
-
-| Resource | Description |
-|----------|-------------|
-| **M68HC11 Reference Manual** | Official Motorola/Freescale documentation |
-| **A09 Assembler** | Free HC11/HC12 assembler |
-| **dis68hc11** | Simple disassembler (has bugs - see my docs) |
-| **dasmfw** | More accurate disassembler framework |
-| **Ghidra** | NSA reverse engineering tool with HC11 support |
-
-### YouTube Channels Worth Following
-
-| Channel | Content |
-|---------|---------|
-| **Chr0m3 Motorsport** | Holden ECU tuning, spark cut development |
-| **TheBoostController** | Boost/turbo tuning content |
-| **HP Tuners** | (Competitors but good general info) |
-
-### Books & Documentation
-
-| Title | Author | Notes |
-|-------|--------|-------|
-| *M68HC11 Reference Manual* | Motorola/Freescale | Essential HC11 documentation |
-| *Embedded Systems: Introduction to Arm Cortex-M Microcontrollers* | Jonathan Valvano | General embedded concepts |
-| *Engine Management: Advanced Tuning* | Greg Banish | Tuning fundamentals |
-
----
-
-## 💭 Why This Project Exists
-
-### Timeline: 6 Weeks from Idea to 40+ Assembly Files
-
-- **Late November 2025** - Thought: *"I want ignition cut on my Commodore like I did on my BMW"*
-- **Late 2025** - Finally got PCMHacking account after **2 years of trying** (couldn't get admin support without account, couldn't get account without admin support)
-- **December 2025** - Started pulling apart Enhanced $060A binaries
-- **January 2026** - This repository: 40+ assembly patches, 15KB+ free ROM mapped, verified hook points, Python tooling
-
-**6 weeks.** From zero Holden ECU assembly knowledge to the most documented VY V6 ASM repository publicly available.
-
-### The Gatekeeping Problem
-
-After **1+ year** trying to learn ECU tuning through "official" Discord channels, Facebook pages, and forums, here's what happened:
-
-| Platform | My Contribution | Their Response |
-|----------|-----------------|----------------|
-| **BMW Tuning Discord** | Cracked password-protected RAR with Stage 1/2/3 tunes, shared the password to help community access locked files, uploaded some tunes that werent on public repos. tried to share a patch for the community patch. waste of effort with that lot | classed as spam **BANNED** |
-| **Facebook Groups** | GitHub repos, offered help and advice | Posts deleted → **BLOCKED** |
-| **Various "Experts"** | Questions about specific opcodes | Left on read, or *"that looks like GPT crap"* |
-
-The pattern is always the same:
-1. Share free work (XDFs, tools, file collections)
-2. Nobody acknowledges it
-3. Ask one question
-4. Get insulted, then banned for "spamming"
-
-#### What They Called "Spam":
-- 5 private messages to 5 different people asking if anyone could help
-- That's it. That's "spamming links" apparently.
-
-#### What They Said When I Asked Why:
-> *"You kept spamming links as private messages. And didn't explain what's the deal with that."*
-
-The "links" were GitHub repositories. The explanation was in the repositories. They just didn't click them.
-
-### Meanwhile, People Who Actually Looked At My Work...
-
-| Person | What Happened |
-|--------|---------------|
-| **Mark Mansur (TunerPro developer)** | I reported a zero-export bug. **Fixed it in 24 hours.** Also added missing data units. Professional, helpful, legend. |
-| **Antus (PCMHacking admin)** | Activated my account, explained rules, answered emails. Said *"I just do software as a hobby"* - honest about scope. **Turns out he lives near me in SA.** |
-| **Chr0m3 Motorsport** | His videos and forum posts are the foundation of this work. The 3X period injection method = his discovery. |
-| **The1** | His Enhanced OS bins are what we're patching. Years of work, shared publicly. |
-| **Nakai** | Random person on Discord who actually validated my BMW claims instead of dismissing them |
-
-**The gatekeepers are not the experts. The helpful people are.**
-
-### On AI-Assisted Development
-
-Yes, I use **Claude Opus 4.5 in VS Code Copilot** to accelerate my work.
-
-Someone in a Discord called my code *"GPT crap that won't even run"* and *"GPT likes to hallucinate"*.
-
-Here's my response:
-
-1. **Every address verified against the actual binary** - check yourself. Check `0x101E1`. It's `FD 01 7B` (STD $017B). That's not a hallucination.
-
-2. **AI doesn't replace understanding** - You still need to know:
-   - What bank the code executes in
-   - How 68HC11 addressing modes work
-   - Which RAM is safe to use (I ran bit-analysis on $0046 - bits 0,1,2,4,5 used, bit 7 free)
-   - How ISRs interact with main loop timing
-
-3. **The alternative is asking gatekeepers who don't answer** - I asked dozens of people. Hundreds of messages. Left on read, blocked, or banned. AI actually helps.
-
-4. **Results speak** - This repo has more documented Holden ECU assembly than anywhere else public. If that's "slop", show me the alternative.
-
-From a chat with another tuner who gets it:
-> *"Use what ya know and get AI to help. Should be purpose-built AI. Gemini and ChatGPT love to hallucinate."*
-
-
-### The 10/90 Rule
-
-The tuning community is:
-- **10% legends** who share knowledge freely (Chr0m3, The1, Antus, Mark Mansur, BennVenn)
-- **90% gatekeepers** who hoard it, sell it, or just insult newcomers to feel powerful, dont now how to RE or make hardware or code are the one who click the ban/delete post button.
-
-**Find the 10%. Ignore the 90%.**
+**Timeline:** 6 weeks from idea to 40+ assembly files (Nov 2025 - Jan 2026).
 
 ### Why I'm Publishing This
 
 - These engines are **20+ years old** - Holden doesn't even exist anymore
-- **Knowledge shouldn't be gatekept** for discontinued platforms in 2026
+- **Knowledge shouldn't be gatekept** for discontinued platforms
 - **I learned from people who shared** (Chr0m3's videos, The1's forum posts, PCMHacking archives)
 - Time to pay it forward
 - **Open source wins** - Speeduino, rusEFI, MegaSquirt all prove this
 
-### To The Haters
+### On AI-Assisted Development
 
-To the people leaving jealous, spiteful comments without reviewing the actual code:
-
-- You called it "AI slop" without reading it
-- You called it "spam" because I asked for help
-- You called me "mental" because I contributed without permission
-- You banned me from servers where I shared free tools
-
-**Stay jealous.** Your doubt pushes me harder than you'll ever go.
-
-This repo exists because you told me I couldn't. Keep watching. you will be using this code in a few months time to make off custom tuning mail order so called dyno validated tunes off ebay.
+Yes, I use AI tools to accelerate research. Every address is verified against the actual binary - check `0x101E1` yourself: it's `FD 01 7B` (STD $017B). AI doesn't replace understanding of 68HC11 addressing modes, ISR timing, or which RAM is safe to use.
 
 ### Want To Actually Help?
 
@@ -958,9 +816,8 @@ If you have oscilloscope traces of EST/dwell on VY V6 - that's the missing piece
 | **charlay86** | Enhanced code testing and dwell limiting validation |
 | **vlad01** | 11P spark cut research and historical context |
 | **Muncie** | Real-world testing (*"Have had this in my car with partial success"*) |
-| **Rhysk94** | RPM limit confirmation (Topic 8756) also a mega tooner by the way... |
-| **VYVZMods** | VY/VZ cluster RE work, Renesas MCU details and alot of other info about tech 2 |
-| **Nakai** | Validated my BMW claims when others dismissed them, answered questions helps with pcm tuning discussions. renowned tooner in asia |
+| **VYVZMods** | VY/VZ cluster RE work, Renesas MCU details and a lot of other info about tech 2 |
+
 
 ### Knowledge Sources
 
