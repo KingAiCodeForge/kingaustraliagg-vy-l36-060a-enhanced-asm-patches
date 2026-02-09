@@ -561,11 +561,11 @@ Used for LDX/STX with Y-indexing and some CPX variants.
 | Offset | Register | Description |
 |--------|----------|-------------|
 | $00 | PORTA | Port A Data Register |
-| $01 | Reserved | |
-| $02 | PIOC | Parallel I/O Control |
-| $03 | PORTC | Port C Data Register |
+| $01 | DDRA | Port A Data Direction (HC11F) |
+| $02 | PORTG | Port G Data (**bank switching** — NOT PIOC as per HC11E datasheet) |
+| $03 | DDRG | Port G Data Direction (NOT PORTC) |
 | $04 | PORTB | Port B Data Register |
-| $05 | PORTCL | Port C Latched Data |
+| $05 | PORTF | Port F Data (HC11F — NOT PORTCL as per HC11E) |
 | $06 | Reserved | |
 | $07 | DDRC | Port C Data Direction |
 | $08 | PORTD | Port D Data Register |
@@ -673,28 +673,62 @@ S1130170707172737475767778797A7B7C7D7E7F03
 
 ## Tools Available in This Reference Collection
 
-| Tool | Location | Purpose |
-|------|----------|---------|
-| dis68hc11 | `dis68hc11/` | Simple C++ disassembler |
-| dasmfw | `dasmfw/` | Comprehensive disassembler framework |
-| EVBU Simulator | `EVBU_Simulator/` | Python-based HC11/Buffalo simulator |
-| A09 Assembler | `A09_Assembler/` | Full macro assembler |
-| GCC HC11 | `GCC_HC11/` | GNU cross-compiler |
-| BASIC11 | `BASIC11/` | BASIC interpreter with include files |
-| Ghidra Files | `ghidra_hc11/` | Ghidra processor specification |
+| Tool | Location | Purpose | What It Does |
+|------|----------|---------|-------------|
+| **dis68hc11** | `dis68hc11/` | Simple C++ disassembler | Single-pass linear disassembler written by forum member. Reads raw binary, walks bytes sequentially, decodes Page 0/1 opcodes. **⚠️ HAS BUGS:** ADCA/ADCB IMM/DIR swapped in Opcodes.h. Outputs mnemonics + descriptions + address comments. Small (~367 lines main.cpp). Good learning reference but not production quality. |
+| **dasmfw** | `dasmfw/` | Comprehensive disassembler framework | Full-featured multi-CPU disassembler. `Dasm68HC11.cpp` has authoritative opcode tables with correct addressing modes, byte counts, and cycle counts. Handles ALL prebytes (0x18, 0x1A, 0xCD) correctly. **Best source for verifying opcodes.** Supports labels, data regions, output formatting. |
+| **EVBU Simulator** | `EVBU_Simulator/` | Python-based HC11/Buffalo simulator | `PySim11/ops.py` contains complete opcode execution with cycle-accurate simulation. Tests actual register/memory behavior. Useful for verifying what instructions DO (not just what bytes they decode to). Buffalo monitor ROM included. |
+| **A09 Assembler** | `A09_Assembler/` | Full macro assembler (`a09.c`) | Assembles HC11 mnemonics to binary. Supports macros, includes, conditional assembly. Use for building patches from .asm files. Single C file, portable. Handles all addressing modes including Y-indexed with prebytes. |
+| **GCC HC11** | `GCC_HC11/` | GNU cross-compiler | Full C compiler targeting 68HC11. Generates HC11 assembly from C source. Includes linker scripts, startup code, and library. Useful for complex patches that would be painful in pure assembly. |
+| **BASIC11** | `BASIC11/` | BASIC interpreter with include files | HC11 BASIC interpreter with hardware register definitions. `bas11e.inc` has complete register equate list — another verification source for register addresses ($1000-$103F). |
+| **Ghidra SLEIGH** | `ghidra_hc11/` | Ghidra processor specification | `HC11.slaspec` (2464 lines) defines the complete HC11 instruction set in Ghidra's SLEIGH language. Maps every opcode to semantic operations (what it does to registers/flags). **Most authoritative source** — Ghidra uses this to decompile. `HC11.sla` is compiled version. `GaryOderNichts_HC11.slaspec` is an alternate community version. |
+| **gendasm** | `gendasm/` | Generic disassembler with HC11 support | `m6811gdc.cpp` contains another independent opcode table. Cross-references well with dasmfw. Includes addressing mode encoding patterns. |
+| **m68hc11x** | `m68hc11x/` | Assembler (has BNE bug) | `assembler.h` contains opcode definitions. **⚠️ HAS BUG:** BNE opcode defined as 0x2B (should be 0x26, 0x2B is BMI). Otherwise good reference for instruction encoding. |
+| **techedge DISASM11** | `techedge_tools/` | Techedge disassembler | `DISASM11.OPC` is a flat opcode table file. Simple but correct. Used in Techedge ECU tools for Holden/HSV tuning. |
+
+### SLEIGH (.sla / .slaspec) File Format Notes
+
+**What SLEIGH is:** A domain-specific language used by Ghidra to describe processor instruction sets. It defines:
+- **Token patterns** — how bytes map to instruction fields
+- **Constructors** — how to decode each instruction variant
+- **Semantics** — what each instruction does to registers, flags, and memory
+- **Display** — how to show the disassembly text
+
+**HC11.slaspec key sections:**
+- `define space` — Address spaces (RAM, register)
+- `define register` — A, B, D, X, Y, SP, PC, CCR and individual flag bits
+- `define token` — Byte field definitions for opcode/operand extraction
+- `attach variables` — Map bit fields to register names
+- `macro` — Reusable patterns (e.g., `setNZFlags`, `setAddFlags`)
+- Individual instruction constructors with pcodeop semantics
+
+**Why it matters for VY V6:** Ghidra needs correct SLEIGH to properly decompile the ECU binary. If you load the 128KB bin into Ghidra with this processor spec, it can decompile the HC11 code to C-like pseudocode, making reverse engineering much easier.
+
+### Tool Cross-Reference: Which Tool For What?
+
+| Task | Best Tool | Why |
+|------|-----------|-----|
+| Verify an opcode | dasmfw `Dasm68HC11.cpp` | Most complete, correct tables |
+| Understand instruction semantics | Ghidra SLEIGH `HC11.slaspec` | Shows exact flag/register effects |
+| Build a patch (.asm → .bin) | A09 Assembler `a09.c` | Full assembler with macro support |
+| Test patch behavior | EVBU Simulator `PySim11` | Cycle-accurate execution |
+| Quick disassembly | dis68hc11 | Fast, but apply ADCA/ADCB fix first |
+| Full binary decompilation | Ghidra with HC11.slaspec | Interactive analysis, call graphs |
+| Compile C to HC11 | GCC HC11 | For complex logic patches |
+| Check register addresses | BASIC11 `bas11e.inc` | Quick equate lookup |
 
 ---
 
 ## VY V6 ECU Specific Register Usage ($060A OSID 92118883)
 
-> **IMPORTANT:** The VY V6 Delco ECU uses the MC68HC711E9 variant. These mappings are verified against the Enhanced v1.0a binary.
+> **IMPORTANT:** The VY V6 Delco ECU uses an **HC11F-family derivative** (68HC11FC0 per DARC/IDA Pro disassembly and PCMhacking community confirmation). NOT HC11E9 as previously stated. The HC11F has a different register layout at $1000-$1005 (PORTG/DDRG/PORTF instead of PIOC/PORTC/PORTCL). Crystal = 13.631488 MHz → E-clock = 3.408 MHz (VL400, topic_982). These mappings are verified against the Enhanced v1.0a binary.
 
 ### Timer Registers for EST (Electronic Spark Timing)
 
 | Address | Name | VY V6 Usage | Notes |
 |---------|------|-------------|-------|
-| **$100E-$100F** | TCNT | Free-running 16-bit counter | 500ns per count @ 2MHz E-clock |
-| **$1014-$1015** | TIC3 | 3X Crank sensor capture | ISR at $35FF handles spark calc |
+| **$100E-$100F** | TCNT | Free-running 16-bit counter | ~293ns per count @ 3.408MHz E-clock (NOT 500ns/2MHz — see topic_982) |
+| **$1014-$1015** | TIC3 | 24X crank sensor capture | ISR at $35FF handles spark calc |
 | **$1012-$1013** | TIC2 | 24X Crank sensor capture | ISR at $358A for position |
 | **$101A-$101B** | TOC3 | EST output control | ISR at $35BD fires coils |
 | **$1020** | TCTL1 | Output Compare mode | OM2:OL2 bits control EST pin |
@@ -780,7 +814,7 @@ Writing 1 to FOCx forces the corresponding OCx output action immediately (withou
 | **TOC3** | $1FFE4 | $2009 | **JMP $35BD** | **EST Output Handler** |
 | TOC2 | $1FFE6 | $200C | JMP $xxxx | Output Compare 2 |
 | TOC1 | $1FFE8 | $2024 | JMP $xxxx | Output Compare 1 |
-| **TIC3** | $1FFEA | $200F | **JMP $35FF** | **3X Crank Handler** |
+| **TIC3** | $1FFEA | $200F | **JMP $35FF** | **24X Crank Handler** |
 | **TIC2** | $1FFEC | $2012 | **JMP $358A** | **24X Crank Handler** |
 | TIC1 | $1FFEE | $2015 | JMP $xxxx | Input Capture 1 |
 | RTI | $1FFF0 | $2018 | JMP $xxxx | Real-Time Interrupt |
@@ -815,13 +849,128 @@ Writing 1 to FOCx forces the corresponding OCx output action immediately (withou
 
 ---
 
-## VY V6 Critical RAM Variables (Verified)
+## VY V6 DTC / Malfunction Code System (from XDF v2.09a)
+
+> **Source:** Enhanced v2.09a XDF definition file (latest, includes extra DTCs)
+> **XDF calibration range:** 0x4000–0x7FFC (1655 entries)
+
+### How DTCs Work in the $060A OS
+
+The VY V6 ECU uses a **MALF (Malfunction) flag** system with bitmask registers:
+
+| Register | Address | Purpose |
+|----------|---------|--------|
+| KKMASK1–9A | Calibration | Enable mask — which MALFs are active (1=enabled) |
+| KKACT1–9 | Calibration | Action mask — what the ECU does when MALF is set |
+| KKSEL1–6 | Calibration | Alternate action mask (secondary response) |
+| KKKMASK1–9A | Calibration | Check Transmission Light mask (illuminate dash light) |
+
+**Bit positions:** Each MALF code corresponds to a specific bit in a specific flag byte.
+Flag bytes are organized as MALF Flag 1 through MALF Flag 9A (10 flag bytes total).
+
+### Transmission-Defined MALFs
+
+These MALFs are defined in the transmission section of calibrations:
+
+| MALF # | Description | Notes |
+|--------|-------------|-------|
+| 24 | Vehicle Speed Sensor Failure | |
+| 28 | Pressure Switch Manifold | |
+| 37 | (Transmission defined) | |
+| 38 | (Transmission defined) | |
+| 39 | TCC Off | Torque Converter Clutch |
+| 53 | Battery Voltage High | |
+| 58 | Transmission Temperature High | |
+| 59 | Transmission Temperature Low | |
+| 63 | (Transmission defined) | |
+| 64 | (Transmission defined) | |
+| 68 | Transmission Component Slipping | |
+| 69 | TCC Stuck On | |
+| 71 | Engine Speed Sensor Low | |
+| 72 | Output Speed Loss | |
+| 73 | Force Motor Current | |
+| 74 | (Transmission defined) | |
+| 75 | System Voltage Low | |
+| 79 | Transmission Hot | |
+| 81 | Shift B Solenoid Shorted | |
+| 82 | Shift A Solenoid Shorted | |
+| 83 | (Transmission defined) | |
+| 85 | (Transmission defined) | |
+| 86 | Shift A Solenoid Open | |
+| 87 | Shift B Solenoid Open | |
+| 89 | Maximum Adaptive Long Shift | |
+
+### Shared Engine/Transmission MALFs
+
+These MALFs reside in `DATADIET` module and have **separate default values** for engine vs transmission logic:
+
+| MALF # | Description | Notes |
+|--------|-------------|-------|
+| 14 | Coolant Temperature Sensor High | Separate engine/trans defaults |
+| 15 | Coolant Temperature Sensor Low | Separate engine/trans defaults |
+| 21 | Throttle Position Sensor High | Separate engine/trans defaults |
+| 22 | Throttle Position Sensor Low | Separate engine/trans defaults |
+
+### Engine MALFs Affecting Transmission
+
+> "Any engine defined Malf that causes an action to be taken in the transmission
+> logic must have the appropriate BITS selected in KKACT and KKSEL (A 1 in KKACT
+> and either a 0 or a 1 in KKSEL), and in KKKMASK."
+
+### DTC Clearing
+
+| Parameter | Address | Value | Description |
+|-----------|---------|-------|-------------|
+| Successive Power Ups With No Malfs | $56E6 | CYCLES | Number of clean starts before DTC auto-clears |
+
+### MALF 93 (MAF Failure) — Important for Tuning
+
+| Table | Address | Description |
+|-------|---------|-------------|
+| M93 Enable Load Vs RPM | $6B9C | Minimum airflow for MALF 93 enable |
+
+**Tuning note:** When MAF or knock sensor DTC is set, the PCM falls back to low-octane spark tables exclusively. The PCM interpolates between high-octane and low-octane maps based on knock activity. Only when a MAF/knock DTC is active does it lock to low-octane.
+
+### BCC ID (DTC Flag Identifier)
+
+| Parameter | Address | Value | Description |
+|-----------|---------|-------|-------------|
+| BCC ID | $4002 | 0x44544346 | ASCII "DTCF" — visible in hex editor comments field |
+| PROGRAM ID (Box Code) | $7FF8 | varies | PCM identification (e.g., 92118883) |
+
+### Calibration IDs Covered by v2.09a XDF
+
+| OSID | BDA/BDB/06x | Type | Notes |
+|------|-------------|------|-------|
+| 92104512 | BDA AUTO | 261 | |
+| 92108760 | BDB AUTO | 262 | |
+| 92108761 | BDB MAN/LPG | 263 | Manual and LPG variants |
+| 92118885 | 06A AUTO (LPG) | 306 | |
+| **92118883** | **06A AUTO** | **305** | **Primary target (Enhanced v1.0a base)** |
+| 92118889 | 06A LPG | 305 | |
+| 92161296 | 06B AUTO | 305 | |
+| 92162167 | 06B AUTO | 305 | |
+| 92211726 | 06B AUTO | 307 | |
+| 92163772 | 06C LPG | | |
+
+### Key Calibration Addresses from v2.09a
+
+| Address | Parameter | Category |
+|---------|-----------|----------|
+| $4D9F | Min TCC Capacity | Transmission |
+| $4DB0 | Max TCC Capacity | Transmission |
+| $6272 | Main Low-Octane Spark < 4800 RPM | Spark |
+| $58C2 | Main Low-Octane Spark > 850-1650mg | Spark |
+| $7DFF | Main Low-Octane Spark > 4800 RPM | Spark |
+| $6B9C | M93 Enable Load Vs RPM | DTC |
+| $56E6 | Successive Power Ups With No Malfs | DTC |
+| $77DD-$77E9 | Fuel Cut RPM Thresholds | Rev Limiter |
 
 | Address | Name | Size | Purpose | Verified By |
 |---------|------|------|---------|-------------|
 | **$00A2** | RPM | 1 byte | Engine RPM ÷ 25 (8-bit) | 82 reads in code |
-| **$0178** | 3X_PERIOD | 2 bytes | 3X crank period (µs) | TIC3 ISR at $363E |
-| **$017B** | 3X_PERIOD_ALT | 2 bytes | Alternate period storage | STD at $101E1 |
+| **$0178** | 24X_PERIOD | 2 bytes | 24X crank period (µs) | TIC3 ISR at $363E |
+| **$017B** | DWELL_INTERMEDIATE | 2 bytes | Alternate period storage | STD at $101E1 |
 | **$0199** | DWELL_RAM | 2 bytes | Calculated dwell time | LDD at $1007C |
 | **$0171** | CYL_INDEX | 1 byte | Current cylinder (0-5) | TIC3 cylinder tracking |
 | **$01B3** | PREV_TIC3 | 2 bytes | Previous TIC3 capture | Period calculation |
@@ -868,7 +1017,7 @@ Writing 1 to FOCx forces the corresponding OCx output action immediately (withou
 
 ```asm
 ; Original at 0x101E1:
-    STD  $017B          ; FD 01 7B - Store 3X period
+    STD  $017B          ; FD 01 7B - Store dwell intermediate (NOT crank period!)
 
 ; Patched to:
     JSR  $C500          ; BD C5 00 - Call spark cut handler
@@ -920,7 +1069,7 @@ HANDLER:
 
 ## Notes on Two-Way Bridge / Port A Control
 
-The 68HC711E9 in the VY V6 uses PORTA bits for EST (Electronic Spark Timing) control:
+The HC11F-family derivative (68HC11FC0) in the VY V6 uses PORTA bits for EST (Electronic Spark Timing) control:
 
 | Port A Bit | Function | Notes |
 |------------|----------|-------|
@@ -931,7 +1080,7 @@ The 68HC711E9 in the VY V6 uses PORTA bits for EST (Electronic Spark Timing) con
 | PA3 | OC5/IC4 Output/Input | Shared function |
 
 **EST Control Flow:**
-1. TIC3 ISR captures 3X crank pulse timing at $1014
+1. TIC3 ISR captures 24X crank pulse timing at $1014
 2. Period calculated and stored to $0178/$017B
 3. Dwell time calculated based on period
 4. TOC3 ISR ($35BD) toggles PA bits to control coil:
@@ -980,9 +1129,9 @@ Instead of manipulating PORTA directly (which triggers bypass mode), inject fake
 | $00A4 | TPS_VOLTS | 1 | Throttle position sensor |
 | $00AD | COOLANT_TEMP | 1 | Engine coolant temperature |
 | $00B0 | IAC_STEPS | 1 | Idle air control position |
-| $0178 | PERIOD_3X_HI | 1 | 3X crankshaft period (high byte) |
-| $0179 | PERIOD_3X_LO | 1 | 3X crankshaft period (low byte) |
-| $017A | PERIOD_3X_COPY | 2 | Period working copy |
+| $0178 | PERIOD_24X_HI | 1 | 24X crankshaft period (high byte) |
+| $0179 | PERIOD_24X_LO | 1 | 24X crankshaft period (low byte) |
+| $017A | PERIOD_24X_COPY | 2 | Period working copy |
 | $017D | DWELL_TIME | 1 | Calculated coil dwell |
 
 ### Key VY V6 Register Addresses (Extended)
@@ -993,7 +1142,7 @@ Instead of manipulating PORTA directly (which triggers bypass mode), inject fake
 | $1003 | PORTC | Port C Data |
 | $1004 | PORTB | Port B Data |
 | $100E | TCNT | Timer Counter (16-bit, $100E:$100F) |
-| $1014 | TIC3 | Input Capture 3 (3X crank pulse timing) |
+| $1014 | TIC3 | Input Capture 3 (24X crank pulse timing) |
 | $101A | TOC3 | Output Compare 3 (EST timing, $101A:$101B) |
 | $1020 | TCTL1 | Timer Control 1 (OC edge selection) |
 | $1022 | TMSK1 | Timer Interrupt Mask 1 |
@@ -1067,5 +1216,6 @@ OP_ADCA_IMM = 0x99,  // Should be DIR!
 
 *Reference: M68HC11 Reference Manual Rev 6.1, NXP/Freescale*
 *VY V6 Specific: Verified against OSID 92118883 Enhanced v1.0a binary*
+*XDF Data: Enhanced v2.09a XDF definition (1655 calibration entries, $4000-$7FFC)*
 *Cross-checked: dasmfw, Ghidra SLEIGH HC11.slaspec, M68HC11E Family Datasheet*
-*Last Updated: January 17, 2026*
+*Last Updated: February 7, 2026*

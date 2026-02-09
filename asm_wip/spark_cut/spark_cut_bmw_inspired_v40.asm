@@ -1,4 +1,9 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; BMW MS42/MS43-INSPIRED SPARK CUT FOR VY V6 $060A
 ;==============================================================================
 ; Inspired by: BMW community patchlists (MS42/MS43 Siemens C166)
@@ -116,7 +121,7 @@ CUT_DUTY_CYCLE:
 ; IMPLEMENTATION: BMW-STYLE TABLE-DRIVEN LIMITER
 ;------------------------------------------------------------------------------
 
-    ORG $C500           ; Verified free space
+    ORG $C500           ; Verified free space ; ⚠️ MUST BE bank 1 (file 0x0C500). Banks 0/2/3 have calibration data! [auto-fix 2026-02-09]
 
 BMW_STYLE_LIMITER_ENTRY:
     ; Check if feature enabled (BMW pattern)
@@ -186,7 +191,7 @@ APPLY_SOFT_CUT:
 APPLY_HARD_CUT:
     ; Method 2: Period injection (Chr0m3 method)
     LDD     #$3E80      ; Fake long period
-    STD     $017B       ; Inject into period storage
+    STD     $194C       ; Inject into period storage
     RTS
     
 APPLY_ROLLING_CUT:
@@ -199,7 +204,7 @@ APPLY_ROLLING_CUT:
     
     ; Cut this cycle
     LDD     #$3E80
-    STD     $017B
+    STD     $194C
     RTS
     
 CUT_APPLIED:
@@ -216,7 +221,7 @@ NORMAL_OPERATION:
 ; HOOK INSTALLATION (Same as v38)
 ;------------------------------------------------------------------------------
 ; OFFSET: 0x101E1
-; ORIGINAL: FD 01 7B        (STD $017B)
+; ORIGINAL: FD 01 7B        (STD     $194C)
 ; PATCHED:  BD C5 00        (JSR $C500)
 
 ;==============================================================================

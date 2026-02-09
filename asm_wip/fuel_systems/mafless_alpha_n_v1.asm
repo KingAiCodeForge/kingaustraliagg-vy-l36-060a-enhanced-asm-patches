@@ -2,7 +2,7 @@
 ; VY V6 MAFLESS ALPHA-N CONVERSION v1 - FORCE MAF FAILURE MODE
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
-; Date: January 13, 2026 (Updated January 16, 2026)
+; Date: January 13, 2026 (Updated February 3, 2026)
 ; Method: Force MAF sensor failure to enable fallback Alpha-N mode
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
@@ -12,27 +12,29 @@
 ; ⚠️ This will trigger MAF failure DTC (Code M32) - expected behavior
 ;
 ;==============================================================================
-; OEM TUNING INSIGHT (January 2026 - Alpina/BMW/OSE Research)
+; ALPINA "ZERO COMPLEX, TUNE SIMPLE" - VERIFIED DATA
 ;==============================================================================
 ;
-; 🏁 ALPINA STRATEGY: "Zero the Complex, Tune the Simple"
+; BINARY COMPARISON (February 3, 2026):
+;   Stock M52TUB25 EU3 RHD:   7 zero tables (normal)
+;   Alpina B3 3.3L Stroker: 34 zero tables (27 intentionally zeroed!)
 ;
-; Alpina B3 3.3L stroker (M52TUB33) analysis revealed:
-;   - ZEROED: ip_iga_ron_91, ip_iga_ron_98 (fuel grade timing tables)
-;   - ZEROED: ip_maf_vo_1 to vo_7 (7 of 8 VANOS VE tables)
-;   - TUNED: ip_maf_1_diag (fallback) as PRIMARY airflow calculation
-;   - TUNED: ip_iga_knk_diag (fallback) as PRIMARY timing
+; 🏁 ALPINA STRATEGY: Zero complex interacting tables, tune fallback tables
 ;
-; WHY: Modified displacement engine needs recalibration
-;      Instead of modifying 50+ interacting tables → zero them
-;      Force ECU to use simpler diagnostic/fallback path
-;      Tune 3-5 fallback tables = faster, predictable calibration
+; ALPINA ZEROED (key categories):
+;   ❌ ip_maf_vo_1, vo_3-vo_8 = ALL ZEROS (7 of 8 VANOS VE tables)
+;   ❌ ip_iga_ron_91, ip_iga_ron_98 = ALL ZEROS (fuel grade timing)
+;   ❌ ip_ti_tco_1/tco_2 tables = ALL ZEROS (temp timing corrections)
+;   ❌ ip_iga_optm/cor tables = ALL ZEROS (ignition corrections)
+;   ❌ Plus 15 more tables (see MAFLESS_VARIANTS_COMPARISON.md)
 ;
-; VY V6 APPLICATION:
-;   - Set $56D4 bit 6 = 1 (force MAF failure - like Alpina zeros RON tables)
-;   - ECU enters fallback mode using "Minimum Airflow For Default Air"
-;   - Tune $7F1B value OR inject full TPS×RPM lookup table
-;   - Same professional OEM approach!
+; ALPINA KEPT ACTIVE:
+;   ✅ ip_maf_1_diag__n__tps_av = PRIMARY airflow (TPS × RPM Alpha-N)
+;   ✅ ip_iga_knk_diag = PRIMARY timing (knock fallback)
+;   ✅ ip_maf_vo_2 = SINGLE VE table (mid-cam position)
+;
+; WHY: Modified engine needs recalibration. Instead of 50+ tables → 3-5 tables.
+;      Force ECU to use simpler fallback path = faster, predictable tuning.
 ;
 ;==============================================================================
 ;
@@ -49,32 +51,34 @@
 ;   - Simpler, more predictable fuel delivery
 ;
 ; How It Works:
-;   1. Set "M32 MAF Failure" flag at 0x56D4 = 1 (force failure state)
-;   2. ECU detects MAF failure, switches to fallback mode
-;   3. Uses "Minimum Airflow For Default Air" (0x7F1B) as base
-;   4. TPS + RPM tables calculate fuel delivery
-;   5. Tune VE tables to match actual airflow
+;   1. Set $56F3 bit 6 = 1 (enable M32 fallback ACTION)
+;   2. Disconnect MAF sensor (or set DTC mask at $56D4)
+;   3. ECU detects MAF failure, switches to fallback mode
+;   4. Uses "Default Airflow Table" at $7F2A (TPS × RPM)
+;   5. Tune fallback table to match actual engine airflow
 ;
-; XDF Evidence (CORRECTED January 25, 2026):
-;   - 0x56D4: KKMASK4 "M32 MAF Failure" DTC ENABLE mask (bit 6=1 logs DTCs)
+; XDF Evidence (VERIFIED February 2026):
+;   - 0x56D4: KKMASK4 - M32 DTC ENABLE mask (bit 6=1 logs DTCs, stock=0xCC)
 ;   - 0x56DE: Check Trans Light mask (bit 6=1 lights CEL on M32)
-;   - 0x56F3: KKACT3 "M32" ACTION mask (bit 6=1 takes fallback action) ← KEY!
+;   - 0x56F3: KKACT3 - M32 ACTION mask (bit 6=1 enables fallback!) ← KEY!
+;   - 0x577C: Hot Open Loop disable on M32 (set to 0x00 to keep HOL)
+;   - 0x577D: Accel Enrichment disable on M32 (set to 0x00 to keep AE)
 ;   - 0x7F1B: "Minimum Airflow For Default Air" = 3.5 g/s (16-bit, stock=0x01C0)
-;   - 0x7F2A: "Default Airflow Vs RPM & TPS %" (7×5 table, 35 bytes)
-;   - 0x6D1D: "Maximum Airflow Vs RPM" table (VE approximation)
+;   - 0x7F2A: "Default Airflow Table" (7×5, TPS × RPM, 35 bytes)
+;   - 0x6D1D: "Maximum Airflow Vs RPM" (17-element)
 ;
-; ⚠️ CRITICAL CORRECTION:
-;   - 0x56D4 is NOT a failure flag! It's a DTC ENABLE mask (stock=0xCC)
-;   - 0x56F3 is the ACTION mask - setting bit 6 ENABLES fallback mode
-;   - Stock has ACTION disabled (0x00), so ECU does NOT enter fallback on MAF fail!
-;   - Setting 0x56F3 bit 6 = 1 is the KEY PATCH for MAFless operation!
+; ⚠️ KEY INSIGHT:
+;   - Stock $56F3 = 0x00 (bit 6 CLEAR) = NO ACTION on MAF fail!
+;   - Setting $56F3 = 0x40 (bit 6 SET) ENABLES the fallback path
+;   - This is the PRIMARY patch for Alpha-N operation
 ;
 ; Tuning Requirements After Patch:
-;   1. Increase "Minimum Airflow For Default Air" from 3.5 to ~150-200 g/s
-;   2. Tune "Maximum Airflow Vs RPM" table (VE table substitute)
-;   3. Adjust "Power Enrichment Enable TPS Vs RPM" (0x74D1)
-;   4. Retune closed-loop AFR targets (O2 sensors still work!)
-;   5. Disable MAF failure DTC if desired (cosmetic only)
+;   1. Set $56F3 = 0x40 (enable M32 action)
+;   2. Set $56D4 = 0x8C (disable M32 DTC logging - cosmetic)
+;   3. Set $577C = 0x00, $577D = 0x00 (keep enrichments active)
+;   4. Disconnect MAF sensor
+;   5. Tune "Default Airflow Table" at $7F2A on dyno
+;   6. Note: Table limited to 0-50% TPS, 0-4800 RPM (see v4 for expansion)
 ;
 ; Implementation Status: 🔬 EXPERIMENTAL - Requires dyno validation
 ;
@@ -94,18 +98,24 @@ MIN_AIRFLOW_CAL     EQU $7F1B   ; Minimum Airflow For Default Air (16-bit, stock
 MAX_AIRFLOW_TABLE   EQU $6D1D   ; Maximum Airflow Vs RPM table address
 
 ;------------------------------------------------------------------------------
-; ROM CONSTANTS TO PATCH (Binary Hex Editor)
+; ROM CONSTANTS TO PATCH (Binary Hex Editor or TunerPro)
 ;------------------------------------------------------------------------------
-; These must be patched in the binary file BEFORE assembly injection:
+; These must be patched in the binary file for MAFless operation:
 ;
 ; Address   | Original | Patched | Description
 ; ----------|----------|---------|----------------------------------------------
-; 0x7F1B    | 0x23     | 0xC8    | Min Airflow: 3.5 g/s → 200 g/s (base fuel)
-; 0x56D4    | 0x00     | 0x01    | Force MAF failure flag = 1
-; 0x5795    | 0x00     | 0x01    | Bypass MAF filtering = 1 (always)
+; 0x56D4    | 0xCC     | 0x8C    | Disable M32 DTC logging (clear bit 6)
+; 0x56F3    | 0x00     | 0x40    | Enable M32 fallback ACTION (set bit 6) ← KEY!
+; 0x577C    | 0x01     | 0x00    | Keep Hot Open Loop enabled during M32
+; 0x577D    | 0x01     | 0x00    | Keep Accel Enrichment enabled during M32
 ;
-; **CRITICAL:** Without these binary patches, this code will NOT enable Alpha-N!
-
+; HARDWARE: Disconnect MAF sensor (or ground signal wire)
+;
+; *** FEBRUARY 2026 DISCOVERY ***
+; The fallback table at $7F2A is LIMITED: 7×5 (0-50% TPS, 0-4800 RPM only!)
+; Output goes to RAM $0128 (CYLAIR) - same variable as MAF path.
+; For full WOT and high RPM coverage, see mafless_alpha_v4.asm table relocation.
+;
 ;------------------------------------------------------------------------------
 ; ASSEMBLY CODE SECTION
 ;------------------------------------------------------------------------------
@@ -113,7 +123,7 @@ MAX_AIRFLOW_TABLE   EQU $6D1D   ; Maximum Airflow Vs RPM table address
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; MAF FAILURE FORCE ROUTINE
@@ -343,16 +353,16 @@ ALPHA_N_AIRFLOW_CALC:
 ;   0x56D4: 00 → 01 (Force MAF failure)
 ;   0x5795: 00 → 01 (Bypass MAF filtering)
 ;
-; Step 2: Assemble and inject this code at 0x18156
+; Step 2: Assemble and inject this code at 0x0C500 (engine bank free space)
 ; --------------------------------------------------------
 ; as11 mafless_alpha_n_conversion_v1.asm -o mafless_patch.s19
-; (Use TunerPro or hex editor to inject S19 at 0x18156)
+; (Use TunerPro or hex editor to inject S19 at 0x0C500)
 ;
 ; Step 3: Create XDF entries for Alpha-N table
 ; --------------------------------------------------------
 ; Add new 2D table in XDF:
 ;   Title: "Alpha-N Airflow Table (MAFless Mode)"
-;   Address: (TBD - use free ROM space after 0x181C6)
+;   Address: (TBD - use free ROM space after 0x0C600)
 ;   X-axis: RPM (0-7000 in 13 steps)
 ;   Y-axis: TPS% (0-100 in 11 steps)
 ;   Z-data: Airflow g/s (uint8 or uint16)
@@ -443,7 +453,7 @@ ALPHA_N_AIRFLOW_CALC:
 ;==============================================================================
 
 ; END OF MAFless Alpha-N Conversion v1
-; Total code size: ~50 bytes (fits in 492-byte free space @ 0x18156)
+; Total code size: ~50 bytes (fits in ~15KB free space @ 0x0C468-0x0FFBF)
 ; Additional ROM space needed: ~143 bytes for Alpha-N lookup table
 ; Total ROM usage: ~193 bytes
 

@@ -1,3 +1,10 @@
+; ═══════════════════════════════════════════════════════════════════
+; UPDATE HISTORY:
+;   2026-01-28: RAM Address Fix - $01A0 → $0046 bit 7
+;   2026-01-31: Crank Period Fix - $017B → $194C (TIC3 ISR verified)
+;   2026-02-09: Enhanced v1.0a ground truth: hook=0x101E1 STD $017B, bank 1 free $C468-$FFBF
+; ═══════════════════════════════════════════════════════════════════
+
 ;==============================================================================
 ; VY V6 IGNITION CUT v35 - COMBINED FUEL+SPARK CUT (CLEAN CUT)
 ;==============================================================================
@@ -57,13 +64,14 @@
 ;------------------------------------------------------------------------------
 ; VERIFIED RAM ADDRESSES
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 8-bit RPM/25
-PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: 3X period storage
-LIMITER_FLAG    EQU $01A0       ; ⚠️ UNVERIFIED: Limiter state flag
+RPM_ADDR EQU $00A2       ; ✅ VERIFIED: 8-bit RPM/25 ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: crank period storage ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 
 ; INJECTOR PULSE WIDTH - NEEDS VERIFICATION
 ; These are guesses based on typical Delco RAM layout:
-INJ_PW_RAM      EQU $0180       ; ⚠️ UNVERIFIED: Injector pulse width (µs)
+INJ_PW_RAM EQU $0180       ; ⚠️ UNVERIFIED: Injector pulse width (µs) ; Verified: CALC_AIRFLOW_REF (1 ref both) [Enhanced-fix]
 INJ_PW_FINAL    EQU $0182       ; ⚠️ UNVERIFIED: Final calculated PW
 
 ; FUEL CUT TABLE IN CALIBRATION (verified from XDF)
@@ -81,7 +89,11 @@ FAKE_PERIOD     EQU $3E80       ; Spark cut fake period
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $0C500          ; ✅ VERIFIED: Free space
+; ⚠️ Code below still uses TST/STAA/CLR $01A0 — needs rewrite to BRSET/BSET/BCLR $46,$80
+; See spark_cut_chr0m3_method_VERIFIED_v38.asm for correct implementation
+;
+
+            ORG $0C500          ; ✅ VERIFIED: Free space ; Bank 1 (file 0x0C500). Free banks: [1], used: [2, 3]. 15192 bytes free [Enhanced-fix]
 
 ;==============================================================================
 ; COMBINED CUT HANDLER - FUEL AND SPARK
@@ -139,7 +151,7 @@ DO_COMBINED_CUT:
     PULB                        ; 33       Discard original period
     PULA                        ; 32       
     LDD     #FAKE_PERIOD        ; CC 3E 80 Load fake period
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store → kills spark
+    STD     PERIOD_24X_RAM      ; FD 19 4C Store → kills spark
     
     ; 2. CUT FUEL: Zero the injector pulse width
     ; ⚠️ THIS SECTION REQUIRES VERIFICATION OF INJ_PW_RAM ADDRESS
@@ -167,7 +179,7 @@ EXIT_NORMAL:
     ;--------------------------------------------------------------------------
     PULB                        ; 33       Restore original period
     PULA                        ; 32       
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store real period
+    STD     PERIOD_24X_RAM      ; FD 19 4C Store real period
     RTS                         ; 39       Return
 
 ;==============================================================================
@@ -267,7 +279,7 @@ EXIT_NORMAL:
 ; SPARK CUT ADDRESSES (proven):
 ; File Offset | Bytes      | Verified      | Purpose
 ; ------------|------------|---------------|-------------------------------
-; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x101E1     | FD 01 7B   | ✅ STD $017B      | HOOK POINT — dwell intermediate store
 ; 0x0C500     | 00 00 00...| ✅ zeros      | FREE SPACE for code
 ;
 ; FUEL CUT CALIBRATION (verified from XDF):

@@ -18,11 +18,12 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; VERIFIED ADDRESSES (same as v38)
+; VERIFIED ADDRESSES (CORRECTED 2026-01-31)
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads (8-bit RPM/25)
-PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: STD at 0x101E1
-LIMITER_FLAGS   EQU $0046       ; ✅ VERIFIED: Engine mode flags
+RPM_ADDR EQU $00A2       ; ✅ VERIFIED: 82 reads (8-bit RPM/25) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: STD @ $3618 in TIC3 ISR ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+                                ; ❌ OLD WRONG: $017B (purpose unknown)
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
 LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 
 ;------------------------------------------------------------------------------
@@ -39,7 +40,7 @@ FAKE_PERIOD     EQU $3E80       ; 16000 = ~100µs dwell = no spark
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $0C500
+            ORG $0C500 ; Bank 1 (file 0x0C500). Free banks: [1], used: [2, 3]. 15192 bytes free [Enhanced-fix]
 
 SPARK_CUT_HANDLER:
     BRSET   LIMITER_FLAGS,LIMITER_BIT,CHECK_RESUME
@@ -59,12 +60,12 @@ CHECK_RESUME:
     BCLR    LIMITER_FLAGS,LIMITER_BIT  ; Deactivate limiter
 
 STORE_NORMAL:
-    STD     PERIOD_3X_RAM       ; Store real period
+    STD     PERIOD_24X_RAM      ; Store real period to $194C
     RTS
 
 INJECT_FAKE:
     LDD     #FAKE_PERIOD        ; Load fake period
-    STD     PERIOD_3X_RAM       ; Store fake period  
+    STD     PERIOD_24X_RAM      ; Store fake period to $194C
     RTS
 
 ;==============================================================================

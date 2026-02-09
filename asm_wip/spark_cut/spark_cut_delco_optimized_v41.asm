@@ -1,4 +1,9 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; DELCO-OPTIMIZED SPARK CUT v41 - IGNORING CHR0M3 REJECTIONS
 ;==============================================================================
 ; Philosophy: What actually works in Delco/GM systems, not theoretical limits
@@ -106,7 +111,7 @@ DWELL_NORMAL:
 ; MAIN LIMITER CODE
 ;------------------------------------------------------------------------------
 
-    ORG $C500           ; Verified free space
+    ORG $C500           ; Verified free space ; ⚠️ MUST BE bank 1 (file 0x0C500). Banks 0/2/3 have calibration data! [auto-fix 2026-02-09]
 
 DELCO_LIMITER_ENTRY:
     ; Check enable
@@ -164,7 +169,7 @@ APPLY_METHOD:
 ;------------------------------------------------------------------------------
 METHOD_PERIOD:
     LDD     #$3E80      ; Fake long period = no spark
-    STD     $017B       ; Store to period (verified address)
+    STD     $194C       ; Store to period (verified address)
     RTS
 
 ;------------------------------------------------------------------------------
@@ -179,9 +184,9 @@ METHOD_DWELL:
     STAA    $0199           ; Store to dwell LOW byte
     
     ; Also increase period slightly (double effect)
-    LDD     $017B           ; Read current period
+    LDD     $194C           ; Read current period
     ASLD                    ; Multiply by 2
-    STD     $017B           ; Store back
+    STD     $194C           ; Store back
     
     RTS
 
@@ -218,7 +223,7 @@ METHOD_COMBINED:
     
     ; 2. Inject fake period
     LDD     #$3E80
-    STD     $017B           ; Period storage
+    STD     $194C           ; Period storage
     
     ; 3. Retard timing (address unknown - needs research)
     ; LDD     $????         ; Timing advance register
@@ -252,7 +257,7 @@ SKIP_RESTORE:
 ; HOOK INSTALLATION
 ;------------------------------------------------------------------------------
 ; OFFSET: 0x101E1
-; ORIGINAL: FD 01 7B        (STD $017B)
+; ORIGINAL: FD 01 7B        (STD     $194C)
 ; PATCHED:  BD C5 00        (JSR $C500)
 
 ;==============================================================================

@@ -30,8 +30,11 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM address
-PERIOD_3X_RAM       EQU $017B       ; 3X period storage
+; ⚠️ CORRECTED 2026-02-02: $017B is DWELL INTERMEDIATE, NOT crank period!
+RPM_ADDR EQU $00A2       ; RPM address ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+; DWELL_INTERMEDIATE     EQU $017B       ; ❌ OLD WRONG - NOT crank period!
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: 24X crank period (TIC3 ISR @ $3618) ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+DWELL_INT_RAM EQU $017B       ; Dwell intermediate (can also be used for spark cut) ; Verified: DWELL_INTERMEDIATE (2 refs both. HOOK TARGET at 0x101E1) [Enhanced-fix]
 SPARK_ADVANCE       EQU $019B       ; Spark advance (degrees BTDC) - UNCONFIRMED
 
 ; FLAGS
@@ -66,7 +69,7 @@ RETARD_ZONE4        EQU 0           ; No timing (hard cut at 6020 RPM)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 SOFT_CUT_HANDLER:
     PSHA
@@ -140,9 +143,9 @@ ZONE_HARD_CUT:
     LDAA    #1
     STAA    HARD_CUT_FLAG       ; Set hard cut flag
     
-    ; Use Chr0m3's proven 3X period injection method
+    ; Use Chr0m3's proven period injection method
     LDD     #$FFFF              ; Maximum period value (fake slow RPM)
-    STD     PERIOD_3X_RAM       ; Store fake 3X period
+    STD     PERIOD_24X_RAM      ; Store fake 24X crank period (or use DWELL_INT_RAM)
     
     ; Result: Dwell calculation produces insufficient coil charge → no spark
     

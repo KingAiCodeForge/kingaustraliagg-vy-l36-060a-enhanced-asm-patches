@@ -1,3 +1,14 @@
+; ═══════════════════════════════════════════════════════════════════
+; UPDATE HISTORY:
+;   2026-01-28: RAM Address Fix - $01A0 → $0046 bit 7 (EQU only, code NOT updated)
+;   2026-01-31: Crank Period Fix - $017B → $194C (TIC3 ISR verified)
+;   2026-02-09: Enhanced v1.0a ground truth fix:
+;     - Fixed actual code to use BRSET/BSET/BCLR $46,$80 instead of TST/STAA/CLR $01A0
+;     - Fixed hook comment: FD 01 7B = STD $017B (NOT $194C)
+;     - Code stores to $017B (dwell intermediate) matching hook at 0x101E1
+;     - Added bank annotations
+; ═══════════════════════════════════════════════════════════════════
+
 ;==============================================================================
 ; VY V6 IGNITION CUT v33 - CHR0M3 METHOD (FUEL CUT SCRAPPED)
 ;==============================================================================
@@ -30,7 +41,7 @@
 ; STATUS: 🔬 EXPERIMENTAL - Chr0m3's method, adapted for Enhanced OS
 ;
 ; DIFFERENCE FROM v32:
-;   v32 = Hook into 3X period storage, leave fuel cut alone
+;   v32 = Hook into crank period storage, leave fuel cut alone
 ;   v33 = Overwrite fuel cut entirely with spark cut logic
 ;
 ; RPM Thresholds:
@@ -59,11 +70,12 @@ FUEL_CUT_TABLE      EQU $77DE   ; ✅ VERIFIED: XDF fuel cut table location
 ;------------------------------------------------------------------------------
 ; VERIFIED RAM ADDRESSES
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads in code (8-BIT RPM/25!)
+RPM_ADDR EQU $00A2       ; ✅ VERIFIED: 82 reads in code (8-BIT RPM/25!) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
                                 ; NOTE: RPM = value × 25, max 255 = 6375 RPM
                                 ; $00A3 = Engine State 2 (NOT part of RPM!)
-PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: STD at 0x101E1 (FD 01 7B)
-DWELL_RAM       EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99)
+PERIOD_24X_RAM EQU $194C       ; 24X crank period (init @ $3618; real updates via filter $050C)
+DWELL_INTM_RAM EQU $017B       ; ✅ CORRECT: dwell intermediate (hook target at 0x101E1)
+DWELL_RAM EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99) ; Verified: DWELL_TIME_RAM (8 refs both) [Enhanced-fix]
 
 ;------------------------------------------------------------------------------
 ; CHR0M3's "FREE BIT IN RAM" - FOR LIMITER FLAG
@@ -78,7 +90,8 @@ DWELL_RAM       EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99)
 ; For v33, we'll use a verified approach: piggyback on an existing
 ; unused bit in a status register, or use a known free byte
 ;
-LIMITER_FLAG    EQU $01A0       ; ⚠️ PLACEHOLDER - verify with RAM dump
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 
 ;------------------------------------------------------------------------------
 ; RPM THRESHOLDS (6000 RPM USER PREFERENCE - USING 8-BIT SCALED VALUES)
@@ -110,7 +123,7 @@ FAKE_PERIOD     EQU $3E80       ; 16000 decimal = ~100µs dwell = no spark
 ; THIS VERSION (v33):
 ;   - Uses 8-bit RPM/25 from $00A2 (max 6375 RPM is fine for 6000 target)
 ;   - Compares to $F0 (240 × 25 = 6000 RPM)
-;   - If over: injects fake 3X period → kills dwell → kills spark
+;   - If over: injects fake crank period → kills dwell → kills spark
 ;   - If under: does nothing, normal operation continues
 ;
 ; NOTE: Chr0m3's turbo builds needed >6375 RPM so he used 16-bit.
@@ -124,7 +137,10 @@ FAKE_PERIOD     EQU $3E80       ; 16000 decimal = ~100µs dwell = no spark
 ; Verified free space: File offset 0x0C468-0x0FFBF (15,192 bytes of 0x00)
 ; CPU address after mapping: $0C468+
 ;
-            ORG $0C500          ; ✅ VERIFIED: Safe code space
+; ⚠️ Code below has been FIXED to use BRSET/BSET/BCLR $46,$80 (Feb 9 2026)
+;
+
+            ORG $0C500          ; Bank 1 free space (file 0x0C500, $C468-$FFBF = 15192 bytes)
 
 ;==============================================================================
 ; SPARK CUT HANDLER - CHR0M3 METHOD
@@ -132,7 +148,7 @@ FAKE_PERIOD     EQU $3E80       ; 16000 decimal = ~100µs dwell = no spark
 ; This replaces the stock fuel cut behavior
 ;
 ; HOOK OPTIONS:
-;   Option A: Hook 3X period storage (like v32) - simpler
+;   Option A: Hook crank period storage (like v32) - simpler
 ;   Option B: Replace fuel cut JSR call - more like Chr0m3's method
 ;   Option C: Overwrite fuel cut routine itself - most aggressive
 ;
@@ -162,8 +178,7 @@ SPARK_CUT_HANDLER:
     ;--------------------------------------------------------------------------
     ; CHECK LIMITER STATE FOR HYSTERESIS
     ;--------------------------------------------------------------------------
-    TST     LIMITER_FLAG        ; 7D 01 A0 Test limiter flag
-    BNE     LIMITER_ACTIVE      ; 26 xx    Flag set → limiter is ON
+    BRSET   LIMITER_FLAGS,LIMITER_BIT,LIMITER_ACTIVE  ; 12 46 80 xx  If bit 7 set → limiter ON
     
     ;--------------------------------------------------------------------------
     ; LIMITER OFF - Check activation threshold
@@ -172,20 +187,19 @@ SPARK_CUT_HANDLER:
     BCS     EXIT_NORMAL         ; 25 xx    RPM < 6000 → normal operation
     
     ; RPM >= 6000: ACTIVATE SPARK CUT
-    LDAA    #$01                ; 86 01    Flag = 1
-    STAA    LIMITER_FLAG        ; 97 A0    Set limiter active
+    BSET    LIMITER_FLAGS,LIMITER_BIT  ; 14 46 80  Set bit 7 = limiter active
     BRA     DO_SPARK_CUT        ; 20 xx    Kill spark
 
 LIMITER_ACTIVE:
     ;--------------------------------------------------------------------------
     ; LIMITER ON - Check deactivation threshold
     ;--------------------------------------------------------------------------
-    LDAA    RPM_ADDR            ; 96 A2    Reload RPM (was clobbered)
+    LDAA    RPM_ADDR            ; 96 A2    Reload RPM (was clobbered by BRSET)
     CMPA    #RPM_LOW            ; 81 EC    Compare RPM/25 to 236 (5900 RPM)
     BCC     DO_SPARK_CUT        ; 24 xx    RPM >= 5900 → keep cutting
     
     ; RPM < 5900: DEACTIVATE SPARK CUT
-    CLR     LIMITER_FLAG        ; 7F 01 A0 Clear flag
+    BCLR    LIMITER_FLAGS,LIMITER_BIT  ; 15 46 80  Clear bit 7 = limiter off
     BRA     EXIT_NORMAL         ; 20 xx    Resume normal operation
 
 DO_SPARK_CUT:
@@ -195,8 +209,7 @@ DO_SPARK_CUT:
     PULB                        ; 33       Pop original period (discard)
     PULA                        ; 32       Pop original period (discard)
     LDD     #FAKE_PERIOD        ; CC 3E 80 D = 16000 (impossibly slow RPM)
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store fake → ECU thinks super slow
-                                ;          → Dwell calc gives ~100µs
+    STD     DWELL_INTM_RAM      ; FD 01 7B Store fake → dwell calc gives ~100µs
                                 ;          → Not enough to fire coil
                                 ;          → NO SPARK = exhaust pops!
     RTS                         ; 39       Return
@@ -207,7 +220,7 @@ EXIT_NORMAL:
     ;--------------------------------------------------------------------------
     PULB                        ; 33       Restore original period low
     PULA                        ; 32       Restore original period high
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store real period
+    STD     DWELL_INTM_RAM      ; FD 01 7B Store real dwell intermediate
     RTS                         ; 39       Return
 
 ;==============================================================================
@@ -239,11 +252,13 @@ EXIT_NORMAL:
 ;------------------------------------------------------------------------------
 ; HOOK INSTALLATION
 ;------------------------------------------------------------------------------
-; Same as v32 - hook the 3X period storage:
+; Same as v32 - hook the crank period storage:
 ;
-; File offset 0x101E1:
-;   Original: FD 01 7B (STD $017B)
+; File offset 0x101E1 (bank 2, CPU $81E1):
+;   Original: FD 01 7B (STD $017B — dwell intermediate)
 ;   Patched:  BD C5 00 (JSR $C500)
+;
+; ❌ DO NOT USE 0x13618 (STD $194C = cold-start init path only)
 ;
 ;------------------------------------------------------------------------------
 ; TESTING PROTOCOL
@@ -322,8 +337,8 @@ EXIT_NORMAL:
 ; ADDRESS CATEGORY: HOOK & FREE SPACE
 ; File Offset | Bytes      | Instruction    | Purpose
 ; ------------|------------|----------------|--------------------------------
-; 0x101E1     | FD 01 7B   | STD $017B      | ✅ HOOK - 3X period storage
-; 0x0C500     | 00 00 00...| (zeros)        | ✅ FREE - 15,040 bytes available
+; 0x101E1     | FD 01 7B   | STD $017B      | ✅ HOOK - dwell intermediate (bank 2)
+; 0x0C500     | 00 00 00...| (zeros)        | ✅ FREE - 15,192 bytes (bank 1, $C468-$FFBF)
 ; 0x3631      | BD 37 1A   | JSR $371A      | Dwell calc call in TIC3 ISR
 ;
 ; ADDRESS CATEGORY: FUEL CUT TABLE
@@ -347,7 +362,7 @@ EXIT_NORMAL:
 ;
 ; CHR0M3's SOLUTION:
 ;   Don't use fuel cut at all!
-;   Use 3X period injection for spark cut instead.
+;   Use crank period injection for spark cut instead.
 ;   3X period is 16-bit = no practical RPM limit.
 ;
 ; WHY 16-BIT WORKS FOR >6375:

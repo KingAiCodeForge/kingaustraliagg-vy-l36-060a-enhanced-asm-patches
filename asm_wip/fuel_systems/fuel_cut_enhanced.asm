@@ -9,7 +9,7 @@
 ; Processor: Motorola MC68HC11 (8-bit)
 ;
 ; ⭐ PRIORITY: HIGH - Safest option, 100% tunable in TunerPro
-; ✅ Chr0m3 Status: Not applicable (uses stock table, no new code)
+; (uses stock table, no new code)
 ; ✅ Success Rate: 100% (zero risk, table-only modification)
 ;
 ;==============================================================================
@@ -77,7 +77,7 @@ FUEL_CUT_AFR_PN EQU $77EF       ; "Fuel Cutoff A/F Ratio in P/N And Reverse"
 ; Purpose: Soften the fuel cut with timing retard for smoother transition
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18600 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18600 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18600 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; TIMING RETARD ENHANCEMENT - CALLED DURING FUEL CUT

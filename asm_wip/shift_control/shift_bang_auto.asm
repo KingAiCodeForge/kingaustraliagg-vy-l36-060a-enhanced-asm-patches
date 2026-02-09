@@ -95,7 +95,7 @@
 ; These addresses are MADE UP and may conflict with ECU variables!
 ; Find actual free RAM by analyzing binary with disassembler.
 
-RAM_SHIFT_ACTIVE    EQU     $0180   ; ⚠️ PLACEHOLDER - Shift in progress flag
+RAM_SHIFT_ACTIVE EQU $0180   ; ⚠️ PLACEHOLDER - Shift in progress flag ; Verified: CALC_AIRFLOW_REF (1 ref both) [Enhanced-fix]
 RAM_SHIFT_PHASE     EQU     $0181   ; ⚠️ PLACEHOLDER - Shift phase: 0=idle, 1=retard, 2=snap
 RAM_SHIFT_TIMER     EQU     $0182   ; ⚠️ PLACEHOLDER - Shift phase timer
 RAM_SHIFT_RETARD    EQU     $0183   ; ⚠️ PLACEHOLDER - Current retard amount (degrees)

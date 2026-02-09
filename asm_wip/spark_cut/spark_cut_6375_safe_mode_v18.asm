@@ -13,8 +13,8 @@
 ; Author: Jason King kingaustraliagg  
 ; Date: January 14, 2026
 ; Method: Software RPM Limit to Prevent Timer Overflow
-; Source: PCMHacking Topic 8756 - Rhysk94
-; Target: Holden VY V6 $060A (OSID 92118883/92118885)
+; Source: PCMHacking Topic 2544 - charlay86
+; Target: Holden VY V6 $060A (OSID 92118883)
 ; Processor: Motorola MC68HC11 (8-bit)
 ;
 ; ⭐ PRIORITY: HIGH - Prevents known hardware failure point
@@ -25,7 +25,7 @@
 ; THEORY OF OPERATION
 ;==============================================================================
 ;
-; From PCMHacking Topic 8756 (Rhysk94, March 2019):
+; From PCMHacking Topic 2544 (charlay86, March 2019):
 ;   "If you set the rpm to 6375 it removes the limiter"
 ;   "Spark becomes crap after 6500"
 ;
@@ -64,7 +64,7 @@
 ;     - Warning to driver
 ;
 ;   Stage 3: Emergency Hard Cut (6350+ RPM)
-;     - Immediate spark cut (3X period injection)
+;     - Immediate spark cut (crank period injection)
 ;     - Full fuel cut
 ;     - Log DTC for user awareness
 ;     - PREVENT reaching 6375 RPM overflow point
@@ -80,11 +80,12 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP (CORRECTED 2026-01-31)
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM)
+RPM_ADDR EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
                                 ; NOTE: $00A3 = Engine State 2 (NOT RPM low byte!)
-PERIOD_3X       EQU $017B       ; 3X period (for emergency cut)
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: 24X crank period @ TIC3 ISR $3618 ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+                                ; ❌ OLD WRONG: $017B (purpose unknown)
 LIMITER_FLAGS   EQU $00FA       ; Runtime flags
                                 ; Bit 0: progressive_active
                                 ; Bit 1: emergency_active
@@ -96,9 +97,9 @@ RPM_EMERGENCY   EQU $77F9       ; Emergency hard cut
 LIMITER_ENABLE  EQU $77FA       ; Enable flag
 
 ;------------------------------------------------------------------------------
-; CONFIGURATION - TOPIC 8756 VERIFIED VALUES
+; CONFIGURATION - Topic 2544 VERIFIED VALUES
 ;------------------------------------------------------------------------------
-; Archive-Verified Limits (Rhysk94)
+; Archive-Verified Limits (charlay86)
 RPM_ABSOLUTE_MAX    EQU $FF     ; 255 × 25 = 6375 RPM (OVERFLOW POINT!)
 RPM_EMERGENCY_DEF   EQU $FE     ; 254 × 25 = 6350 RPM (emergency cut)
 RPM_PROGRESSIVE_DEF EQU $FA     ; 250 × 25 = 6250 RPM (progressive start)
@@ -108,7 +109,7 @@ RPM_PROGRESSIVE_DEF EQU $FA     ; 250 × 25 = 6250 RPM (progressive start)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18500 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18500 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18500 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; MAIN SAFE MODE HANDLER
@@ -154,9 +155,9 @@ EMERGENCY_CUT:
     ORAA #$02                   ; 8A 02 - Set emergency_active bit
     STAA LIMITER_FLAGS          ; 97 FA
     
-    ; Method 1: 3X Period Injection (Chr0m3's method)
+    ; Method 1: crank period injection (Chr0m3's method)
     LDD #$FFFF                  ; CC FF FF - "Astronomically high" period
-    STD PERIOD_3X               ; FD 01 7B - Store to 3X period
+    STD DWELL_INTERMEDIATE      ; FD 01 7B - Store to dwell intermediate
                                 ; ECU calculates tiny dwell → no spark
     
     ; Method 2: Fuel cut (redundant safety)
@@ -210,14 +211,14 @@ SAFE_MODE_CAL_DATA:
 ; VALIDATION NOTES
 ;==============================================================================
 ;
-; Archive Evidence (Topic 8756):
-;   ✅ Rhysk94: "6375 removes the limiter"
-;   ✅ Rhysk94: "Spark becomes crap after 6500"
+; Archive Evidence (Topic 2544):
+;   ✅ charlay86: "6375 removes the limiter"
+;   ✅ charlay86: "Spark becomes crap after 6500"
 ;   ✅ Confirmed: 255 × 25 = 6375 RPM = overflow point
 ;
 ; Why This Method Works:
 ;   - Software-only (no hardware dependencies)
-;   - Uses Chr0m3's 3X period injection for cut
+;   - Uses Chr0m3's crank period injection for cut
 ;   - Prevents reaching known failure point
 ;   - 100% safe (no hardware risk)
 ;
@@ -235,7 +236,7 @@ SAFE_MODE_CAL_DATA:
 ; Testing Procedure:
 ;   1. Bench test: Set RPM_EMERGENCY = 120 (3000 RPM)
 ;   2. Verify emergency cut activates
-;   3. Verify PERIOD_3X = $FFFF during cut
+;   3. Verify DWELL_INTERMEDIATE = $FFFF during cut
 ;   4. In-vehicle: Gradually increase threshold
 ;   5. NEVER test at actual 6375 RPM (hardware risk!)
 ;
@@ -243,9 +244,9 @@ SAFE_MODE_CAL_DATA:
 ; REFERENCES
 ;==============================================================================
 ;
-; 1. PCMHacking Topic 8756 - "VY Commodore rpm limiter" (March 2019)
-;    - Rhysk94: "If you set the rpm to 6375 it removes the limiter"
-;    - Rhysk94: "Spark becomes crap after 6500"
+; 1. PCMHacking Topic 2544 - "VY Commodore rpm limiter" (March 2019)
+;    - charlay86: "If you set the rpm to 6375 it removes the limiter"
+;    - charlay86: "Spark becomes crap after 6500"
 ;    - Confirmed: 8-bit overflow at 255 × 25 = 6375
 ;
 ; 2. RPM Scaling Analysis
@@ -254,7 +255,7 @@ SAFE_MODE_CAL_DATA:
 ;    - Maximum safe RPM: 255 × 25 = 6375
 ;    - Overflow behavior: Wraps to 0
 ;
-; 3. Chr0m3 3X Period Injection Method
+; 3. Chr0m3 crank period injection Method
 ;    - File: ignition_cut_patch_v1_3x_period_injection.asm
 ;    - Used as emergency cut mechanism
 ;    - Proven effective for hard cuts
@@ -277,7 +278,7 @@ SAFE_MODE_CAL_DATA:
 ;
 ; File Offset | Bytes      | Verified      | Purpose
 ; ------------|------------|---------------|-------------------------------
-; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x101E1     | FD 01 7B   | ✅ STD     $194C  | HOOK POINT - 3X period store
 ; 0x0C500     | 00 00 00...| ✅ zeros      | FREE SPACE for code
 ;
 ; CALIBRATION ADDRESSES (proposed for safe mode config):
@@ -306,7 +307,7 @@ SAFE_MODE_CAL_DATA:
 ;   2. All RPM-based tables look up wrong values
 ;   3. Fuel cut threshold checks fail (0 < threshold)
 ;   4. Timing calculations become undefined
-;   5. "Spark becomes crap" - Rhysk94
+;   5. "Spark becomes crap" - charlay86
 ;
 ; BINARY PROOF (from VY binary):
 ;   Fuel cut table at 0x77DE: EC = 236 × 25 = 5900 RPM
@@ -359,7 +360,7 @@ SAFE_MODE_CAL_DATA:
 ;   RPM = (2,000,000 × 60) ÷ (3333 × 6) = 6001 RPM ✓
 ;
 ; Implementation:
-;   1. Read 3X period from $017B (16-bit)
+;   1. Read dwell intermediate from $017B (NOT crank period) (16-bit)
 ;   2. Divide constant by period
 ;   3. Result is true 16-bit RPM (no overflow!)
 ;

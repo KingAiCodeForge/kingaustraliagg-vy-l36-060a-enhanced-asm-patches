@@ -1,3 +1,10 @@
+; ═══════════════════════════════════════════════════════════════════
+; UPDATE HISTORY:
+;   2026-01-28: RAM Address Fix - $01A0 → $0046 bit 7
+;   2026-01-31: Crank Period Fix - $017B → $194C (TIC3 ISR verified)
+;   2026-02-09: Enhanced v1.0a ground truth: hook=0x101E1 STD $017B, bank 1 free $C468-$FFBF
+; ═══════════════════════════════════════════════════════════════════
+
 ;==============================================================================
 ; VY V6 IGNITION CUT v34 - ROLLING CUT (SPEEDUINO-STYLE)
 ;==============================================================================
@@ -48,7 +55,7 @@
 ;
 ; IMPLEMENTATION DIFFERENCE:
 ;   Speeduino: Can directly disable ignition channel bits
-;   VY Delco: Cannot - must use 3X period injection trick
+;   VY Delco: Cannot - must use crank period injection trick
 ;
 ;   Our adaptation:
 ;   - Use pseudo-random check based on ignition cycle counter
@@ -60,9 +67,10 @@
 ;------------------------------------------------------------------------------
 ; VERIFIED RAM ADDRESSES
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 8-bit RPM/25 (max 255=6375)
-PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: 3X period storage
-LIMITER_FLAG    EQU $01A0       ; ⚠️ UNVERIFIED: Limiter state flag
+RPM_ADDR EQU $00A2       ; ✅ VERIFIED: 8-bit RPM/25 (max 255=6375) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: crank period storage ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 RANDOM_SEED     EQU $01A1       ; ⚠️ PLACEHOLDER: Pseudo-random counter
 
 ;------------------------------------------------------------------------------
@@ -78,7 +86,7 @@ RANDOM_SEED     EQU $01A1       ; ⚠️ PLACEHOLDER: Pseudo-random counter
 ;
 ; 8-bit scaled values (RPM÷25):
 RPM_HARD_LIMIT  EQU $F0         ; 240 × 25 = 6000 RPM (100% cut)
-RPM_ZONE_75     EQU $EF         ; 239 × 25 = 5975 RPM (75% cut)
+RPM_ZONE_75     EQU $EF         ; 239 × 25 = 5975 RPM (75% cut)  ; NOTE: $EF is a CONSTANT, not a RAM address — "0 refs" annotation was incorrect
 RPM_ZONE_50     EQU $EE         ; 238 × 25 = 5950 RPM (50% cut)
 RPM_ZONE_25     EQU $EC         ; 236 × 25 = 5900 RPM (25% cut)
 RPM_RESUME      EQU $E9         ; 233 × 25 = 5825 RPM (resume threshold)
@@ -88,12 +96,16 @@ FAKE_PERIOD     EQU $3E80       ; 16000 = fake period for spark kill
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $0C500          ; ✅ VERIFIED: Free space
+; ⚠️ Code below still uses TST/STAA/CLR $01A0 — needs rewrite to BRSET/BSET/BCLR $46,$80
+; See spark_cut_chr0m3_method_VERIFIED_v38.asm for correct implementation
+;
+
+            ORG $0C500          ; ✅ VERIFIED: Free space ; Bank 1 (file 0x0C500). Free banks: [1], used: [2, 3]. 15192 bytes free [Enhanced-fix]
 
 ;==============================================================================
 ; ROLLING CUT HANDLER - SPEEDUINO-STYLE RANDOM CYLINDER CUT
 ;==============================================================================
-; Called from: JSR at 0x101E1 (replaces STD $017B)
+; Called from: JSR at 0x101E1 (replaces STD $017B — dwell intermediate)
 ; Entry: D = calculated 3X period
 ; Exit:  D = real period OR fake period (based on rolling cut decision)
 ;
@@ -190,7 +202,7 @@ INJECT_FAKE:
     PULB                        ; 33       Discard original period
     PULA                        ; 32       
     LDD     #FAKE_PERIOD        ; CC 3E 80 Load fake period
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store to 3X period RAM
+    STD     PERIOD_24X_RAM      ; FD 19 4C Store to 3X period RAM
     RTS                         ; 39       Return
 
 EXIT_REAL_PERIOD:
@@ -199,7 +211,7 @@ EXIT_REAL_PERIOD:
     ;--------------------------------------------------------------------------
     PULB                        ; 33       Restore original period
     PULA                        ; 32       
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store real period
+    STD     PERIOD_24X_RAM      ; FD 19 4C Store real period
     RTS                         ; 39       Return
 
 ;==============================================================================
@@ -238,7 +250,7 @@ EXIT_REAL_PERIOD:
 ; 1. Open binary in hex editor
 ;
 ; 2. At file offset 0x101E1, change:
-;    FROM: FD 01 7B (STD $017B)
+;    FROM: FD 01 7B (STD $017B — dwell intermediate)
 ;    TO:   BD C5 00 (JSR $C500)
 ;
 ; 3. At file offset 0x0C500, insert this assembled code
@@ -262,7 +274,7 @@ EXIT_REAL_PERIOD:
 ;
 ; Our adaptation:
 ;   - rollingCutTable → Fixed zone thresholds
-;   - ignitionChannelsOn → 3X period injection
+;   - ignitionChannelsOn → crank period injection
 ;   - random1to100() → LFSR pseudo-random from counter
 ;
 ;==============================================================================
@@ -281,7 +293,7 @@ EXIT_REAL_PERIOD:
 ;
 ; File Offset | Bytes      | Verified      | Purpose
 ; ------------|------------|---------------|-------------------------------
-; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x101E1     | FD 01 7B   | ✅ STD     $194C  | HOOK POINT - 3X period store
 ; 0x0C500     | 00 00 00...| ✅ zeros      | FREE SPACE - code injection
 ; 0x77DE-E1   | EC EB EC EB| ✅ fuel cut   | Stock 5900/5875 RPM values
 ;

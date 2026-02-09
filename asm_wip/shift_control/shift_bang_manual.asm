@@ -86,7 +86,7 @@
 ; These addresses are MADE UP and may conflict with ECU variables!
 ; Find actual free RAM by analyzing binary with disassembler.
 
-RAM_FLATSHIFT_ACTIVE EQU    $0180   ; ⚠️ PLACEHOLDER - Flat shift in progress flag
+RAM_FLATSHIFT_ACTIVE EQU $0180   ; ⚠️ PLACEHOLDER - Flat shift in progress flag ; Verified: CALC_AIRFLOW_REF (1 ref both) [Enhanced-fix]
 RAM_FLATSHIFT_MODE   EQU    $0181   ; ⚠️ PLACEHOLDER - 0=off, 1=cutting, 2=resuming
 RAM_FLATSHIFT_TIMER  EQU    $0182   ; ⚠️ PLACEHOLDER - Timeout counter (prevents stuck)
 RAM_CLUTCH_DEBOUNCE  EQU    $0183   ; ⚠️ PLACEHOLDER - Clutch switch debounce counter
@@ -110,7 +110,7 @@ CAL_FS_DEBOUNCE     EQU     $C506   ; ⚠️ PLACEHOLDER - Clutch debounce (10ms
 ;==============================================================================
 
 ; RPM - VERIFIED from copilot-instructions.md
-ENGINE_RPM          EQU     $00A2   ; ✅ VERIFIED - RPM/25 (8-bit, max 6375 RPM)
+ENGINE_RPM EQU $00A2   ; ✅ VERIFIED - RPM/25 (8-bit, max 6375 RPM) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 
 ; TPS - needs XDF verification
 TPS_VAR             EQU     $00DA   ; ⚠️ UNVERIFIED - Throttle position (0-255)

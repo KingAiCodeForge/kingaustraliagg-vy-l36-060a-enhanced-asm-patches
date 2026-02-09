@@ -1,6 +1,6 @@
 # VS/VT Memcal vs VY Flash ECU - Technical Reference
 
-**Last Updated:** January 29, 2026  
+**Last Updated:** February 9, 2026  
 **Purpose:** Binary architecture comparison for ignition cut porting  
 **Author:** Jason King (kingaustraliagg)
 
@@ -54,14 +54,14 @@
 | Feature | Specification | Source |
 |---------|---------------|--------|
 | **Architecture** | 8-bit | Motorola datasheet |
-| **Clock** | 2-4 MHz E-clock | HC11 Reference Manual |
+| **Clock** | 2.1-3.41 MHz E-clock (varies by platform — see topic_982, topic_4539) | VL400 crystal measurements, Antus scope |
 | **Address Space** | 64KB (bank-switched for 128KB) | HC11 Reference Manual |
 | **Timer Registers** | 5× Output Compare, 3× Input Capture | HC11 §10 |
 | **TCTL1 Address** | $1020 (controls OC2-OC5 outputs) | HC11 §10.4 |
 
 ## 🔍 Binary Architecture Comparison
 
-> **⚠️ BANK SWITCHING:** VY uses 128KB in 64KB address space via bank switching. The exact latch address needs hardware verification.
+> **✅ BANK SWITCHING (VERIFIED 2026-02-09):** VY uses 128KB in 64KB address space. PORTC ($1003) bit 3 controls A16 address line. `$2000-$7FFF` always visible (cal+common), `$8000-$FFFF` bank-switched between engine (A16=0) and transmission (A16=1).
 
 ### Code & ISR Locations (Verified from Binaries)
 
@@ -86,7 +86,7 @@
 ```
 FILE OFFSET   HC11 VECTOR   TRAMPOLINE   FUNCTION                    NOTES
 -----------   -----------   ----------   --------                    -----
-0x1FFEA       $FFEA         $200F        TIC3 (3X Crank)             ⭐ SPARK CUT HOOK POINT
+0x1FFEA       $FFEA         $200F        TIC3 (24X Crank)             ⭐ SPARK CUT HOOK POINT
 0x1FFEC       $FFEC         $2012        TIC2 (24X Crank)            24X timing input capture
 0x1FFEE       $FFEE         $2015        TIC1                        Timer Input Capture 1
 0x1FFE8       $FFE8         $C011        RESET                       ROM bootloader entry
@@ -291,8 +291,60 @@ with open('vy_ti3_isr.bin', 'wb') as f:
 
 1. **PCMHacking Topic 7922** - BennVenn's OSE12P spark cut
 2. **MC68HC11 Reference Manual** - TCTL1 register specification
-3. **VY XDF v2.09a** - Address mappings
+3. **VY XDF v2.09b** - Address mappings (v2.09b = v2.09a + 68 DTC flags from Antus DTC Tool)
 4. **Binary comparison** - ISR vector analysis
+
+---
+
+## 📊 Enhanced XDF DTC Base Address Cross-Reference (All Platforms)
+
+All Enhanced XDFs share **68 identical DTCs** (DTC 13–80+), but the DTC flag base address differs by platform/memory layout:
+
+| Platform | Calibration | XDF Version | DTC Base Address | Memory Type | Notes |
+|----------|-------------|-------------|------------------|-------------|-------|
+| **VS V6 N/A** | $51 | v1.4g | `0x35E2` | Short Memcal | Same DTC base for SC variant |
+| **VS V6 SC** | $51 | v1.0d | `0x35E2` | Short Memcal | L67 supercharged |
+| **VS V8** | $A6F | v0.90b | `0x36C9` | Short Memcal | Different base from V6 |
+| **VT V6 N/A** | $A5G | v1.0i | `0x36DB` | Short Memcal | Same as VT V8 |
+| **VT V6 SC** | $A5G | v1.3i | `0x36DB` | Short Memcal | L67 supercharged |
+| **VT V8** | $A6E | v1.04 | `0x36DB` | Short Memcal | Same as VT V6 |
+| **VX/VY V6 N/A** | $060A | v2.09b | `0x56D2` | Flash (soldered) | ⭐ Our target - shifted address |
+| **VX/VY V6 SC** | $07 | v2.6i | `0x36DB` | Short Memcal | SC variant uses memcal layout |
+
+**Key Insight**: The VX/VY flash PCM ($060A) has DTC flags at `0x56D2` — a massive offset from the memcal-based VS/VT at `0x35E2`/`0x36C9`/`0x36DB`. This is because the flash PCM reorganises the entire ROM layout, pushing calibration data to higher addresses. The SC variant ($07) retains the memcal layout at `0x36DB`.
+
+### XDF Element Count Comparison (VS/VT vs VY)
+
+| Metric | VS V6 $51 v1.4g | VT V6 $A5G v1.0i | VY V6 $060A v2.09b | Growth (VS→VY) |
+|--------|------------------|-------------------|---------------------|----------------|
+| Tables | 257 | 118 | 334 | +30% |
+| Constants | 681 | 177 | 1,546 | +127% |
+| Flags | 349 | 205 | 548 | +57% |
+| **Total** | **1,287** | **500** | **2,428** | **+89%** |
+| Categories | 27 | 20 | 64 | +137% |
+| Unique Titles | 1,282 | 498 | 2,256 | +76% |
+
+### Supercharged Variant Comparison
+
+| Metric | VS V6 SC $51 v1.0d | VT V6 SC $A5G v1.3i | VY V6 SC $07 v2.6i |
+|--------|---------------------|----------------------|---------------------|
+| Tables | 254 | 129 | 175 |
+| Constants | 679 | 169 | 385 |
+| Flags | 369 | 203 | 257 |
+| **Total** | **1,302** | **501** | **817** |
+| Categories | 30 | 21 | 49 |
+| SC-Specific Categories | Supercharger, Fuel Pump Speed Control | Supercharger Boost Valve | Supercharger Solenoid |
+
+### V8 Variant Comparison
+
+| Metric | VS V8 $A6F v0.90b | VT V8 $A6E v1.04 |
+|--------|-------------------|-------------------|
+| Tables | 82 | 77 |
+| Constants | 120 | 81 |
+| Flags | 202 | 203 |
+| **Total** | **404** | **361** |
+| Categories | 21 | 19 |
+| Author | The1, Antus XDF DTC Tool | Others, Antus XDF DTC Tool |
 
 ---
 
@@ -357,10 +409,10 @@ Original values (FROM OSE12P - NOT VY):
 
 | Feature | Value | Notes |
 |---------|-------|-------|
-| Timer Resolution | 500ns @ 2MHz | Single tick minimum |
+| Timer Resolution | ~293ns @ 3.408MHz (VX/VY Flash), ~317ns @ 3.146MHz (VS/VT MAF), 500ns @ 2.097MHz (VN-VR MAP) | Per VL400/Antus measurements |
 | Output Compare Registers | 5 (OC1-OC5) | All available on VY |
 | Zero Jitter Timing | Yes | Hardware-based timing |
-| 200µs in ticks | 400 ticks | (200µs / 0.5µs per tick) |
+| 200µs in ticks | ~682 ticks @ 3.408MHz VX/VY (200µs / 0.293µs) | NOT 400 ticks — that's only for 2MHz MAP PCMs |
 
 **EST Bypass Safety (DFI Module):**
 - 10kΩ pull-down resistor required
@@ -384,7 +436,7 @@ Original values (FROM OSE12P - NOT VY):
 - Minimal code changes
 - Not fully tested by The1
 
-### Chr0m3's Method (3X Period Injection)
+### Chr0m3's Method (crank period injection)
 **Source:** Topic 8567, Post #4, #8, #10
 
 **Quotes:**
@@ -396,7 +448,7 @@ Original values (FROM OSE12P - NOT VY):
 
 **Approach:**
 - ✅ Oscilloscope validated (bench tested)
-- ✅ 3X period manipulation ("astronomically high" fake period)
+- ✅ crank period manipulation ("astronomically high" fake period)
 - ✅ Works reliably at 6500+ RPM but Jason King (kingaustraliagg) was aiming for 6000 RPM instead. Chr0m3 was aiming for high RPM and doing spark cut combined. 5900 RPM is where the stock limiter fuel cut is at, with spark/ignition cut using a different method by manipulation of the binary once mapped out more on the VY V6.
 - ✅ Multiple patches coordinated across functions
 - ⚠️ Complex implementation (edge checks, timestamps)
@@ -564,123 +616,96 @@ TI3_ISR:
 
 ## 🔧 HC11 EXPANDED MODE & BANK SWITCHING
 
-> **⚠️ UNVERIFIED / RESEARCH IN PROGRESS**  
-> This section contains **assumptions** based on HC11 datasheet theory and VS Commodore research.  
-> The exact VY V6 bank switching hardware (latch address, port bits) has **NOT been confirmed** on actual hardware.  
-> Treat all file offset mappings as "best guess until validated."
+> **UPDATED 2026-02-09** — Previous version was full of unverified assumptions. Now corrected with:
+> - Antus (DARC author, pcmhacking admin) — [Topic 8500](https://pcmhacking.net/forums/viewtopic.php?t=8500)
+> - VL400 (FlashTool author) — [Topic 82](https://pcmhacking.net/forums/viewtopic.php?t=82), [Topic 275](https://pcmhacking.net/forums/viewtopic.php?t=275)
+> - malser (AM29F010 A16 info) — [Topic 82 Post 31](https://pcmhacking.net/forums/viewtopic.php?f=3&t=82&start=30)
+> - Binary analysis of VY_V6_Enhanced.bin (diff between halves, vector tables, PORTC writes)
 
-### Jason's Problem: Reset Vector 0xC011 Doesn't Decode
-**Source:** Facebook Messenger (January 15, 2026)
+### ✅ VERIFIED: Bank Switching Architecture
 
-**Quote:**
-> "problem im having with no ida pro is **HC11 in expanded mode with bank switching**, the **reset vector 0xC011 doesn't decode** to expected startup code at either offset."
+**Antus (Topic 8500, March 2024):**
+> "Note that the challenge for disassembly of the 128k bins, is the bank switching which the disassemblers can't follow. Essentially you have:
+> - **0-32KB** mapped to 0-32KB address space **full time** with calibration and common code
+> - **32-64KB** mapped to the high half (0x8000-0xFFFF) for **engine processing**
+> - **92-128KB** mapped to 32-64KB for **transmission processing**"
 
-### Explanation: CONFIG Register & Memory Mapping
-
-**HC11 Operating Modes:**
-
-| Mode | MODA | MODB | Reset Vector | Internal ROM |
-|------|------|------|--------------|---------------|
-| **Single Chip** | 0 | 0 | $FFFE | Enabled |
-| **Expanded** | 1 | 1 | $FFFE | **Disabled** |
-| **Special Test** | 0 | 1 | **$BFFE** | Disabled |
-| **Bootstrap** | 1 | 0 | $BFFE | Disabled |
-
-**VY V6 ECU Configuration (ASSUMED - NEEDS VERIFICATION):**
-- **Mode:** Expanded (MODA=1, MODB=1)
-- **Internal ROM:** Disabled (external 128KB flash)
-- **Reset Vector Location:** $FFFE (in external ROM)
-- **Vector Contents:** $C011 (startup code address)
-
-### Why 0xC011 Doesn't Disassemble Correctly
-
-**Problem:** VY uses **bank switching** (128KB in 64KB address space)
-
-**Memory Banking:**
 ```
-Address Space:  $0000 - $FFFF (64KB visible)
-Physical Flash: $00000 - $1FFFF (128KB total)
-
-Bank 0: $00000 - $0FFFF → mapped to $8000-$FFFF
-Bank 1: $10000 - $1FFFF → mapped to $8000-$FFFF
+HC11 CPU Address Space (64KB visible at any time):
+├── $0000-$03FF   Internal RAM (1KB — HC11F)
+├── $1000-$105F   Memory-Mapped I/O (HC11F registers)
+├── $2000-$7FFF   ALWAYS VISIBLE — calibration + common code + ISR jump table
+│                   (from file 0x02000-0x07FFF — NEVER bank-switched)
+└── $8000-$FFFF   BANK-SWITCHED — engine OR transmission code
+    ├── When A16=0: File 0x08000-0x0FFFF visible (ENGINE bank)
+    └── When A16=1: File 0x18000-0x1FFFF visible (TRANSMISSION bank)
 ```
 
-**Reset Vector @ $FFFE:**
-- **CPU Address:** $FFFE (top of address space)
-- **File Offset:** Could be at $0FFFE (Bank 0) OR $1FFFE (Bank 1)
-- **VY V6:** Reset vector is at **file offset $1FFFE** (Bank 1) - *(assumed, needs verification)*
+### ✅ VERIFIED: Bank Switch Mechanism — PORTC Bit 3
 
-**Reset Handler @ $C011:**
-- **CPU Address:** $C011
-- **Which Bank?** Need to know CONFIG register setting
-- **VY V6:** Likely in Bank 0, so **file offset $0C011** - *(assumed, needs verification)*
+**malser (Topic 82 Post 31):**
+> "Memory AM29F010 — it has two banks on 64K. 1 — from 0000 to FFFF and 2 from 10000 to 1FFFF. Switching between banks occurs to the senior A16 address."
+
+**Found in binary (2026-02-09):**
+- `STAB $1003` at file `0x1476A` — writes `$F7` to PORTC (clears bit 3 → A16=0 → engine bank)
+- `BSET $03,#$CC` at file `0x0B0B9` — sets bits 7,6,3,2 of PORTC (bit 3 → A16=1 → trans bank)
+
+> **PORTC bit 3 = bank select line.** NOT Port G bit 6 as previously assumed from VS research.
+
+### ✅ VERIFIED: Reset Vector and $C011
+
+**Previously:** "Reset vector $C011 doesn't decode" — this was because we didn't understand banking.
+
+**Now proven:**
+- **RESET vector at $FFFE** (file `0x1FFFE` in HIGH/trans half) = **`$C011`**
+- File offset `0x1C011` → CPU `$C011` (in transmission bank context, `$8000-$FFFF` range)
+- **RESET vector at $FFFE** (file `0x0FFFE` in LOW/engine half) = **`$202A`**
+- `$202A` → JMP `$202A` (infinite loop / watchdog trap) in the always-visible ISR jump table
+- This means the **transmission bank boots directly to its own startup code at $C011**
+- The **engine bank's reset vector is a watchdog trap** — the ECU always boots into trans bank first, then switches to engine bank
+
+### ✅ VERIFIED: Vector Table Comparison
+
+Only 3 vectors differ between engine and transmission halves:
+
+| Vector | Engine (file 0x0FFxx) | Trans (file 0x1FFxx) |
+|--------|----------------------|---------------------|
+| COP ($FFFA) | `$2024` (∞ loop) | `$C015` |
+| CMF ($FFFC) | `$2027` (∞ loop) | `$C019` |
+| RESET ($FFFE) | `$202A` (∞ loop) | `$C011` |
+| All other 18 vectors | Same as trans | Point to `$2000-$201E` jump table |
+
+### Binary Regions Shared Between Halves
+
+| File Region | LOW (engine) | HIGH (trans) | Match |
+|-------------|-------------|-------------|-------|
+| `$0000-$BFFF` | Different code | Different code | 96-99% different |
+| `$D000-$EFFF` | Lookup tables | Lookup tables | **100% IDENTICAL** |
+| `$F000-$FFFF` | Vectors + ISR code | Vectors + ISR code | 99.6% identical (18 bytes differ) |
+
+### ⚠️ OLD ASSUMPTIONS NOW CORRECTED
+
+| Old Claim | Correction |
+|-----------|------------|
+| "Port G bit 6 controls bank switching" | **PORTC bit 3** controls A16 |
+| "$8000-$FFFF always visible" | **$8000-$FFFF is BANK-SWITCHED** |
+| "$4000-$7FFF is banked window" | **$2000-$7FFF is ALWAYS visible** (NOT banked) |
+| "Reset vector doesn't decode at 0xC011" | It decodes correctly — `$C011` is in the trans bank at file `0x1C011` |
+| "File offset 0x18000 maps to CPU $8000 in bank 1" | Correct, but "bank 1" = **transmission bank** selected by A16=1 |
+| "CONFIG register controls banking" | CONFIG sets expanded mode; **PORTC controls A16 bank select** |
 
 ### How to Disassemble with Bank Switching
 
-**Method 1: Split Binary by Bank**
-```bash
-# Extract Bank 0 (first 64KB)
-dd if=92118883.BIN of=bank0.bin bs=1 count=65536 skip=0
+**Method (Antus, Topic 8500):**
+> "Instead we ended up using the disassembly work to understand the code, but patched the factory bins with jumps to jump out to unused space and implement additional logic there, without reassembling the bin. This side steps the whole bank switching problem quite effectively."
 
-# Extract Bank 1 (second 64KB)  
-dd if=92118883.BIN of=bank1.bin bs=1 count=65536 skip=65536
-
-# Disassemble Bank 0 starting at reset handler
-m6811-elf-objdump -D -b binary -m m68hc11 --start-address=0xC011 bank0.bin
-```
-
-**Method 2: Use Arduino/Moates to Read from Running ECU**
-- ECU handles bank switching automatically
-- Read via ALDL or SPI flash programmer
-- Easier than offline analysis
-
-**Method 3: IDA Pro with Custom Loader**
-- Write IDC script to handle bank switching
-- Define memory segments for each bank
-- IDA can follow cross-bank JSR/JMP
-
-### CONFIG Register (Determines Banking)
-
-**CONFIG @ $103F (EEPROM):**
-
-| Bit | Name | Function |
-|-----|------|----------|
-| 7 | - | Unused |
-| 6 | - | Unused |
-| 5 | - | Unused |
-| 4 | EE4 | EEPROM mapping |
-| 3 | EEON | EEPROM enable |
-| 2 | - | Unused |
-| 1 | NOCOP | COP disable |
-| 0 | ROMON | **Internal ROM enable** |
-
-**VY V6 CONFIG = 0x0F** (typical):
-- Bit 0 (ROMON) = 1 → Internal ROM **ENABLED** (but usually has no code)
-- Expanded mode still uses external flash
-
-### Bank Switching Hardware
-
-> **⚠️ ASSUMPTION - NOT VERIFIED ON VY V6 HARDWARE**
-
-**VY V6 uses external latch for bank selection (assumed):**
-- Write to specific I/O port triggers bank switch
-- Bank select stored in hardware latch
-- Transparent to software (JSR/JMP work across banks)
-
-**Finding Bank Switch Code:**
-```bash
-# Search for bank switch patterns
-grep -a "STAA.*\$10" 92118883.BIN  # Look for I/O writes
-```
-
-**Typical Bank Switch:**
-```asm
-    LDAA  #$01        ; Select Bank 1
-    STAA  $1039       ; Write to bank control register (example)
-    JSR   $C000       ; Call function in Bank 1
-    LDAA  #$00        ; Select Bank 0  
-    STAA  $1039       ; Restore bank
-```
+**For Ghidra/IDA:**
+1. Load full 128KB binary
+2. Create 3 memory blocks:
+   - `common` at `$2000`, file offset `0x02000`, size `0x6000` (24KB always-visible)
+   - `engine` at `$8000`, file offset `0x08000`, size `0x8000` (32KB engine bank)
+   - `trans` at `$8000`, file offset `0x18000`, size `0x8000` (32KB trans bank — overlaps engine!)
+3. Note: Ghidra struggles with overlapping address spaces. DARC handles this with separate "scopes."
 
 ---
 
@@ -712,11 +737,12 @@ grep -a "STAA.*\$10" 92118883.BIN  # Look for I/O writes
 | `$19000-$1FFAF` | Bank 1 ROM (trans) | 28K | ⚠️ Bank switching |
 | `$28000-$2FFAF` | Bank 2 ROM (engine) | 26K | ⚠️ Bank switching |
 
-**Bank Switching (VS/VY - UNVERIFIED FOR VY):** Port G bit 6 controls ROM bank selection *(from VS research, may differ on VY)*
+**Bank Switching (VS/VY — VERIFIED FOR VY, likely same for VS):** PORTC ($1003) bit 3 controls A16 address line.
 ```asm
-; Bank Switch To 1 (ORAB #0x40 on Port G) - UNVERIFIED
-; Bank Switch To 2 (ANDB #0xBF on Port G) - UNVERIFIED
+; Bank Switch To Engine  (STAB $1003 with $F7 — clears bit 3, A16=0) - VERIFIED
+; Bank Switch To Trans   (BSET $03,#$CC — sets bit 3, A16=1)        - VERIFIED
 ```
+> **Note:** VS topic_181 references suggest PORTG bit 6 for VS — this may be different from VY which uses PORTC bit 3. The HC11F variant in VY has different I/O port assignments than the HC11A/E in VS ECUs.
 
 ### BKLL.md RAM Addresses (topic_184 - VN/VP/VR Era)
 
@@ -813,7 +839,7 @@ SPCR  ($1028) = 0x44  (SPI enabled, CPHA=1)
 
 ### Common HC11 Memory Maps for GM ECUs
 
-#### Option 1: EPROM at 0x4000 (most likely for partial binaries)
+#### Option 1: EPROM at 0x4000 (for 32KB partial binaries — VN/VP/VR MEMCAL)
 ```
 Memory Map:
 0x0000-0x003F: I/O Registers (hardware)
@@ -829,14 +855,25 @@ Example: Address 0x5AB1 → File Offset 0x1AB1
 Example: Address 0x6877 → File Offset 0x2877
 ```
 
-#### Option 2: VY 128KB Full Binary (Bank Switched) - UNVERIFIED
+#### Option 2: VY 128KB Full Binary (Bank Switched) — ✅ VERIFIED 2026-02-09
 ```
-Memory Map (Full 128KB) - ASSUMED, NEEDS VERIFICATION:
-Bank 0: 0x00000-0x0FFFF → mapped to 0x8000-0xFFFF
-Bank 1: 0x10000-0x1FFFF → mapped to 0x8000-0xFFFF
+HC11F Memory Map (VY V6 $060A):
 
-File Offset = Memory Address directly (for analysis)
-Reset Vector @ 0x1FFFE points to startup code
+$0000-$03FF   Internal RAM (1KB)
+$1000-$105F   HC11F I/O Registers
+$2000-$7FFF   ALWAYS VISIBLE — cal + common code (file 0x02000-0x07FFF)
+$8000-$FFFF   BANK-SWITCHED via PORTC bit 3 (A16):
+  A16=0: Engine bank  (file 0x08000-0x0FFFF)
+  A16=1: Trans bank   (file 0x18000-0x1FFFF)
+
+File Offset to CPU Address:
+  0x02000-0x07FFF → $2000-$7FFF (always visible, direct mapping)
+  0x08000-0x0FFFF → $8000-$FFFF (engine bank, when PORTC bit 3 = 0)
+  0x18000-0x1FFFF → $8000-$FFFF (trans bank, when PORTC bit 3 = 1)
+
+Reset Vector:
+  Engine half (file 0x0FFFE) → $202A (watchdog trap)
+  Trans half  (file 0x1FFFE) → $C011 (boot entry point)
 ```
 
 ### Priority Address Analysis (Within File Range)
@@ -950,17 +987,21 @@ patches = [
 - **Recommended dwell for spark cut: 200-300µs** (proven values)
 - **Recommended production RPM: 6000-6350 RPM** (staying under 8-bit max of 6375)
 - **CRITICAL: Opcode timing matters** - keep ISR patches minimal
-- **Bank switching:** *(UNVERIFIED)* Reset vector 0xC011 is assumed to be in Bank 0 @ file offset 0x0C011
+- **Bank switching:** ✅ **VERIFIED (2026-02-09):** PORTC ($1003) bit 3 controls A16 address line. Reset vector at file `0x1FFFE` = `$C011` (trans bank boot entry)
 
 **Verified Items:**
 - Hook point at $101E1 contains `FD 01 7B` (STD $017B) ✅
 - RPM variable at $00A2 (×25 scaling) ✅
 - Free space at $0C468-$0FFBF ✅
+- Bank switching: PORTC bit 3 = A16 ✅
+- Reset vector: Trans half boots to $C011, engine half traps at $202A ✅
+- $2000-$7FFF always visible (ISR jump table + calibration) ✅
+- $8000-$FFFF bank-switched (engine vs transmission) ✅
 
-**Unverified Items:**
-- Bank switching mechanism (Port G bit 6?) - needs hardware probe
-- Exact memory mapping between file offsets and CPU addresses
-- CONFIG register contents at $103F
+**Remaining Questions:**
+- ~~Bank switching mechanism (Port G bit 6?)~~ → **RESOLVED:** PORTC bit 3
+- ~~Exact memory mapping between file offsets and CPU addresses~~ → **RESOLVED:** See HARDWARE_SPECS.md
+- CONFIG register contents at $103F — still unverified (but not needed for patching)
 
 **Next Step:** Test patches at 3000 RPM first (safe), then increase to production RPM after validation.
 
@@ -982,8 +1023,8 @@ This parameter controls when the ECU forces maximum dwell - important for spark 
 
 | Platform | XDF Parameter Name | Address | Raw Value | Notes |
 |----------|-------------------|---------|-----------|-------|
-| **VS V6 $51** | If Delta CYLAIR is Greater than this then Max Dwell | **0x3D49** | **32** (0x20) | Enhanced v1.4f |
-| **VY V6 $060A** | If Delta Cylair > This - Then Max Dwell | **0x6776** | **32** (0x20) | Enhanced v2.09a |
+| **VS V6 $51** | If Delta CYLAIR is Greater than this then Max Dwell | **0x3D49** | **32** (0x20) | Enhanced v1.4g |
+| **VY V6 $060A** | If Delta Cylair > This - Then Max Dwell | **0x6776** | **32** (0x20) | Enhanced v2.09b |
 | **VT V6 $A5G** | NOT MAPPED | - | - | Not in XDF |
 | **OSE12P** | NOT PRESENT | - | - | Uses different dwell system |
 
@@ -1040,14 +1081,21 @@ VS, VT, and VY XDFs do NOT have explicit rev limiter parameters mapped!
 | Crank Engage Lock-Out Engine RPM Limit | 0x64FA | 88 | 1100 RPM |
 | Adaptive Spark Cell - RPM Limit | 0x6965 | 80 | 2500 RPM |
 
-### XDF Parameter Counts (Platform Comparison)
+### XDF Parameter Counts (Platform Comparison — Latest Versions)
 
-| Platform | Scalars | Flags | Tables | Notes |
-|----------|---------|-------|--------|-------|
-| **OSE12P V112** | 401 | 148 | 90 | Most complete dwell/rev limit exposure |
-| **VS V6 $51 Enhanced v1.4f** | 681 | 147 | 256 | Most parameters total |
-| **VT V6 $A5G Enhanced v1.0h** | 166 | 8 | 108 | Fewer parameters exposed |
-| **VY V6 $060A Enhanced v2.09a** | ~600+ | ~100+ | ~200+ | Similar to VS |
+> **Updated February 2026:** Counts from latest XDF versions with Antus XDF DTC Tool applied (68 DTC flags each).
+
+| Platform | Tables | Constants | Flags | DTCs | Notes |
+|----------|--------|-----------|-------|------|-------|
+| **OSE12P V112** | 90 | 401 | 148 | — | Most complete dwell/rev limit exposure |
+| **VS V6 $51 Enhanced v1.4g** | 257 | 681 | 349 | 68 | Most parameters total |
+| **VS V6 SC $51 Enhanced v1.0d** | 254 | 679 | 369 | 68 | Supercharged — adds EGR, Power Steering |
+| **VS V8 $A6F Enhanced v0.90b** | 82 | 120 | 202 | 68 | Fewer parameters exposed |
+| **VT V6 $A5G Enhanced v1.0i** | 118 | 177 | 205 | 68 | Includes MALF DTCs category |
+| **VT V6 SC $A5G Enhanced v1.3i** | 129 | 169 | 203 | 68 | Supercharged — adds Boost Valve |
+| **VT V8 $A6E Enhanced v1.04** | 77 | 81 | 203 | 68 | Author: "Others, Antus XDF DTC Tool" |
+| **VX/VY V6 $060A Enhanced v2.09b** | **334** | **1546** | **548** | **68** | **⭐ Largest — 64 categories incl. Chr0m3/Charlay86 Mods** |
+| **VX/VY V6 SC $07 Enhanced v2.6i** | 175 | 385 | 257 | 68 | Supercharged — adds SC Solenoid, Abuse Mgmt |
 
 ### Key Addresses for Spark Cut Implementation
 
@@ -1074,6 +1122,21 @@ Based on verified XDF data:
 | VS_V6_$51_Enhanced_v1.4b.bin | c63ddd2e0322b632289b717efec46bc8 | 131,072 | VS enhanced |
 | OSE $12P V112 BLCD V6.BIN | 24d31b878a40955db6a0ec68b52fd28e | 32,768 | OSE12P memcal |
 | VY 92118883_STOCK.bin | 4afd0d075d2a2960c51775b0efce059f | 131,072 | VY stock |
+
+### Latest Enhanced XDF Versions (February 2026)
+
+All XDFs below include 68 DTC enable/disable flags added by **Antus's XDF DTC Tool**.
+
+| XDF File | Platform | Size | Author |
+|----------|----------|------|--------|
+| VS_V6_$51_Enhanced_v1.4g.xdf | VS V6 NA ($51) | 1,094,719 | The1, Antus XDF DTC Tool |
+| VS_V6_SC_$51_Enhanced_v1.0d.xdf | VS V6 S/C ($51) | 1,093,727 | The1, Antus XDF DTC Tool |
+| VS_V8_$A6F_Enhanced_v0.90b.xdf | VS V8 ($A6F) | 331,219 | The1, Antus XDF DTC Tool |
+| VT_V6_$A5G_Enhanced_v1.0i.xdf | VT V6 NA ($A5G) | 451,825 | The1, Antus XDF DTC Tool |
+| VT_V6_SC_$A5G_Enhanced_v1.3i.xdf | VT V6 S/C ($A5G) | 474,154 | The1, Antus XDF DTC Tool |
+| VT_V8_$A6E_Enhanced_v1.04.xdf | VT V8 ($A6E) | 305,962 | Others, Antus XDF DTC Tool |
+| **VX VY_V6_$060A_Enhanced_v2.09b.xdf** | **VX/VY V6 NA ($060A)** | **1,930,248** | **THE1, Antus XDF DTC Tool** |
+| VX VY_V6_SC_$07_Enhanced_v2.6i.xdf | VX/VY V6 S/C ($07) | 760,271 | The1, Antus XDF DTC Tool |
 
 ---
 

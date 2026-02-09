@@ -1,16 +1,64 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+;==============================================================================
 ; VY V6 MAFLESS v22 - ALPHA-N TPS FALLBACK MODE
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
-; Date: January 14, 2026
+; Date: January 14, 2026 (Updated February 3, 2026)
 ; Method: Alpha-N (TPS + RPM) Replaces MAF Sensor
-; Source: GM P59/P01 MAF Failure Fallback Mode
+; Source: GM P59/P01 MAF Failure Fallback Mode + Alpina B3 Analysis
 ; Target: Holden VY V6 $060A (OSID 92118883/92118885)
 ; Processor: Motorola MC68HC11 (8-bit)
 ;
 ; ⭐ PRIORITY: LOW - Optional, for aggressive cam setups
 ; ⚠️ Success Rate: 60% (simpler than Speed-Density, less accurate)
 ; 🔬 Status: EXPERIMENTAL - Requires tuning, not as accurate as v21
+;
+;==============================================================================
+; ALPINA "ZERO COMPLEX, TUNE SIMPLE" - VERIFIED (February 3, 2026)
+;==============================================================================
+;
+; Binary Comparison:
+;   Stock M52TUB25 EU3:   7 zero tables (normal)
+;   Alpina B3 3.3L:      34 zero tables (27 intentionally zeroed!)
+;
+; Alpina uses ip_maf_1_diag__n__tps_av (TPS × RPM) as PRIMARY airflow.
+; This is the SAME Alpha-N approach we're implementing here!
+;
+; Key tables Alpina zeroed to force Alpha-N path:
+;   ❌ 7/8 VANOS VE tables (ip_maf_vo_1, vo_3-vo_8)
+;   ❌ RON91/RON98 timing tables
+;   ❌ Temperature timing corrections (5 tables)
+;   ❌ Ignition correction tables (7 tables)
+;
+; See MAFLESS_VARIANTS_COMPARISON.md for complete list.
 ;
 ;==============================================================================
 ; THEORY OF OPERATION
@@ -43,6 +91,13 @@
 ;   - When MAF fails (DTC P0101-P0103)
 ;   - ECU uses fallback "Minimum Airflow" table
 ;   - We just need to ENHANCE the fallback tables!
+;
+; *** FEBRUARY 2026 DISCOVERY ***
+;   - Fallback table at $7F2A is only 7×5 (35 bytes)!
+;   - Coverage: 0-50% TPS, 0-4800 RPM only
+;   - NO WOT coverage, NO high RPM coverage
+;   - For full Alpha-N, need table relocation (see mafless_alpha_v4.asm)
+;   - Output stored to RAM $0128 (CYLAIR) - same as MAF path
 ;
 ;==============================================================================
 ; IMPLEMENTATION STRATEGY
@@ -85,9 +140,9 @@ MIN_AIRFLOW_ROM     EQU $7F1B   ; Minimum Airflow base value (16-bit, stock=0x01
 ALPHA_N_TABLE       EQU $6E00   ; Alpha-N table (TPS vs RPM)
 
 ; RAM Variables
-TPS_SENSOR          EQU $00B6   ; TPS sensor reading (%)
-RPM_ADDR            EQU $00A2   ; RPM (high byte)
-AIRFLOW_CALC        EQU $01A0   ; Calculated airflow (g/s)
+TPS_SENSOR EQU $00B6   ; TPS sensor reading (%) ; Verified: TPS_ADC_RAW (47 refs both) [Enhanced-fix]
+RPM_ADDR EQU $00A2   ; RPM (high byte) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+AIRFLOW_CALC        EQU $01A0   ; ⚠️  UNVERIFIED - address needs confirmation   ; ⚠️  UNVERIFIED - address needs confirmation   ; ⚠️  UNVERIFIED - address needs confirmation   ; Calculated airflow (g/s) ; ⚠️ BINARY: 0 refs in stock! ZERO refs in stock binary - NOT a valid RAM variable [auto-fix 2026-02-09]
 
 ; Calibration
 ALPHA_N_ENABLE      EQU $7850   ; Enable Alpha-N mode
@@ -105,7 +160,7 @@ TPS_WOT_DEF         EQU $64     ; 100% TPS at WOT (0x64 = 100 decimal)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18A00 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18A00 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18A00 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; ALPHA-N AIRFLOW CALCULATION

@@ -12,10 +12,11 @@
 ;   "Lumpy Idle" = THIS FILE - XDF parameter changes only, slow ~1Hz lope
 ;   "Ghost Cam"  = Fast aggressive lopey sound (method TBD - see ghost_cam_ASM_PATCH/)
 ;
-; ⚠️ CORRECTION (Jan 27, 2026): Rhysk94 (RKGarage / Rhys Kirkham) states that
-; ghost cam on these PCMs is NOT done with timing - timing does not get touched.
-; Topic 8605 (VY L67 Enhanced Idle Timing) is about idle spark XDFs, NOT ghost cam.
-; The actual ghost cam method needs clarification from Rhysk94.
+; ⚠️ IMPORTANT (Jan 27, 2026): Rhysk94 (RKGarage) has a working ghost cam tune
+; on VY V6 but states his method does NOT use timing - "timing does not get touched".
+; WE DO NOT KNOW HOW HIS METHOD WORKS. This file is OUR OWN THEORETICAL approach
+; based on idle spark correction parameters exposed in XDF. It may produce slow lope
+; only, not the fast ghost cam sound. Topic 8605 is about idle spark XDFs, NOT ghost cam.
 ;
 ; NO ASM PATCHING REQUIRED - just modify values in TunerPro!
 ; ⚠️ WARNING: EXPERIMENTAL - NOT TESTED ON HARDWARE

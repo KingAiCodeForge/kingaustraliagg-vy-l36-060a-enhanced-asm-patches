@@ -94,7 +94,7 @@ OC3M_SET        EQU %00110000   ; Bits 5-4 = 11 (force HIGH)
 OC3M_MASK       EQU %11001111   ; Mask to clear bits 5-4
 
 ; RPM Variables
-RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
+RPM_ADDR EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 LIMITER_FLAG    EQU $77F4       ; Runtime flags byte
 
 ; Threshold Constants - CORRECTED to 8-bit scaled
@@ -177,7 +177,7 @@ EXIT_CUT_ACTIVE:
 ;
 ; If this doesn't work, try:
 ;   - v17 OC1D forced output (more aggressive)
-;   - v33 Chr0m3 3X period injection (validated)
+;   - v33 Chr0m3 crank period injection (validated)
 ;
 ;==============================================================================
 ; CROSS-REFERENCE

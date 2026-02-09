@@ -1,4 +1,33 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+;==============================================================================
 ; VY V6 IGNITION CUT LIMITER v4 - COIL SATURATION PREVENTION METHOD
 ;==============================================================================
 ; ⚠️ DEPRECATED: This file is archived in old_versions/ for reference only
@@ -67,9 +96,9 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; RPM address (VERIFIED: 82R/2W in binary)
-DWELL_RAM       EQU $0199       ; Dwell time storage (VERIFIED from code analysis)
-DWELL_TARGET    EQU $019A       ; Target dwell calculation (suspected)
+RPM_ADDR EQU $00A2       ; RPM address (VERIFIED: 82R/2W in binary) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+DWELL_RAM EQU $0199       ; Dwell time storage (VERIFIED from code analysis) ; Verified: DWELL_TIME_RAM (8 refs both) [Enhanced-fix]
+DWELL_TARGET    EQU $019A       ; Target dwell calculation (suspected) ; ⚠️ BINARY: 0 refs in stock! ZERO refs in stock binary - possibly $0199+1 (high byte) [auto-fix 2026-02-09]
 MIN_BURN_ROM    EQU $21813      ; Min burn constant ROM location (VERIFIED: LDAA #$24)
 DWELL_THRESH    EQU $6776       ; "If Delta Cylair > This - Then Max Dwell" (XDF VERIFIED)
 
@@ -94,12 +123,29 @@ RPM_LOW         EQU $0B54       ; 2900 RPM deactivation threshold (100 RPM hyste
 ; RPM_LOW         EQU $1890       ; 6280 RPM deactivation (20 RPM hysteresis)
 
 WEAK_DWELL      EQU $00C8       ; 200µs weak dwell (may not saturate coil)
-LIMITER_FLAG    EQU $01A0       ; Free RAM byte for limiter state (0=off, 1=on)
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $14468          ; Free space VERIFIED: 15,192 bytes of 0x00 (was $18156 WRONG!)
+; ⚠️  MANUAL CONVERSION REQUIRED:
+; - Replace LDAA/STAA LIMITER_FLAG with BSET/BCLR LIMITER_FLAGS, #$80
+; - See spark_cut_chr0m3_method_VERIFIED_v38.asm for reference
+; - Test: BRSET LIMITER_FLAGS, #$80, LABEL (if bit set, branch)
+; - Set:  BSET LIMITER_FLAGS, #$80 (turn on)
+; - Clear: BCLR LIMITER_FLAGS, #$80 (turn off)
+;
+
+; ⚠️  MANUAL CONVERSION REQUIRED:
+; - Replace LDAA/STAA LIMITER_FLAG with BSET/BCLR LIMITER_FLAGS, #$80
+; - See spark_cut_chr0m3_method_VERIFIED_v38.asm for reference
+; - Test: BRSET LIMITER_FLAGS, #$80, LABEL (if bit set, branch)
+; - Set:  BSET LIMITER_FLAGS, #$80 (turn on)
+; - Clear: BCLR LIMITER_FLAGS, #$80 (turn off)
+;
+
+            ORG $C468          ; Free space VERIFIED: 15,192 bytes of 0x00 (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ignition_cut_handler:
     ; Read current RPM

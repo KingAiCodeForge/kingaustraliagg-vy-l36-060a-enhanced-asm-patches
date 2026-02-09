@@ -23,7 +23,7 @@ need to map out every thing to the bone in the binary itself and correct any mis
 
 | Old Claim | Corrected Fact |
 |-----------|----------------|
-| `$017B` = 3X crank period | **`$017B` = Intermediate dwell calculation** (NOT crank!) |
+| `$017B` = 24X crank period | **`$017B` = Intermediate dwell calculation** (NOT crank!) |
 | Unknown actual crank storage | **`$194C` = 24X crank period** (STD @ $3618 in TIC3 ISR) |
 
 **Both hooks are VALID for spark cut:**
@@ -105,7 +105,7 @@ asm_wip/
 │   ├── spark_cut_dwell_patch_v37.asm       # Dwell patch for high RPM
 │   ├── spark_cut_two_stage_hysteresis_v23.asm  # Two-stage with hysteresis (VL style)
 │   ├── spark_cut_6375_safe_mode_v18.asm    # 6375 RPM max enforcer
-│   └── spark_cut_original.asm              # Original 3X period method
+│   └── spark_cut_original.asm              # Original crank period method
 │
 ├── fuel_systems/                   # ⛽ MAFless, Speed Density, E85
 │   ├── mafless_alpha_n_v1.asm              # Force MAF failure mode v1
@@ -187,14 +187,23 @@ docs/
 └── ...
 
 xdfs_and_adx_and_bins_related_to_project/
-└── VX VY_V6_$060A_Enhanced_v2.09a.xdf   # Current XDF definition
+├── VS_V6_$51_Enhanced_v1.4g.xdf          # VS V6 NA (257 tables, 681 constants, 68 DTCs)
+├── VS_V6_SC_$51_Enhanced_v1.0d.xdf       # VS V6 Supercharged (254 tables, 68 DTCs)
+├── VS_V8_$A6F_Enhanced_v0.90b.xdf        # VS V8 (82 tables, 68 DTCs)
+├── VT_V6_$A5G_Enhanced_v1.0i.xdf         # VT V6 NA (118 tables, 68 DTCs)
+├── VT_V6_SC_$A5G_Enhanced_v1.3i.xdf      # VT V6 Supercharged (129 tables, 68 DTCs)
+├── VT_V8_$A6E_Enhanced_v1.04.xdf         # VT V8 (77 tables, 68 DTCs)
+├── VX VY_V6_$060A_Enhanced_v2.09b.xdf    # ⭐ VX/VY V6 NA (334 tables, 1546 constants, 68 DTCs)
+└── VX VY_V6_SC_$07_Enhanced_v2.6i.xdf    # VX/VY V6 Supercharged (175 tables, 68 DTCs)
 ```
+
+> **XDF versions above are the LATEST** — all include 68 DTC enable/disable flags added by Antus's XDF DTC Tool. Previous versions (v2.09a, v1.4f, v1.0h etc.) did NOT have individual DTC flags.
 
 ---
 
 ## 🔧 ASM vs XDF Tuning Guide
 
-**Not everything needs assembly patches!** The Enhanced v2.09a XDF exposes many parameters.
+**Not everything needs assembly patches!** The Enhanced v2.09b XDF exposes many parameters.
 
 | Feature | Method | Notes |
 |---------|--------|-------|
@@ -222,12 +231,12 @@ xdfs_and_adx_and_bins_related_to_project/
 
 | Binary | XDF | Spark Cut? | Status |
 |--------|-----|------------|--------|
-| **Enhanced v1.0a** | v2.09a | ❌ NO | This repo's target |
+| **Enhanced v1.0a** | v2.09b | ❌ NO | This repo's target (v2.09b adds 68 DTC flags via Antus DTC Tool) |
 | **Enhanced v1.1a** | v2.04c | ✅ YES | The1's implementation (Topic 8852) |
 
 > **Note:** Enhanced v1.1a (v2.04c package, Topic 8852) includes The1's spark cut implementation. We are currently reverse-engineering that code to understand exactly what changed from v1.0a → v1.1a before documenting it publicly. Our v38 ASM patches are independent work based on Chr0m3's dwell intermediate method.
 
-Primary implementation based on **Dwell Intermediate Injection** (Chr0m3 validated method, originally called "3X period"):
+Primary implementation based on **Dwell Intermediate Injection** (Chr0m3 validated method, originally called "crank period"):
 
 | Step | Description |
 |------|-------------|
@@ -280,7 +289,7 @@ All claims verified against PCMHacking.net archive:
 
 | Source | Topic | Key Finding |
 |--------|-------|-------------|
-| **Chr0m3** | [Topic 8567](https://pcmhacking.net/forums/viewtopic.php?t=8567) | 3X period injection method, dwell starving |
+| **Chr0m3** | [Topic 8567](https://pcmhacking.net/forums/viewtopic.php?t=8567) | crank period injection method, dwell starving |
 | **The1** | [Topic 2518](https://pcmhacking.net/forums/viewtopic.php?t=2518) | Enhanced OS bins, CPD comparison method, XDF definitions |
 | **BennVenn** | [Topic 7922](https://pcmhacking.net/forums/viewtopic.php?t=7922) | OSE12P timer bit `$3FFC` discovery |
 | **charlay86** | [Topic 2544](https://pcmhacking.net/forums/viewtopic.php?t=2544) | 6,375 RPM max (255 � 25 = 6375) - July 2012 |
@@ -315,7 +324,7 @@ Key differences from Chr0m3's method:
 ## 🛠️ Requirements
 
 - **Binary:** `VX-VY_V6_$060A_Enhanced_v1.0a.bin` (128KB)
-- **XDF:** `VX VY_V6_$060A_Enhanced_v2.09a.xdf`
+- **XDF:** `VX VY_V6_$060A_Enhanced_v2.09b.xdf` (68 DTCs, 334 tables, 1546 constants)
 - **Assembler:** A09 or similar HC11 assembler
 - **Hex Editor:** HxD, 010 Editor, or similar
 - **Verification:** Oscilloscope recommended for EST/dwell testing
@@ -651,6 +660,71 @@ This ensures if stock code ever touches $01A0 unexpectedly, our code isn't corru
 
 ## 🔄 Platform Compatibility Matrix
 
+### Latest Enhanced XDF Inventory (All Platforms)
+
+All XDFs below are the **latest versions** with 68 DTC enable/disable flags added by **Antus's XDF DTC Tool**. Author field updated to `"The1, Antus XDF DTC Tool"` (or `"Others, Antus XDF DTC Tool"` for VT V8).
+
+| XDF File | Platform | OSID | Author | Tables | Constants | Flags | DTCs | Key Categories |
+|----------|----------|------|--------|--------|-----------|-------|------|----------------|
+| `VS_V6_$51_Enhanced_v1.4g.xdf` | VS V6 NA | $51 | The1, Antus | 257 | 681 | 349 | 68 | Spark, ESC, MAF, IAC, Adaptive Shift/Spark, TCC |
+| `VS_V6_SC_$51_Enhanced_v1.0d.xdf` | VS V6 S/C | $51 | The1, Antus | 254 | 679 | 369 | 68 | + EGR, Power Steering |
+| `VS_V8_$A6F_Enhanced_v0.90b.xdf` | VS V8 | $A6F | The1, Antus | 82 | 120 | 202 | 68 | Spark, Knock, DFCO, Adaptive Spark |
+| `VT_V6_$A5G_Enhanced_v1.0i.xdf` | VT V6 NA | $A5G | The1, Antus | 118 | 177 | 205 | 68 | Spark, Knock, Torque Mgmt, MALF DTCs |
+| `VT_V6_SC_$A5G_Enhanced_v1.3i.xdf` | VT V6 S/C | $A5G | The1, Antus | 129 | 169 | 203 | 68 | + Supercharger Boost Valve |
+| `VT_V8_$A6E_Enhanced_v1.04.xdf` | VT V8 | $A6E | Others, Antus | 77 | 81 | 203 | 68 | Spark, ESC, DTC MALF, Crank |
+| **`VX VY_V6_$060A_Enhanced_v2.09b.xdf`** | **VX/VY V6 NA** | **$060A** | **THE1, Antus** | **334** | **1546** | **548** | **68** | **⭐ Primary — 64 categories incl. Chr0m3/Charlay86 Mods** |
+| `VX VY_V6_SC_$07_Enhanced_v2.6i.xdf` | VX/VY V6 S/C | $07 | The1, Antus | 175 | 385 | 257 | 68 | + Supercharger Solenoid, Abuse Management |
+
+> **v2.09b vs v2.09a:** The only difference is 68 DTC "Process DTC xx" flags added by Antus's tool. v2.09a had **0 individual DTC flags**. All calibration tables/constants are identical. This is what Antus used AI for — batch-generating DTC flag entries — and it works perfectly.
+
+### 68 DTCs (All Platforms — Identical Set)
+
+Every XDF above has the same 68 "Process DTC" enable/disable flags:
+
+<details>
+<summary>Click to expand full DTC list</summary>
+
+| DTC | Description | DTC | Description |
+|-----|-------------|-----|-------------|
+| 13 | RH O2 Sensor Open | 55 | A/D Conversion Error |
+| 14 | Coolant High Temp | 56 | Fuel Starvation Under Load (Lean) |
+| 15 | Coolant Low Temp | 57 | Injector Monitor Failure |
+| 16 | Coolant Sensor Unstable | 58 | Trans. Temp. High |
+| 17 | Coolant Pull-up Failure | 59 | Trans. Temp. Low |
+| 18 | Linear EGR Flow Check | 63 | LH O2 Sensor Open |
+| 19 | TPS Sensor Stuck | 64 | LH O2 Sensor Lean |
+| 21 | TPS Sensor High | 65 | LH O2 Sensor Rich |
+| 22 | TPS Sensor Low | 66 | 3-2 DS QDM2/Solenoid Failure |
+| 23 | IAT Sensor Low | 67 | TCC QDM2/Solenoid Failure |
+| 24 | Vehicle Speed Sensor | 68 | Trans. Component Slipping |
+| 25 | IAT Sensor High | 69 | TCC Stuck On |
+| 26 | IAT Sensor Unstable | 72 | VSS Output Speed Loss (Auto) |
+| 27 | PSM Open | 73 | Force Motor Current |
+| 28 | PSM | 75 | Voltage Low |
+| 29 | EGR Pintle Position | 76 | STFT Delta Integrator High |
+| 31 | Theft Deterrent Missing | 78 | LTFT Delta BLM High |
+| 32 | MAF Out of Range | 79 | Transmission Hot |
+| 33 | BAP High | 81 | Solenoid B Failure (2-3) |
+| 34 | BAP Low | 82 | Solenoid A Failure (1-2) |
+| 35 | IAC Failure | 83 | TCC Solenoid Failure |
+| 36 | Vacuum Leak | 84 | QDM2 Failure |
+| 39 | TCC Off | 86 | Solenoid B Stuck On |
+| 41 | EST Open / Shorted | 87 | Solenoid B Stuck Off |
+| 42 | Bypass Open / Shorted | 91 | QDM Failure |
+| 43 | LH ESC Failure | 92 | Low Speed Fan Comms |
+| 44 | RH O2 Sensor Lean | 93 | RH ESC Failure (Knock Circuit) |
+| 45 | RH O2 Sensor Rich | 94 | Loss of PWM from ASR (VSS Manual) |
+| 46 | Crank Reference Pulses | 95 | Loss of Serial Data from ASR |
+| 47 | No 18x Signal | 96 | A/C Pressure Transducer |
+| 48 | Cam Signal Missing / Grounded | 97 | Purge Valve Continuity |
+| 49 | Cam / Crank Signal Error | 98 | Purge Valve Function Test |
+| 51 | Prom Checksum Error | | |
+| 52 | Voltage High - Long Test | | |
+| 53 | Voltage High | | |
+| 54 | Voltage Unstable | | |
+
+</details>
+
 ### Will This Work on Other Holden ECUs?
 
 **Short answer:** The concepts apply, but offsets will be different.
@@ -803,7 +877,7 @@ If you have oscilloscope traces of EST/dwell on VY V6 - that's the missing piece
 
 | Person | Contribution | Why They Matter |
 |--------|--------------|-----------------|
-| **Chr0m3 Motorsport** | Spark cut method discovery, dwell research, video documentation | The 3X period injection = his idea. I just am trying to implement it from what he told me. |
+| **Chr0m3 Motorsport** | Spark cut method discovery, dwell research, video documentation | The crank period injection = his idea. I just am trying to implement it from what he told me. |
 | **The1** | Enhanced OS creation, XDF definitions, LPG zeroing technique | Years of bin editing work, shared publicly on PCMHacking |
 | **Antus** | PCMHacking admin, technical guidance | Helped me get started, lives in my state, actually answers emails (even when he's been at a work party 🍺) |
 | **Mark Mansur** | TunerPro developer | Fixed bugs I reported in 24 hours. Please donate to TunerPro - it's free and he deserves it |

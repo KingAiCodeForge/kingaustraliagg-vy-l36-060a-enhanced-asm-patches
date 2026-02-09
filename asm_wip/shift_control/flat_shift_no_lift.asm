@@ -15,14 +15,14 @@
 ;   - Clutch released → spark restored instantly
 ;   - Result: Faster shifts (no throttle lift required)
 ;
-; Based On: Chr0m3-approved 3X Period Injection
+; Based On: Chr0m3-approved crank period injection
 ; Status: 🔬 EXPERIMENTAL - Manual transmission only
 ;
 ; How It Works:
 ;   1. Monitor clutch switch (digital input)
 ;   2. Monitor TPS (throttle position)
 ;   3. If clutch pressed AND TPS > 80%:
-;      a) Cut spark (3X period injection)
+;      a) Cut spark (crank period injection)
 ;      b) Engine cannot accelerate (transmission safe)
 ;   4. When clutch released:
 ;      a) Restore spark instantly
@@ -41,14 +41,15 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP
+; MEMORY MAP (CORRECTED 2026-02-02)
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM address
-PERIOD_3X_RAM       EQU $017B       ; 3X period storage
-TPS_RAM             EQU $01A5       ; TPS value (0-255, UNVALIDATED!)
+RPM_ADDR EQU $00A2       ; ✅ VERIFIED: RPM/25 (8-bit) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: STD @ $3618 in TIC3 ISR (2026-01-31) ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+                                    ; ❌ OLD WRONG: $017B (purpose unknown)
+TPS_RAM             EQU $01A5       ; ⚠️ UNVALIDATED - needs binary verification
 CLUTCH_SWITCH       EQU $1008       ; Port D data register (HC11 PORTD = $1008, NOT $1004!)
 
-FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
+FAKE_PERIOD         EQU $3E80       ; fake crank period (spark cut)
 TPS_THRESHOLD       EQU $CC         ; 80% throttle (204 / 255 = 0.8)
 MIN_RPM             EQU $07D0       ; 2000 RPM minimum (safety)
 
@@ -57,7 +58,7 @@ MIN_RPM             EQU $07D0       ; 2000 RPM minimum (safety)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; FLAT SHIFT HANDLER
@@ -86,7 +87,7 @@ FLAT_SHIFT_HANDLER:
     ; Clutch pressed AND throttle wide open - CUT SPARK
 CUT_SPARK:
     LDD     #FAKE_PERIOD
-    STD     PERIOD_3X_RAM
+    STD     PERIOD_24X_RAM      ; ✅ CORRECTED: $194C (was wrong $017B)
     BRA     EXIT_HANDLER
 
 ALLOW_SPARK:

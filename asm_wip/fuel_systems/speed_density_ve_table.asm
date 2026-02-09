@@ -1,12 +1,59 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+;==============================================================================
 ; VY V6 MAFLESS v21 - SPEED-DENSITY VE TABLE CONVERSION
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
-; Date: January 14, 2026
+; Date: January 14, 2026 (Updated February 3, 2026)
 ; Method: Speed-Density (MAP + RPM + VE Table) Replaces MAF Sensor
-; Source: OSE12P V112 concept + GM Speed-Density theory
+; Source: OSE12P V112 concept + GM Speed-Density theory + Alpina Analysis
 ; Target: Holden VY V6 $060A (OSID 92118883/92118885)  
 ; Processor: Motorola MC68HC711E9 (8-bit)
+;
+;==============================================================================
+; ALPINA "ZERO COMPLEX, TUNE SIMPLE" - VERIFIED (February 3, 2026)
+;==============================================================================
+;
+; Binary Comparison:
+;   Stock M52TUB25 EU3:   7 zero tables (normal)
+;   Alpina B3 3.3L:      34 zero tables (27 intentionally zeroed!)
+;
+; Alpina kept ONLY ip_maf_vo_2 (single VE table) active, zeroing 7 others.
+; This forces ECU to use ONE VE calculation path regardless of conditions.
+;
+; Same philosophy applies to VY V6 Speed-Density:
+;   - Single VE table (MAP × RPM) replaces complex MAF paths
+;   - Eliminates MAF sensor dependencies
+;   - Simpler calibration with predictable behavior
+;
+; See MAFLESS_VARIANTS_COMPARISON.md for complete Alpina zeroed tables list.
 ;
 ; ⚠️⚠️⚠️ CRITICAL HARDWARE REQUIREMENT ⚠️⚠️⚠️
 ;
@@ -98,22 +145,27 @@
 ; ⚠️ CRITICAL CORRECTION: 0x56D4 is a DTC ENABLE mask, NOT a failure flag!
 ;    To enable MAFless fallback, set 0x56F3 bit 6 = 1
 
-; DTC Mask Bytes (ROM calibration data)
-M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC)
+; DTC Mask Bytes (ROM calibration data) - FEBRUARY 2026 VERIFIED VALUES
+M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC, set 0x8C to disable)
 M32_CEL_MASK        EQU $56DE   ; Check Trans Light bit 6 = M32 CEL (stock=0xC0)
-M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00) ← KEY!
+M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00, set 0x40 to enable)
+HOL_DISABLE_M32     EQU $577C   ; Hot Open Loop disable on M32 (set 0x00 to keep enabled)
+AE_DISABLE_M32      EQU $577D   ; Accel Enrichment disable on M32 (set 0x00 to keep enabled)
 MAF_OPTION_WORD     EQU $5795   ; Option word, multiple bits (stock=0xFC)
+
+; Output Variable (VERIFIED)
+CYLAIR_OUTPUT       EQU $0128   ; Fallback routine stores result here (same as MAF path)
 
 ; Fallback Fuel Tables
 MIN_AIRFLOW_ROM     EQU $7F1B   ; Minimum Airflow For Default Air (16-bit, stock=0x01C0)
 VE_TABLE_ADDR       EQU $6D1D   ; Maximum Airflow Vs RPM (VE table)
 
 ; RAM Variables (⚠️ UNVERIFIED - need oscilloscope/ALDL validation)
-MAP_SENSOR          EQU $00B0   ; MAP sensor reading (kPa) - DOES NOT EXIST STOCK!
+MAP_SENSOR EQU $00B0   ; MAP sensor reading (kPa) - DOES NOT EXIST STOCK! ; Verified: MAP_OR_TPS_RAW (7 refs Enhanced. STOCK uses this!) [Enhanced-fix]
 IAT_SENSOR          EQU $00B2   ; IAT sensor reading (°C) - UNVERIFIED
 ECT_SENSOR          EQU $00B4   ; ECT sensor reading (°C) - VERIFIED
-RPM_ADDR            EQU $00A2   ; RPM (high byte) - VERIFIED
-AIRFLOW_CALC        EQU $01A0   ; Calculated airflow (g/s) - 16-bit - UNVERIFIED
+RPM_ADDR EQU $00A2   ; RPM (high byte) - VERIFIED ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+AIRFLOW_CALC        EQU $01A0   ; ⚠️  UNVERIFIED - address needs confirmation   ; ⚠️  UNVERIFIED - address needs confirmation   ; ⚠️  UNVERIFIED - address needs confirmation   ; Calculated airflow (g/s) - 16-bit - UNVERIFIED ; ⚠️ BINARY: 0 refs in stock! ZERO refs in stock binary - NOT a valid RAM variable [auto-fix 2026-02-09]
 
 ; Calibration
 VE_ENABLE           EQU $7800   ; Enable VE mode flag
@@ -132,7 +184,7 @@ VE_BASE             EQU $64     ; 100% VE (0x64 = 100 decimal)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18800 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18800 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18800 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; SPEED-DENSITY AIRFLOW CALCULATION

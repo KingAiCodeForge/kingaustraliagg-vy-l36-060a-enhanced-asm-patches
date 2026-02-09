@@ -77,6 +77,35 @@ const char* MnenomicPage1(uint8_t op); // Page 1 (0x18 prefix) opcodes
 | 0x35 | TXS | Transfer |
 | 0x3E | WAI | Control |
 | 0x8F | XGDX | Transfer |
+| 0x01 | NOP | Control |
+| 0x11 | CBA | Arithmetic |
+| 0x0C | CLC | CCR |
+| 0x40 | NEGA | Negate |
+| 0x50 | NEGB | Negate |
+| 0x43 | COMA | Complement |
+| 0x53 | COMB | Complement |
+
+### Bit Manipulation Instructions
+
+These instructions use unique operand formats (address + mask, with optional branch offset):
+
+| Opcode | Mnemonic | Mode | Bytes | Description |
+|--------|----------|------|-------|-------------|
+| 0x14 | BSET | DIR | 3 | Set bits: M OR mask → M |
+| 0x1C | BSET | IND,X | 3 | Set bits: M OR mask → M (indexed) |
+| 0x15 | BCLR | DIR | 3 | Clear bits: M AND NOT mask → M |
+| 0x1D | BCLR | IND,X | 3 | Clear bits: M AND NOT mask → M (indexed) |
+| 0x12 | BRSET | DIR | 4 | Branch if bit(s) set (addr, mask, rel) |
+| 0x1E | BRSET | IND,X | 4 | Branch if bit(s) set (offset, mask, rel) |
+| 0x13 | BRCLR | DIR | 4 | Branch if bit(s) clear (addr, mask, rel) |
+| 0x1F | BRCLR | IND,X | 4 | Branch if bit(s) clear (offset, mask, rel) |
+
+**VY V6 Usage:** BRSET/BRCLR are heavily used for testing mode flags:
+```asm
+; Example: Test ENGINE_RUNNING bit 7 at $0046
+BRSET  $0046,#$80,$target  ; 12 46 80 xx — Branch if bit 7 set
+BRCLR  $0046,#$80,$target  ; 13 46 80 xx — Branch if bit 7 clear
+```
 
 ### Multi-Mode Instructions
 
@@ -177,6 +206,7 @@ These instructions share the same mnemonic but different opcodes based on addres
 |------|--------|
 | IMM | 0x8C |
 | DIR | 0x9C |
+| EXT | 0xBC |
 | IND | 0xAC |
 
 #### EORA - Exclusive OR with A
@@ -329,7 +359,16 @@ These instructions share the same mnemonic but different opcodes based on addres
 | Mode | Opcode |
 |------|--------|
 | DIR | 0x9F |
+| EXT | 0xBF |
 | IND,X | 0xAF |
+
+#### SUBD - Subtract from D (16-bit)
+| Mode | Opcode |
+|------|--------|
+| IMM | 0x83 |
+| DIR | 0x93 |
+| EXT | 0xB3 |
+| IND,X | 0xA3 |
 
 #### STX - Store X
 | Mode | Opcode |

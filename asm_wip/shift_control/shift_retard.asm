@@ -58,7 +58,7 @@
 ;       This area is used for timer/calculation scratch space
 ;       Verify no conflicts with your specific binary!
 
-RAM_SHIFT_RETARD_ACTIVE EQU $0180   ; Patch active flag (0=off, 1=active)
+RAM_SHIFT_RETARD_ACTIVE EQU $0180   ; Patch active flag (0=off, 1=active) ; Verified: CALC_AIRFLOW_REF (1 ref both) [Enhanced-fix]
 RAM_SHIFT_RETARD_AMT    EQU $0181   ; Current retard amount (0-255 = 0-35°)
 RAM_SHIFT_TIMER         EQU $0182   ; Countdown timer (in 10ms ticks)
 RAM_PREV_GEAR_RATIO     EQU $0183   ; Previous gear ratio for change detect
@@ -79,7 +79,7 @@ CAL_SHIFT_RPM_MIN       EQU $C504   ; Minimum RPM/25 (40 = 1000 RPM)
 ; EXISTING ECU RAM ADDRESSES (VALIDATED)
 ;==============================================================================
 
-RPM_VAR             EQU $00A2   ; Engine RPM ÷ 25 [VALIDATED - RAM_Variables_Validated.md]
+RPM_VAR EQU $00A2   ; Engine RPM ÷ 25 [VALIDATED - RAM_Variables_Validated.md] ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 TPS_VAR             EQU $00A1   ; TPS raw value [NEEDS VERIFICATION - common address]
                                 ; ADX shows TPS% at packet 0x0D, raw A/D at 0x0C
 
@@ -99,9 +99,10 @@ ROM_DFCO_SPARK_MAX  EQU $7C07   ; Maximum spark during DFCO exit (address from X
 ; The ECU calculates final spark advance somewhere in the ignition routine.
 ; We need to find where spark value is written to output compare register.
 ;
-; From 3X_PERIOD_ANALYSIS_COMPLETE.md:
+; From 24X_PERIOD_ANALYSIS_COMPLETE.md:
 ; - Dwell calculated and stored at $0199
-; - 3X period captured at $017B
+; - ⚠️ CORRECTED 2026-02-02: $017B is DWELL INTERMEDIATE, NOT crank period!
+; - 24X crank period stored at $194C (TIC3 ISR @ $3618)
 ; - Spark output via TOC1/TOC2 registers ($1018/$101A)
 ;
 ; HOOK STRATEGY: Insert JSR to our routine just before final spark write
@@ -115,7 +116,7 @@ HOOK_SPARK_CALC     EQU $18500  ; ⚠️ PLACEHOLDER - Find actual address!
 ; PATCH CODE - Install at verified free space
 ;==============================================================================
 
-                    ORG $14468  ; ✅ VERIFIED FREE SPACE (file offset $14468)
+                    ORG $C468  ; ✅ VERIFIED FREE SPACE (file offset $14468) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;----------------------------------------------------------------------
 ; SHIFT_RETARD_CHECK - Called from spark calculation routine

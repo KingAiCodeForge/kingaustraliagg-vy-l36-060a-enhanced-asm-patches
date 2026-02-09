@@ -87,7 +87,7 @@ OC3M_SET        EQU %00110000   ; 11 = set on compare (force HIGH)
 OC3M_MASK       EQU %11001111   ; Mask to clear OC3 mode bits
 
 ; RPM Variables
-RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
+RPM_ADDR EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
                                 ; KNOWN BUG: Code below incorrectly uses LDD
 LIMITER_FLAG    EQU $77F4       ; Runtime flags
 

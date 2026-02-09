@@ -1,9 +1,33 @@
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
 ;==============================================================================
 ; VY V6 IGNITION CUT LIMITER - v3
 ;==============================================================================
 ; Author: Jason King kingaustraliagg
 ; Date: November 26, 2025
-; Method: 3X Period Injection (validated on VY V6 Ecotec)
+; Method: crank period injection (validated on VY V6 Ecotec)
 ; Video Reference: "300 HP 3.8L N/A Ecotec Burnout Car Project: Week 5" (mxoHSRijWds)
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a - Copy.bin (RECOMMENDED)
@@ -12,7 +36,7 @@
 ; Processor: Motorola MC68HC11
 ;
 ; Description:
-;   Implements two-stage hard-cut rev limiter by injecting fake 3X period
+;   Implements two-stage hard-cut rev limiter by injecting fake crank period
 ;   values during high RPM. This causes dwell calculation to produce
 ;   insufficient coil charging time, preventing spark without triggering
 ;   ECU failsafe systems.
@@ -42,9 +66,9 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; RPM address (confirmed 82R/2W)
-PERIOD_3X_RAM   EQU $017B       ; 3X period storage (confirmed 1W @ 0x181E1)
-DWELL_RAM       EQU $0199       ; Dwell time storage
+RPM_ADDR EQU $00A2       ; RPM address (confirmed 82R/2W) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+DWELL_INTERMEDIATE  EQU $017B       ; Dwell intermediate calc (CORRECTED: was wrongly called 3X period)
+DWELL_RAM EQU $0199       ; Dwell time storage ; Verified: DWELL_TIME_RAM (8 refs both) [Enhanced-fix]
 ; TEST THRESHOLDS (3000 RPM for in-car validation - Moates doesn't work on VY V6)
 RPM_HIGH        EQU $0BB8       ; 3000 RPM activation threshold (test)
 RPM_LOW         EQU $0B54       ; 2900 RPM deactivation threshold (100 RPM hysteresis)
@@ -69,23 +93,40 @@ RPM_LOW         EQU $0B54       ; 2900 RPM deactivation threshold (100 RPM hyste
 ; RPM_HIGH        EQU $170C       ; 5900 RPM activation (stock redline)
 ; RPM_LOW         EQU $16F8       ; 5875 RPM deactivation (25 RPM hysteresis)
 FAKE_PERIOD     EQU $3E80       ; 16000 = 1000ms fake period
-LIMITER_FLAG    EQU $01A0       ; Free RAM byte for limiter state (0=off, 1=on)
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains JSR $24AB active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED by binary analysis (was $18156 WRONG!)
+; ⚠️  MANUAL CONVERSION REQUIRED:
+; - Replace LDAA/STAA LIMITER_FLAG with BSET/BCLR LIMITER_FLAGS, #$80
+; - See spark_cut_chr0m3_method_VERIFIED_v38.asm for reference
+; - Test: BRSET LIMITER_FLAGS, #$80, LABEL (if bit set, branch)
+; - Set:  BSET LIMITER_FLAGS, #$80 (turn on)
+; - Clear: BCLR LIMITER_FLAGS, #$80 (turn off)
+;
+
+; ⚠️  MANUAL CONVERSION REQUIRED:
+; - Replace LDAA/STAA LIMITER_FLAG with BSET/BCLR LIMITER_FLAGS, #$80
+; - See spark_cut_chr0m3_method_VERIFIED_v38.asm for reference
+; - Test: BRSET LIMITER_FLAGS, #$80, LABEL (if bit set, branch)
+; - Set:  BSET LIMITER_FLAGS, #$80 (turn on)
+; - Clear: BCLR LIMITER_FLAGS, #$80 (turn off)
+;
+
+            ORG $C468          ; Free space VERIFIED by binary analysis (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; IGNITION CUT MAIN HANDLER
 ;==============================================================================
 ; This routine is called INSTEAD of the stock "STD $017B" instruction at
-; address 0x181E1. The D register contains the real 3X period calculated
+; address 0x101E1. The D register contains the real crank period calculated
 ; by the stock code.
 ;
-; Entry: D register = real 3X period from stock calculation
+; Entry: D register = real crank period from stock calculation
 ; Exit:  D register = either real period OR fake period (depending on RPM)
 ;        RAM 0x017B = stored period value
 ;
@@ -136,17 +177,17 @@ INJECT_FAKE_PERIOD:
     PULB                        ; Restore B from stack (discard real period low byte)
     PULA                        ; Restore A from stack (discard real period high byte)
     LDD  #FAKE_PERIOD           ; D = 16000 (1000ms fake period)
-    STD  PERIOD_3X_RAM          ; Store fake period to RAM 0x017B
+    STD  DWELL_INTERMEDIATE          ; Store fake dwell value to $017B (dwell intermediate)
     RTS                         ; Return to caller (stock code continues)
     
     ;--------------------------------------------------------------------------
-    ; Use real 3X period (normal operation)
+    ; Use real crank period (normal operation)
     ;--------------------------------------------------------------------------
 RESTORE_NORMAL:
     PULB                        ; Restore B from stack (real period low byte)
     PULA                        ; Restore A from stack (real period high byte)
-    ; D register now contains original real 3X period
-    STD  PERIOD_3X_RAM          ; Store real period to RAM 0x017B
+    ; D register now contains original real crank period
+    STD  DWELL_INTERMEDIATE          ; Store real dwell value to $017B (dwell intermediate)
     RTS                         ; Return to caller
 
 ;==============================================================================
@@ -161,7 +202,7 @@ RESTORE_NORMAL:
 ;
 ; 2. Extract binary from S19 file and inject into stock binary at 0x18156
 ;
-; 3. Modify hook point at 0x181E1:
+; 3. Modify hook point at 0x101E1:
 ;    Original: FD 01 7B  (STD $017B)
 ;    Modified: BD 18 156 (JSR $18156)
 ;

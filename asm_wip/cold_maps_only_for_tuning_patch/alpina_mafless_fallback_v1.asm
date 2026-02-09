@@ -1,8 +1,13 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; VY V6 ALPINA-STYLE MAFless FALLBACK PATCH v1.0
 ;==============================================================================
 ; Author: Jason King (kingaustraliagg)
-; Date: January 25, 2026
+; Date: January 25, 2026 (Updated February 3, 2026)
 ; Status: 🔬 EXPERIMENTAL - Derived from Alpina B3 3.3L binary analysis
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
@@ -29,24 +34,91 @@
 ; THE ALPINA PHILOSOPHY: "ZERO THE COMPLEX, TUNE THE SIMPLE"
 ;==============================================================================
 ;
-; WHAT ALPINA ZEROED (MS42 M52TUB33 Stroker):
-;   ❌ ip_iga_ron_98_pl_ivvt = ALL ZEROS (no RON98 timing)
-;   ❌ ip_iga_ron_91_pl_ivvt = ALL ZEROS (no RON91 timing)
-;   ❌ ip_maf_vo_1 to vo_7   = ALL ZEROS (7 of 8 VANOS VE tables)
-;   ❌ ip_iga_tco_2_is_ivvt  = ALL ZEROS (no warm temp timing)
+; VERIFIED FROM BINARY COMPARISON (February 3, 2026):
+;   Stock M52TUB25 EU3 RHD: 7 zero tables (normal)
+;   Alpina B3 3.3L Stroker: 34 zero tables (intentionally zeroed!)
 ;
-; WHAT ALPINA TUNED:
-;   ✅ ip_maf_1_diag__n__tps_av = PRIMARY airflow (tuned for 3.3L)
+; Alpina zeroed 27 ADDITIONAL tables beyond stock to simplify tuning.
+;
+;------------------------------------------------------------------------------
+; ALPINA ZEROED TABLES - COMPLETE LIST (34 TOTAL)
+;------------------------------------------------------------------------------
+;
+; ━━━ VANOS VE TABLES (7 of 8 zeroed) ━━━
+;   ❌ ip_maf_vo_1__map__n  = ALL ZEROS (VANOS position 1)
+;   ❌ ip_maf_vo_3__map__n  = ALL ZEROS (VANOS position 3)
+;   ❌ ip_maf_vo_4__map__n  = ALL ZEROS (VANOS position 4)
+;   ❌ ip_maf_vo_5__map__n  = ALL ZEROS (VANOS position 5)
+;   ❌ ip_maf_vo_6__map__n  = ALL ZEROS (VANOS position 6)
+;   ❌ ip_maf_vo_7__map__n  = ALL ZEROS (VANOS position 7)
+;   ❌ ip_maf_vo_8__map__n  = ALL ZEROS (VANOS position 8)
+;   ✅ ip_maf_vo_2__map__n  = ACTIVE (only VE table used!)
+;
+;   WHY: Forces ECU to use single VE table regardless of cam position.
+;        Eliminates complex VANOS interaction - predictable airflow calc.
+;
+; ━━━ RON (FUEL GRADE) TIMING TABLES ━━━
+;   ❌ ip_iga_ron_91_pl_ivvt__n__maf = ALL ZEROS (RON91 timing offset)
+;   ❌ ip_iga_ron_98_pl_ivvt__n__maf = ALL ZEROS (RON98 timing offset)
+;
+;   WHY: Stock BMW switches timing based on fuel grade detection.
+;        Zeroing forces ECU to use base timing only - tuner controls all.
+;
+; ━━━ TEMPERATURE-DEPENDENT TIMING/INJECTION ━━━
+;   ❌ ip_ti_tco_1_is_ivvt__n__maf    = ALL ZEROS (cold inj timing idle)
+;   ❌ ip_ti_tco_2_is_ivvt__n__maf    = ALL ZEROS (warm inj timing idle)
+;   ❌ ip_ti_tco_2_pl_ivvt_1__n__maf  = ALL ZEROS (warm inj timing PL1)
+;   ❌ ip_ti_tco_2_pl_ivvt_2__n__maf  = ALL ZEROS (warm inj timing PL2)
+;   ❌ ip_iga_tco_2_is_ivvt__n__maf   = ALL ZEROS (warm ign timing idle)
+;
+;   WHY: Prevents ECU from modifying timing based on coolant temp.
+;        Tuner has full control over timing at all temperatures.
+;
+; ━━━ START OF INJECTION TIMING ━━━
+;   ❌ ip_soi_tco_2_is__n__ti = ALL ZEROS (warm SOI idle)
+;   ❌ ip_soi_tco_2_pl__n__ti = ALL ZEROS (warm SOI partial load)
+;
+;   WHY: Fixed injection timing regardless of temperature.
+;
+; ━━━ IGNITION CORRECTION TABLES ━━━
+;   ❌ ip_iga_optm_dif__dmtc          = ALL ZEROS (optimal timing diff)
+;   ❌ ip_iga_optm_tco_2__n__maf      = ALL ZEROS (optimal timing temp2)
+;   ❌ ip_iga_cor_cam_dif_ex__cam_dif = ALL ZEROS (exhaust cam correction)
+;   ❌ ip_iga_cor_cam_dif_in__cam_dif = ALL ZEROS (intake cam correction)
+;   ❌ ip_iga_cs_is__tco              = ALL ZEROS (cold start ign idle)
+;   ❌ ip_iga_maf_n_knk_diag__n__maf  = ALL ZEROS (knock diag timing)
+;   ❌ ip_igab__n__maf                = ALL ZEROS (base ignition offset)
+;
+;   WHY: Removes all ignition correction offsets. Main timing tables only.
+;
+; ━━━ DIAGNOSTIC/ERROR THRESHOLDS ━━━
+;   ❌ ip_thd_is_er_diag__n__maf = ALL ZEROS (idle error diagnostic)
+;   ❌ ip_thd_at_er__n_32__maf   = ALL ZEROS (auto trans error)
+;   ❌ ip_thd_mt_er__n_32__maf   = ALL ZEROS (manual trans error)
+;
+;   WHY: Disables some diagnostic comparisons - prevents nuisance DTCs.
+;
+; ━━━ CATALYST/EMISSIONS TABLES ━━━
+;   ❌ ip_fac_tqd_cat__pvs_av        = ALL ZEROS (catalyst torque factor)
+;   ❌ ip_t_ch_puc_deacc__iga__cat   = ALL ZEROS (catalyst decel timing)
+;   ❌ id_t_ch_ti_cat_var__tco_st    = ALL ZEROS (catalyst timing var)
+;
+;   WHY: Removes emissions-related timing modifications.
+;
+; ━━━ MISCELLANEOUS ━━━
+;   ❌ ip_dist_min__tco_st          = ALL ZEROS (distance minimum)
+;   ❌ ip_n_vim_tia__tia             = ALL ZEROS (variable intake manifold)
+;   ❌ ip_n_sp_add_cs__tco           = ALL ZEROS (speed add cold start)
+;   ❌ ip_ti_add_cop_step_2__n__maf  = ALL ZEROS (injection add step2)
+;   ❌ kf_fak_van_kh__n__lm_van      = ALL ZEROS (VANOS factor)
+;
+;------------------------------------------------------------------------------
+; ALPINA KEPT ACTIVE (Tuned for 3.3L stroker)
+;------------------------------------------------------------------------------
+;   ✅ ip_maf_1_diag__n__tps_av = PRIMARY airflow table (TPS × RPM)
 ;   ✅ ip_iga_knk_diag          = PRIMARY timing (knock fallback)
-;   ✅ ip_maf_vo_2              = ONLY VE table used (mid-cam)
-;
-; WHY THIS WORKS:
-;   - Stock ECU has 50+ interacting tables
-;   - Changing one affects behavior of others
-;   - Professional calibration takes weeks of dyno time
-;   - Fallback/diagnostic tables are designed robust and conservative
-;   - Zeroing complex tables = predictable single-path execution
-;   - Tune 3-5 fallback tables = faster, more predictable calibration
+;   ✅ ip_maf_vo_2              = SINGLE VE table (mid-cam position)
+;   ✅ Base fuel/timing tables  = Core calibration
 ;
 ;==============================================================================
 ; VY V6 MAFless FALLBACK BEHAVIOR
@@ -98,9 +170,11 @@ DEFAULT_AIRFLOW_TABLE   EQU $7F2A   ; Default Airflow Vs RPM & TPS % (7×5 table
 MAX_AIRFLOW_TABLE       EQU $6D1D   ; Maximum Airflow Vs RPM (17 elements)
 
 ; RAM Variables (read-only references)
-TPS_RAM                 EQU $00C6   ; Throttle Position Sensor % (0-255)
-RPM_RAM                 EQU $00A2   ; Engine RPM/25 (8-bit)
-AIRFLOW_RAM             EQU $017B   ; Calculated airflow (g/s scaled)
+TPS_RAM EQU $00C6   ; Throttle Position Sensor % (0-255) ; Verified: TPS_FILTERED (7 refs Enhanced (9 stock)) [Enhanced-fix]
+RPM_RAM EQU $00A2   ; Engine RPM/25 (8-bit) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+; WARNING: $017B is DWELL INTERMEDIATE, NOT airflow! (Corrected 2026-02-02)
+; The actual airflow RAM location is UNKNOWN - needs disassembly verification
+; AIRFLOW_RAM           EQU $????   ; TODO: Find actual airflow RAM variable
 
 ;------------------------------------------------------------------------------
 ; CONFIGURATION CONSTANTS
@@ -116,7 +190,8 @@ DEFAULT_AIRFLOW_VALUE   EQU $6400   ; 200 g/s base (was 0x01C0 = 3.5 g/s)
 ; CODE SECTION
 ;------------------------------------------------------------------------------
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14500          ; Offset from cold spark patch at $14468
+; ⚠️ CORRECTED 2026-02-02: $14500 contains data (0x01 bytes), NOT free space!
+            ORG $C500           ; ✅ CORRECT: CPU $C500 = File 0x0C500 (verified 0x00 bytes) ; ⚠️ MUST BE bank 1 (file 0x0C500). Banks 0/2/3 have calibration data! [auto-fix 2026-02-09]
 
 ;==============================================================================
 ; FORCE_MAFLESS_MODE - Enable Alpha-N Fallback

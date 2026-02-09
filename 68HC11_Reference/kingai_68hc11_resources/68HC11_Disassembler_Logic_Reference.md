@@ -28,11 +28,19 @@ std::string AddressString(uint16_t addr)
     switch(addr)
     {
     // Port Registers
+    // NOTE: This is the dis68hc11 source (HC11E layout). The actual VY V6
+    // ECU uses HC11F-family (68HC11FC0) which has a DIFFERENT register map:
+    //   $1001 = DDRA (not reserved)
+    //   $1002 = PORTG (not PIOC) — bank switching via bit 6
+    //   $1003 = DDRG (not PORTC)
+    //   $1005 = PORTF (not PORTCL)
+    //   $1006 = PORTC (shifted from $1003)
+    // See DARC disassembly (IDA Pro) for correct HC11F layout.
     case 0x1000: return "PORTA";   // Port A Data
-    case 0x1002: return "PIOC";    // Parallel I/O Control
-    case 0x1003: return "PORTC";   // Port C Data
+    case 0x1002: return "PIOC";    // ⚠️ WRONG for VY V6 — actual chip is PORTG (HC11F)
+    case 0x1003: return "PORTC";   // ⚠️ WRONG for VY V6 — actual chip is DDRG (HC11F)
     case 0x1004: return "PORTB";   // Port B Data
-    case 0x1005: return "PORTCL";  // Port C Latched
+    case 0x1005: return "PORTCL";  // ⚠️ WRONG for VY V6 — actual chip is PORTF (HC11F)
     case 0x1006: return "DDRC";    // Data Direction C
     case 0x1008: return "PORTD";   // Port D Data
     case 0x1009: return "DDRD";    // Data Direction D
@@ -253,7 +261,165 @@ void Page1(const uint8_t* data, unsigned int& pc)
 
 ---
 
-## Main Disassembly Loop
+## Page 1A (CPD Instructions) Handling
+
+When the 0x1A prefix byte is encountered, the next byte selects a CPD (Compare D) variant:
+
+```cpp
+void Page1A(const uint8_t* data, unsigned int& pc)
+{
+    uint8_t op = data[pc];
+    switch(op)
+    {
+    case 0x83:  // CPD IMM
+    {
+        uint8_t p0 = data[++pc];
+        uint8_t p1 = data[++pc];
+        uint16_t value = (uint16_t(p0) << 8) | p1;
+        std::cout << "CPD\t#$" << std::hex << value;
+    }
+        break;
+    case 0x93:  // CPD DIR
+        std::cout << "CPD\t" << std::dec << (int)data[++pc];
+        break;
+    case 0xA3:  // CPD IND,X
+    {
+        uint8_t p = data[++pc];
+        std::cout << "CPD\t" << std::dec << int(p) << ",X";
+    }
+        break;
+    case 0xB3:  // CPD EXT
+    {
+        uint8_t p0 = data[++pc];
+        uint8_t p1 = data[++pc];
+        uint16_t addr = (uint16_t(p0) << 8) | p1;
+        std::cout << "CPD\t" << AddressString(addr);
+    }
+        break;
+    }
+}
+```
+
+**VY V6 ECU Usage:** CPD is the 16-bit compare of D register. Used heavily for:
+- 16-bit RPM comparisons: `LDD $00A2; CPD #$1770` (compare to 6000 RPM)
+- Period threshold checks: `LDD $017B; CPD #$00C8`
+- Table lookup bounds checking
+
+---
+
+## Page CD (Cross-Page LDX/STX/CPX with Y-indexing) Handling
+
+The 0xCD prefix byte selects LDX/STX indexed by Y and some CPX variants:
+
+```cpp
+void PageCD(const uint8_t* data, unsigned int& pc)
+{
+    uint8_t op = data[pc];
+    switch(op)
+    {
+    case 0xEE:  // LDX IND,Y
+    {
+        uint8_t p = data[++pc];
+        std::cout << "LDX\t" << std::dec << int(p) << ",Y";
+    }
+        break;
+    case 0xEF:  // STX IND,Y
+    {
+        uint8_t p = data[++pc];
+        std::cout << "STX\t" << std::dec << int(p) << ",Y";
+    }
+        break;
+    case 0xAC:  // CPX IND,Y
+    {
+        uint8_t p = data[++pc];
+        std::cout << "CPX\t" << std::dec << int(p) << ",Y";
+    }
+        break;
+    case 0xA3:  // CPD IND,Y
+    {
+        uint8_t p = data[++pc];
+        std::cout << "CPD\t" << std::dec << int(p) << ",Y";
+    }
+        break;
+    }
+}
+```
+
+### Prebyte Summary
+
+| Prebyte | Purpose | Example |
+|---------|---------|--------|
+| None | Page 0 - standard instructions | `LDAA #$FF` |
+| 0x18 | Y-register variants (LDY, STY, CPY, indexed Y) | `18 CE 0100` = `LDY #$0100` |
+| 0x1A | CPD instructions + CPY IND,X + LDY IND,X | `1A 83 1770` = `CPD #$1770` |
+| 0xCD | LDX/STX indexed Y + CPX IND,Y + CPD IND,Y | `CD EE 05` = `LDX 5,Y` |
+
+---
+
+## Bit Manipulation Opcode Handling
+
+The 68HC11 has 4 bit manipulation instructions with unique operand formats:
+
+```cpp
+// BSET/BCLR: 3 or 4 bytes depending on mode
+case 0x14:  // BSET DIR: addr, mask
+{
+    uint8_t addr = data[++pc];
+    uint8_t mask = data[++pc];
+    std::cout << "BSET\t$" << std::hex << int(addr) << ",#$" << int(mask);
+}
+    break;
+
+case 0x1C:  // BSET IND,X: offset, mask
+{
+    uint8_t offset = data[++pc];
+    uint8_t mask = data[++pc];
+    std::cout << "BSET\t" << std::dec << int(offset) << ",X,#$" << std::hex << int(mask);
+}
+    break;
+
+// BRSET/BRCLR: 4 or 5 bytes (includes branch offset)
+case 0x12:  // BRSET DIR: addr, mask, rel
+{
+    uint8_t addr = data[++pc];
+    uint8_t mask = data[++pc];
+    int8_t  rel  = int8_t(data[++pc]);
+    uint16_t target = pc + rel + 1 + epromStart;
+    std::cout << "BRSET\t$" << std::hex << int(addr) 
+              << ",#$" << int(mask) << ",$" << target;
+}
+    break;
+```
+
+**VY V6 ECU Usage:** BRSET/BRCLR are used extensively for checking mode flags:
+```asm
+; Check if engine is running (bit test on mode byte)
+BRSET  $0046,#$80,$xxxx  ; Branch if ENGINE_RUNNING flag set
+BRCLR  $0046,#$80,$xxxx  ; Branch if ENGINE_RUNNING flag clear
+```
+
+---
+
+## Main Loop - Prebyte Dispatch
+
+The complete prefix handling in Page0:
+
+```cpp
+case 0x18:  // Y-register page
+    pc++;
+    Page1(data, pc);
+    break;
+
+case 0x1A:  // CPD page (+ some CPY/LDY with X indexing)
+    pc++;
+    Page1A(data, pc);
+    break;
+
+case 0xCD:  // Cross-page (LDX/STX/CPX with Y indexing)
+    pc++;
+    PageCD(data, pc);
+    break;
+```
 
 ```cpp
 void Disassemble(const uint8_t data[], unsigned int length, uint16_t startAddress)
@@ -338,15 +504,15 @@ case 0x00A2: return "ENGINE_RPM";      // RPM / 25
 case 0x00A4: return "TPS_VOLTS";       // Throttle Position
 case 0x00AD: return "COOLANT_TEMP";    // Coolant Temp
 case 0x00B0: return "IAC_STEPS";       // Idle Air Control
-case 0x0178: return "PERIOD_3X_HI";    // 3X Period High
-case 0x0179: return "PERIOD_3X_LO";    // 3X Period Low
-case 0x017A: return "PERIOD_3X_COPY";  // Working Copy
+case 0x0178: return "PERIOD_24X_HI";    // 3X Period High
+case 0x0179: return "PERIOD_24X_LO";    // 3X Period Low
+case 0x017A: return "PERIOD_24X_COPY";  // Working Copy
 case 0x017D: return "DWELL_TIME";      // Coil Dwell
 
 // VY V6 Timer registers for EST
 case 0x100E: return "TCNT_HI";         // Timer Counter High
 case 0x100F: return "TCNT_LO";         // Timer Counter Low
-case 0x1014: return "TIC3_HI";         // Input Capture 3 (3X crank!)
+case 0x1014: return "TIC3_HI";         // Input Capture 3 (24X Crank!)
 case 0x1015: return "TIC3_LO";
 case 0x101A: return "TOC3_HI";         // Output Compare 3 (EST!)
 case 0x101B: return "TOC3_LO";

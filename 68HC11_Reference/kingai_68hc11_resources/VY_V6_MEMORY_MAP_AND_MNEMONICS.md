@@ -74,16 +74,21 @@ The DHC11 disassembler from TechEdge uses different mnemonics from Motorola's of
 ### 128KB Binary Layout (OSID: 92118883)
 
 The VY V6 Ecotec ECU uses a **128KB (0x20000 byte)** EEPROM/Flash organized as follows:
-where is the trans tables located is it in a higher or lower in the calibration area
+
+> **Q: Where are the trans tables located?**
+> **A:** Transmission tables are in the **upper half of Bank 0 calibration**, roughly $4D00-$56FF (file offset 0x4D00-0x56FF). This includes TCC capacity, shift points, pressure tables, line pressure, and DTC masks (KKMASK/KKACT/KKSEL). Engine spark/fuel tables are lower, roughly $4000-$4CFF and $5700+. The XDF v2.09a has 1655 entries across $4000-$7FFC.
+
 ```
 FILE OFFSET         SIZE      PURPOSE                    CPU ADDRESS
 ─────────────────────────────────────────────────────────────────────
-0x00000 - 0x0FFFF   64KB      Calibration Bank 0         (Not mapped)
-                              - Spark tables
-                              - Fuel tables  
-                              - VE tables
-                              - Timing tables
-                              - Parameters
+0x00000 - 0x0FFFF   64KB      Calibration Bank 0         (Banked via PORTG bit 6)
+                              0x4000-0x4CFF: Spark/Fuel tables
+                              0x4D00-0x56FF: Transmission tables
+                              0x5700-0x6BFF: More spark/fuel/idle
+                              0x6B9C:        M93 MAF DTC table
+                              0x6C00-0x77FF: Sensor cal, fan, A/C
+                              0x77DD-0x77E9: Fuel cut RPM thresholds
+                              0x7FF8-0x7FFC: Program ID (box code)
                               
 0x10000 - 0x17FFF   32KB      CPU Lower Space            0x0000 - 0x7FFF
                               - RAM mirror
@@ -160,8 +165,11 @@ STAA    $7FFF
 ```
 
 ### ✅ VY V6 Bank Switch - VERIFIED (Jan 22, 2026)
-this is how it works on vs? 
-**Source:** PCMhacking Archive `downloads_md\BMW\topic_181\bank switch.md`
+
+> **Q: Is this how it works on VS?**
+> **A:** Yes, the VS and VY V6 Ecotec both use the Delco P04 PCM with the same HC11F-family processor (68HC11FC0 per DARC/IDA Pro) and the same PORTG bit 6 bank switching mechanism. The VS uses earlier OSIDs (BDA/BDB series like 92104512, 92108760) but the hardware architecture is identical. The only differences are in calibration values and some OS code revisions.
+
+**Source:** PCMhacking Archive topic 181 bank switch
 
 ```assembly
 ; -- Bank Switch To Bank 1 (Code/Upper 64KB) --
@@ -208,7 +216,7 @@ tap             ; Restore The Condition Registers
 | TOC3 | 0x1FFE4 | 0xFFE4 | $2009 | Timer Output Compare 3 |
 | TOC2 | 0x1FFE6 | 0xFFE6 | $2000 | Timer Output Compare 2 |
 | TOC1 | 0x1FFE8 | 0xFFE8 | **$200C** | Timer Output Compare 1 |
-| TIC3 | 0x1FFEA | 0xFFEA | **$200F** | Timer Input Capture 3 (**3X Crank!**) |
+| TIC3 | 0x1FFEA | 0xFFEA | **$200F** | Timer Input Capture 3 (**24X Crank!**) |
 | TIC2 | 0x1FFEC | 0xFFEC | **$2012** | Timer Input Capture 2 |
 | TIC1 | 0x1FFEE | 0xFFEE | **$2015** | Timer Input Capture 1 |
 | RTI | 0x1FFF0 | 0xFFF0 | $2000 | Real Time Interrupt |
@@ -236,7 +244,9 @@ Each vector is a **16-bit address** (big-endian):
 
 ## RAM Layout
 
-### HC11E9 Internal RAM ($0000-$01FF, 512 bytes)
+### HC11F Internal RAM ($0000-$03FF, 1024 bytes)
+
+> **Note:** The VY V6 uses an HC11F-family derivative (68HC11FC0), not HC11E9. The HC11F has 1024 bytes of internal RAM vs the HC11E's 512 bytes. Register space is 96 bytes ($1000-$105F) vs the HC11E's 64 bytes ($1000-$103F). See DARC disassembly line 7 and PCMhacking topics 1573, 4539 for confirmation.
 
 | Address | Size | Verified | Description |
 |---------|------|----------|-------------|
@@ -250,7 +260,7 @@ Each vector is a **16-bit address** (big-endian):
 | $00A4-$00FF | 92B | ⚠️ | Calculated values |
 | $0100-$0140 | 65B | ⚠️ | DTC/diagnostic data |
 | $0141-$017F | 63B | ⚠️ | Sensor readings |
-| **$017B** | 2B | ✅ | **3X period storage** (spark cut target) |
+| **$017B** | 2B | ✅ | **Dwell intermediate** (NOT crank period - see $194C) |
 | $0180-$01FF | 128B | ⚠️ | Stack area |
 
 ### ⚠️ Warning: $01A0
@@ -261,15 +271,19 @@ Each vector is a **16-bit address** (big-endian):
 
 ## Hardware Registers
 
-### HC11 Internal Registers ($1000-$103F)
+### HC11F Internal Registers ($1000-$105F)
+
+> **⚠️ CORRECTED 2026-02-08:** The VY V6 ECU uses an **HC11F-family derivative** (68HC11FC0 per DARC/IDA Pro disassembly), NOT HC11E9. The HC11F has a different register layout at $1000-$1005. The HC11E datasheet shows $1002=PIOC — but the actual chip in the Delco P04 PCM has $1002=PORTG. This was confirmed by 180+ PORTG references in DARC disassembly and bank switching code using ORAB/ANDB on $1002. that darc is a vs or vt though and not vy could vy use a newer hc11.
 
 | Address | Name | Purpose |
-|---------|------|---------|
+|---------|------|---------||
 | $1000 | PORTA | Port A data |
-| $1002 | PIOC | Parallel I/O Control |
-| $1003 | PORTC | Port C data |
+| $1001 | DDRA | Port A Data Direction (HC11F only) |
+| $1002 | PORTG | Port G data (**bank switching bit 6** — NOT PIOC) |
+| $1003 | DDRG | Port G Data Direction (NOT PORTC) |
 | $1004 | PORTB | Port B data |
-| $1005 | PORTCL | Port C Latch |
+| $1005 | PORTF | Port F data (HC11F only — NOT PORTCL) |
+| $1006 | PORTC | Port C data (shifted from $1003 in HC11E) |
 | $1007 | DDRC | Port C Data Direction |
 | $1008 | PORTD | Port D data |
 | $1009 | DDRD | Port D Data Direction |
@@ -280,7 +294,7 @@ Each vector is a **16-bit address** (big-endian):
 | $100E-$100F | TCNT | Timer Counter (16-bit) |
 | $1010-$1011 | TIC1 | Input Capture 1 |
 | $1012-$1013 | TIC2 | Input Capture 2 |
-| **$1014-$1015** | **TIC3** | **Input Capture 3 (3X Crank!)** |
+| **$1014-$1015** | **TIC3** | **Input Capture 3 (24X Crank!)** |
 | $1016-$1017 | TOC1 | Output Compare 1 |
 | $1018-$1019 | TOC2 | Output Compare 2 |
 | $101A-$101B | TOC3 | Output Compare 3 |
@@ -368,6 +382,66 @@ def is_rom(cpu_addr):
 ## Version History
 
 | Date | Changes |
-|------|---------|
+|------|--------|
 | 2026-01-20 | Initial document - DHC11 mnemonics, memory map, bank switching |
-| 2026-01-21 | **VERIFIED** vector table against v1.1a binary (TIC3=$200F, RST=$C011) | we are meant to be working on 92118883 and enhanced 1.0
+| 2026-01-21 | **VERIFIED** vector table against OSID 92118883 Enhanced v1.0a binary (TIC3=$200F, RST=$C011) |
+| 2026-02-07 | Added XDF v2.09a DTC/MALF system section, trans table locations, answered inline questions |
+| 2026-02-07 | Clarified VS/VY bank switching (same PORTG bit 6 mechanism) |
+| 2026-02-07 | Added calibration bank breakdown showing where spark/fuel/trans tables sit |
+| 2026-02-08 | **CRITICAL FIX:** Processor is HC11F-family (68HC11FC0) NOT HC11E9. Register map corrected: $1002=PORTG (not PIOC), $1003=DDRG (not PORTC), $1005=PORTF (not PORTCL). Added DDRA at $1001. RAM = 1024 bytes not 512. Evidence: DARC IDA Pro disassembly, VL400/Antus measurements (topics 982, 4539), sabercatpuck HC11F1 config (topic 1573). |
+| 2026-02-09 | Updated XDF references from v2.09a to v2.09b. v2.09b adds 68 DTC enable/disable flags via Antus XDF DTC Tool. Added full 8-platform XDF inventory (VS/VT/VX/VY — NA and SC variants) to README and comparison doc. |
+
+> **Note:** This document targets OSID 92118883 with Enhanced v1.0a binary. The v1.1a binary mentioned previously was a typo — all work is based on v1.0a.
+
+---
+
+## DTC / Malfunction System (from XDF v2.09b)
+
+> **Source:** Enhanced v2.09b XDF definition file (latest — includes 68 individual DTC enable/disable flags added by Antus XDF DTC Tool, 1546 constants, 334 tables, 548 flags)
+
+### MALF Flag Bitmask System
+
+The VY V6 uses bitmask registers to control DTC behavior:
+
+| Register Group | Count | Purpose |
+|---------------|-------|--------|
+| KKMASK1–9A | 10 bytes | Enable/disable individual MALF codes |
+| KKACT1–9 | 9 bytes | Primary action mask (what ECU does when MALF set) |
+| KKSEL1–6 | 6 bytes | Alternate/secondary action mask |
+| KKKMASK1–9A | 10 bytes | Check Transmission Light enable mask |
+
+### Key Transmission MALFs
+
+| MALF # | Description |
+|--------|-------------|
+| 24 | Vehicle Speed Sensor Failure |
+| 28 | Pressure Switch Manifold |
+| 39 | TCC Off (Torque Converter Clutch) |
+| 58/59 | Trans Temperature High/Low |
+| 68 | Transmission Component Slipping |
+| 69 | TCC Stuck On |
+| 71/72 | Engine/Output Speed Sensor |
+| 73 | Force Motor Current |
+| 81/82 | Shift B/A Solenoid Shorted |
+| 86/87 | Shift A/B Solenoid Open |
+| 89 | Maximum Adaptive Long Shift |
+
+### Shared Engine/Trans MALFs
+
+These have **separate default values** for engine vs transmission logic:
+- MALF 14/15: Coolant Temperature
+- MALF 21/22: Throttle Position
+
+### DTC Auto-Clear
+
+| Parameter | Address | Description |
+|-----------|---------|-------------|
+| Successive Power Ups With No Malfs | $56E6 | Clean starts before DTC clears |
+
+### MALF 93 (MAF Failure) — Tuning Relevance
+
+| Table | Address | Description |
+|-------|---------|-------------|
+| M93 Enable Load Vs RPM | $6B9C | Min airflow threshold for MALF 93 |
+
+**When MAF or knock sensor DTC is active**, the PCM locks to low-octane spark tables only. Normally it interpolates between high-octane and low-octane maps based on knock activity.

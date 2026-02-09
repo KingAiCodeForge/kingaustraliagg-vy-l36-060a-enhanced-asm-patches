@@ -12,16 +12,16 @@
 ;   "Lumpy Idle" = XDF-only approach, slow ~1Hz lope, no ASM patch
 ;   "Ghost Cam"  = Fast aggressive lopey sound (method TBD)
 ;
-; ⚠️ CORRECTION (Jan 27, 2026): Rhysk94 (RKGarage / Rhys Kirkham) states that
-; ghost cam on these PCMs is NOT done with timing - timing does not get touched.
+; ⚠️ IMPORTANT (Jan 27, 2026): Rhysk94 (RKGarage) has a working ghost cam tune
+; on VY V6 but states his method does NOT use timing - "timing does not get touched".
+; WE DO NOT KNOW HOW HIS METHOD WORKS. This file is OUR OWN THEORETICAL approach
+; based on BMW MS42 and HPTuners LS methods, which may NOT apply to Delco PCMs.
 ; Topic 8605 is about VY L67 idle spark XDFs, NOT ghost cam.
-; The actual ghost cam method for VY/VX PCMs needs to be clarified by Rhysk94.
-;
-; THIS FILE IS THEORETICAL - based on BMW/LS methods which MAY NOT APPLY HERE.
+; THIS FILE IS UNTESTED - use at your own risk.
 ;
 ; ⚠️ WARNING: EXPERIMENTAL - Creates intentional misfires for "lopey" sound
 ; ⚠️ WARNING: Improper tuning = exhaust pops, flames, CAT damage!
-; this is a community project please push a new .asm if you have a better method of patching.
+; This is a community project - push a new .asm if you have a better method.
 ;==============================================================================
 ; RESEARCH SOURCES
 ;==============================================================================
@@ -99,17 +99,17 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP - VERIFIED
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; Engine RPM (high byte, ×25 scaling)
+RPM_ADDR EQU $00A2       ; Engine RPM (high byte, ×25 scaling) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 ECT_ADDR            EQU $00B4       ; Engine Coolant Temperature
-TPS_ADDR            EQU $00B6       ; Throttle Position Sensor
+TPS_ADDR EQU $00B6       ; Throttle Position Sensor ; Verified: TPS_ADC_RAW (47 refs both) [Enhanced-fix]
 
 ;------------------------------------------------------------------------------
 ; MEMORY MAP - NEED RESEARCH (suspected from XDF analysis)
 ;------------------------------------------------------------------------------
 RPM_TARGET_IDLE     EQU $01A4       ; 🔬 SUSPECTED: Target idle RPM (from XDF tables)
-SPARK_BASE          EQU $01B0       ; 🔬 SUSPECTED: Base spark advance before corrections
-SPARK_FINAL         EQU $01B2       ; 🔬 SUSPECTED: Final spark advance after all corrections
-ENGINE_STATE        EQU $01C0       ; 🔬 SUSPECTED: Engine state flags (idle, run, crank)
+SPARK_BASE EQU $01B0       ; 🔬 SUSPECTED: Base spark advance before corrections ; Verified: SPARK_BASE_ADV (5 refs both) [Enhanced-fix]
+SPARK_FINAL EQU $01B2       ; 🔬 SUSPECTED: Final spark advance after all corrections ; Verified: SPARK_FINAL_ADV (2 refs both) [Enhanced-fix]
+ENGINE_STATE EQU $01C0       ; 🔬 SUSPECTED: Engine state flags (idle, run, crank) ; Verified: ENGINE_STATE_WORD (4 refs both) [Enhanced-fix]
 
 ;------------------------------------------------------------------------------
 ; PATCH LOCATION
@@ -258,7 +258,7 @@ RPM_DELTA           EQU $0201               ; RAM: Calculated RPM delta
 ;    - Ghost cam in P/N only, smooth in Drive (will get it to chop at idle in drive or gear. we need a new method or .asm file)
 ;    - Need GEAR_STATE flag address
 ;    - if the concept is ported to other memcal based ecotecs the moates could 
-;      theoretically let this be on bank 2 but again different cpu address and xdf addresses.
+;      theoretically let this be on tune bank 2, 3 or 4 but again different cpu address and xdf addresses.
 ;==============================================================================
 ; END OF FILE
 ;==============================================================================

@@ -1,8 +1,14 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Enhanced v1.0a binary ground truth corrections
+; Ground truth: VY_V6_Enhanced.bin + bank disassemblies (Enhanced_bank1/2/3.asm)
+; Bank layout: 0=data+common, 1=free($C468-$FFBF), 2=engine, 3=trans+diag
+; Bank 1 is IDENTICAL between stock and Enhanced (0 bytes differ)
+;==============================================================================
+;==============================================================================
 ; THE1'S SPARK CUT METHOD - PORTED TO $060A
 ;==============================================================================
 ; Source: The1's Enhanced v1.1a binary (addresses 0x1FD84-0x1FD9F)
-; Target: VY V6 $060A (92118883) stock binary
+; Target: VY V6 $060A Enhanced v1.0a binary
 ; Method: Direct threshold comparison with EST flag manipulation
 ;
 ; The1's Implementation Analysis:
@@ -60,7 +66,7 @@
 ;
 ; Option 2: HYBRID (combine with Chr0m3 method)
 ;   - Use The1's CPD comparison
-;   - Use Chr0m3's 3X period injection
+;   - Use Chr0m3's crank period injection
 ;   - Best of both worlds
 ;
 ; Option 3: SIMPLIFIED (verified addresses only)
@@ -77,7 +83,8 @@
 ;------------------------------------------------------------------------------
 ; This would require finding ALL equivalent addresses in $060A
 
-    ORG $14468          ; Candidate free space (verify!)
+    ORG $C468          ; Bank 1 free space (file 0x0C468, 15192 bytes free $C468-$FFBF)
+                       ; ⚠️ The1's addresses ($149E, $16FA, $31EF) are from v1.1a — NOT mapped to $060A!
 
 THE1_METHOD_ENTRY:
     ; Load 16-bit RPM (NEED TO FIND THIS ADDRESS!)
@@ -108,7 +115,8 @@ SKIP_CUT:
 ;------------------------------------------------------------------------------
 ; Uses verified addresses from v38, The1's comparison pattern
 
-    ORG $C500           ; Verified free space
+    ORG $C530           ; Bank 1 free space (file 0x0C530) — offset from Option 1 to avoid overlap
+                       ; ⚠️ This hooks 0x101E1 (STD $017B) but stores to $194C — INCONSISTENT
 
 HYBRID_ENTRY:
     ; Check if already cutting
@@ -144,12 +152,12 @@ CHECK_RESUME:
     BCLR    $46,$80     ; Clear flag
     
 STORE_NORMAL:
-    STD     $017B       ; Store real period
+    STD     $017B       ; Store to dwell intermediate (matches hook at 0x101E1)
     RTS
     
 INJECT_FAKE:
-    LDD     #$3E80      ; Fake period (16000)
-    STD     $017B
+    LDD     #$3E80      ; Fake dwell value (16000 = ~100µs dwell = no spark)
+    STD     $017B       ; Store fake value to dwell intermediate
     RTS
 
 ;------------------------------------------------------------------------------
@@ -157,7 +165,7 @@ INJECT_FAKE:
 ;------------------------------------------------------------------------------
 ; Safest option - uses only confirmed addresses
 
-    ORG $C500           ; Verified free space
+    ORG $C560           ; Bank 1 free space (file 0x0C560) — offset to avoid Option 1+2 overlap
 
 SIMPLE_CPD_ENTRY:
     ; Load 8-bit RPM, convert to 16-bit
@@ -174,24 +182,27 @@ SIMPLE_CPD_ENTRY:
     BLS     NORMAL_OPERATION
     
     ; RPM above threshold - inject fake period
-    LDD     #$3E80      ; 16000 = very long period = no spark
-    STD     $017B       ; Store to period (verified)
+    LDD     #$3E80      ; 16000 = fake dwell value = ~100µs = no spark
+    STD     $017B       ; Store to dwell intermediate ($017B)
     PULA                ; Clean stack
     RTS
     
 NORMAL_OPERATION:
     PULA                ; Restore A
     LDAB    #$00        ; Clear B
-    STD     $017B       ; Store period (from original code)
+    STD     $017B       ; Store to dwell intermediate ($017B)
     RTS
 
 ;==============================================================================
-; HOOK INSTALLATION (Same as v38)
+; HOOK INSTALLATION
 ;==============================================================================
-; Replace STD $017B at 0x101E1 with JSR $C500
-
+; File offset 0x101E1 (bank 2, CPU $81E1)
+; Original: FD 01 7B  (STD $017B — dwell intermediate, runs every cycle)
+; Patched:  BD C5 00  (JSR $C500 — or $C530/$C560 for options 2/3)
+;
+; ❌ DO NOT USE 0x13618 (STD $194C = cold-start init path only)
 ; OFFSET: 0x101E1
-; ORIGINAL: FD 01 7B        (STD $017B)
+; ORIGINAL: FD 01 7B        (STD $017B — dwell intermediate)
 ; PATCHED:  BD C5 00        (JSR $C500)
 
 ;==============================================================================

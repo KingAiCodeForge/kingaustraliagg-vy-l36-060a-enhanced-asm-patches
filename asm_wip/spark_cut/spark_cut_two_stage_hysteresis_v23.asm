@@ -82,14 +82,15 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP - VY V6 SPECIFIC
+; MEMORY MAP - VY V6 SPECIFIC (CORRECTED 2026-01-31)
 ;------------------------------------------------------------------------------
 ; Hardware Registers
 TCTL1_REG       EQU $1020       ; Timer Control (for spark cut)
-PERIOD_3X       EQU $017B       ; 3X period (alternative cut method)
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: 24X crank period @ TIC3 ISR $3618 ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+                                ; ❌ OLD WRONG: $017B (purpose unknown)
 
 ; RAM Variables
-RPM_ADDR        EQU $00A2       ; RPM high byte
+RPM_ADDR EQU $00A2       ; RPM high byte (8-bit RPM/25) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 LIMITER_FLAGS   EQU $00FB       ; Runtime flags
                                 ; Bit 0: lv_fuel_cut (cut active)
                                 ; Bit 1: lv_limiter_active (engaged)
@@ -118,9 +119,9 @@ DELAY_TEST      EQU $05         ; 5 × 20ms = 0.1 sec (VL V8 timing)
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-; ⚠️ ADDRESS CORRECTED 2026-01-15: $18700 was WRONG - NOT in verified free space!
+; ⚠️ ADDRESS CORRECTED 2026-01-31: $14468 is still wrong! Use $0C500!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18700 WRONG!)
+            ORG $0C500          ; ✅ CORRECTED: Use calibration ROM free space ; Bank 1 (file 0x0C500). Free banks: [1], used: [2, 3]. 15192 bytes free [Enhanced-fix]
 
 ;==============================================================================
 ; MAIN TWO-STAGE LIMITER - VL V8 STATE MACHINE
@@ -216,9 +217,9 @@ APPLY_CUT_TS:
     ORAA #$20                   ; 8A 20 - Set bits 5-4 = 10 (Force PA5 LOW)
     STAA TCTL1_REG              ; B7 10 20 - Write back → NO SPARK
     
-    ; Method 2: 3X Period Injection (Chr0m3 - backup/redundant)
+    ; Method 2: crank period injection (Chr0m3 - backup/redundant)
     ; LDD #$FFFF                ; CC FF FF - Astronomically high
-    ; STD PERIOD_3X             ; FD 01 7B - Store to 3X period
+    ; STD DWELL_INTERMEDIATE    ; FD 01 7B - Store to dwell intermediate
     
     ; Result: Clean spark cut with hysteresis band
     
@@ -396,7 +397,7 @@ TWO_STAGE_CAL_DATA:
 ;    - Used for actual spark cut mechanism
 ;    - Combined with two-stage state machine
 ;
-; 4. Chr0m3 3X Period Injection (backup method)
+; 4. Chr0m3 crank period injection (backup method)
 ;    - Can be used instead of or alongside TCTL1
 ;    - Proven effective on VY V6
 ;
@@ -418,7 +419,7 @@ TWO_STAGE_CAL_DATA:
 ;
 ; File Offset | Bytes      | Verified      | Purpose
 ; ------------|------------|---------------|-------------------------------
-; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x101E1     | FD 01 7B   | ✅ STD     $194C  | HOOK POINT - 3X period store
 ; 0x0C500     | 00 00 00...| ✅ zeros      | FREE SPACE for code
 ;
 ; CALIBRATION ADDRESSES (proposed - not in stock binary):

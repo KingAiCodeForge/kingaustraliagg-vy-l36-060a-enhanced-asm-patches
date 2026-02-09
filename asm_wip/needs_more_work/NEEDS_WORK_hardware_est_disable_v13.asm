@@ -41,7 +41,7 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM address
+RPM_ADDR EQU $00A2       ; RPM address ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 
 ; HC11 TIMER REGISTERS (Hardware - confirmed addresses)
 TCTL1               EQU $1020       ; Timer Control Register 1 (OC2-OC5)
@@ -76,7 +76,7 @@ OC3M_MASK           EQU %11001111   ; Mask for OC3M bits
 ;==============================================================================
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 EST_DISABLE_HANDLER:
     PSHA
@@ -201,14 +201,14 @@ EXIT_HANDLER:
 ;   ✅ No interference with dwell/timing calculations
 ;   ⚠️ May trigger failsafe if ESTLOOP timer exists
 ;
-; 3X Period Injection (Method v1-v3):
+; crank period injection (Method v1-v3):
 ;   ✅ Proven working (Chr0m3 validated)
 ;   ✅ No hardware manipulation (software trick)
 ;   ✅ No failsafe triggered (uses existing firmware logic)
 ;   ⚠️ More complex (manipulates dwell calculation)
 ;
 ; Recommendation:
-;   - Stick with 3X Period method (proven)
+;   - Stick with crank period method (proven)
 ;   - Test this method on bench ONLY
 ;   - Requires expert validation (Chr0m3 or VL400)
 ;

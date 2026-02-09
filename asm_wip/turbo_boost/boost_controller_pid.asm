@@ -94,29 +94,26 @@
 ;   - PA3/OC5 = Possibly unused (needs verification)
 ;
 ;==============================================================================
-; RAM VARIABLES - ⚠️ CONFLICTS WITH STOCK ECU - NEED REMAPPING!
+; RAM VARIABLES - ✅ FIXED Jan 28, 2026 - Using verified unused RAM
 ;==============================================================================
 
-; ❌ WRONG: These addresses overlap stock ECU RAM!
-; $00A2 = RPM/25 (verified), $00A3 = Engine State, etc.
-; TODO: Find UNUSED RAM in VY V6 binary for boost controller variables
+; ✅ CORRECTED: Using $03D5-$03E2 (verified unused via binary analysis)
+; Binary analysis confirmed NO direct accesses AND NO indexed pointer loads
+; See ASM_VALIDATION_REPORT_JAN27.md for verification details
 ;
-; Possible unused RAM regions to investigate:
-;   - $00B0-$00BF (check for stock usage)
-;   - $0180-$01FF (extended RAM, less used)
-;
-RAM_BC_ENABLE       EQU     $00A0   ; ❌ CONFLICT - find unused addr!
-RAM_BC_MODE         EQU     $00A1   ; ❌ CONFLICT - find unused addr!
-RAM_BC_TARGET       EQU     $00A2   ; ❌ CONFLICT with RPM! MUST CHANGE!
-RAM_BC_ACTUAL       EQU     $00A3   ; ❌ CONFLICT with Engine State!
-RAM_BC_ERROR        EQU     $00A4   ; ❌ CONFLICT - find unused addr!
-RAM_BC_ERROR_SUM    EQU     $00A5   ; ❌ CONFLICT - find unused addr!
-RAM_BC_ERROR_PREV   EQU     $00A7   ; ❌ CONFLICT - find unused addr!
-RAM_BC_P_TERM       EQU     $00A8   ; ❌ CONFLICT - find unused addr!
-RAM_BC_I_TERM       EQU     $00A9   ; ❌ CONFLICT - find unused addr!
-RAM_BC_D_TERM       EQU     $00AA   ; ❌ CONFLICT - find unused addr!
-RAM_BC_PWM_OUT      EQU     $00AB   ; ❌ CONFLICT - find unused addr!
-RAM_BC_PILOT        EQU     $00AC   ; ❌ CONFLICT - find unused addr!
+RAM_BC_ENABLE       EQU     $03D5   ; ✅ Boost controller enable (0=off, 1=on)
+RAM_BC_MODE         EQU     $03D6   ; ✅ Mode (0=open-loop, 1=closed-loop)
+RAM_BC_TARGET       EQU     $03D7   ; ✅ Target boost (kPa, 8-bit)
+RAM_BC_ACTUAL       EQU     $03D8   ; ✅ Actual boost reading (kPa, 8-bit)
+RAM_BC_ERROR        EQU     $03D9   ; ✅ PID error (16-bit signed)
+RAM_BC_ERROR_SUM    EQU     $03DB   ; ✅ Integral sum (16-bit)
+RAM_BC_ERROR_PREV   EQU     $03DD   ; ✅ Previous error for D term (8-bit)
+RAM_BC_P_TERM       EQU     $03DE   ; ✅ Proportional output (8-bit)
+RAM_BC_I_TERM       EQU     $03DF   ; ✅ Integral output (8-bit)
+RAM_BC_D_TERM       EQU     $03E0   ; ✅ Derivative output (8-bit)
+RAM_BC_PWM_OUT      EQU     $03E1   ; ✅ Final PWM duty cycle (0-255)
+RAM_BC_PILOT        EQU     $03E2   ; ✅ Pilot/base PWM from table (8-bit)
+; Spare: $03E3-$03E7 (5 bytes available for future use)
 
 ;==============================================================================
 ; CALIBRATION CONSTANTS (Define in XDF-accessible area)

@@ -64,7 +64,7 @@ PAOVF           EQU $20         ; Bit 5: PA Overflow Flag
 TCTL1           EQU $1020       ; Timer Control Register 1 (OC modes)
 
 ; RPM and Flag Variables
-RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
+RPM_ADDR EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 LIMITER_FLAG    EQU $77F4       ; Runtime flags byte
 PA5_MASK        EQU $20         ; Bit 5 = PA5 (EST output)
 OC3M_MASK       EQU %11001111   ; Mask for TCTL1 OC3 bits
@@ -211,7 +211,7 @@ PA_INIT:
 ;   - JMP indirect may not work as expected
 ;
 ; NOT RECOMMENDED for first-time testing
-; Use v33 Chr0m3 3X period injection instead
+; Use v33 Chr0m3 crank period injection instead
 ;
 ;==============================================================================
 ; CROSS-REFERENCE

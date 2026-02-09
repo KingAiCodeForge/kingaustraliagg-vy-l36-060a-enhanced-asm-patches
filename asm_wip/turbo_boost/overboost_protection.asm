@@ -1,4 +1,9 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 2 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; VY V6 OVERBOOST PROTECTION v27 - SAFETY FUEL CUT
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
@@ -94,8 +99,8 @@
 ; RAM VARIABLES
 ;==============================================================================
 
-RAM_OB_ACTIVE       EQU     $00B0   ; Overboost active flag
-RAM_OB_COUNT        EQU     $00B1   ; Debounce counter (2 cycles needed)
+RAM_OB_ACTIVE EQU $00B0   ; Overboost active flag ; Verified: MAP_OR_TPS_RAW (7 refs Enhanced. STOCK uses this!) [Enhanced-fix]
+RAM_OB_COUNT        EQU     $00B1   ; Debounce counter (2 cycles needed) ; ⚠️ CONFLICT! STOCK: 55 refs (R=48 W=7) - TPS_PERCENT_RAM. Using for custom vars WILL conflict! [auto-fix 2026-02-09]
 RAM_OB_MAP_PREV     EQU     $00B2   ; Previous MAP reading
 RAM_OB_MAP_PREV2    EQU     $00B3   ; 2-cycle-old MAP reading
 
@@ -116,7 +121,7 @@ CAL_OB_ENABLE       EQU     $7E92   ; Enable flag (1 = on, 0 = off)
 ;    You MUST install 3-bar MAP sensor and wire to spare A/D pin.
 ;    Then update this address to match your wiring.
 MAP_VAR             EQU     $00D8   ; PLACEHOLDER - WIRE YOUR MAP SENSOR!
-FUEL_CUT_FLAG       EQU     $00F8   ; Fuel cut request flag - verify address
+FUEL_CUT_FLAG EQU $00F8   ; Fuel cut request flag - verify address ; WARNING: 0 refs in Enhanced binary - verify this address [Enhanced-fix]
                                     ; Set to 1 = fuel cut active
 
 ;==============================================================================

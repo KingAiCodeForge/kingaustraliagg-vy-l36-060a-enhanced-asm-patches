@@ -1,3 +1,10 @@
+; ═══════════════════════════════════════════════════════════════════
+; UPDATE HISTORY:
+;   2026-01-28: RAM Address Fix - $01A0 → $0046 bit 7
+;   2026-01-31: Crank Period Fix - $017B → $194C (TIC3 ISR verified)
+;   2026-02-09: Enhanced v1.0a ground truth: hook=0x101E1 STD $017B, bank 1 free $C468-$FFBF
+; ═══════════════════════════════════════════════════════════════════
+
 ;==============================================================================
 ; VY V6 IGNITION CUT v36 - SOFT TIMING RETARD (SPEEDUINO SOFT CUT STYLE)
 ;==============================================================================
@@ -42,7 +49,7 @@
 ; IMPLEMENTATION CHALLENGE FOR VY V6:
 ;   - Need to find where final timing is stored before TIO
 ;   - Override that value with retarded timing
-;   - More complex than 3X period injection
+;   - More complex than crank period injection
 ;
 ; ADVANTAGES:
 ;   ✅ Smooth power reduction (no harsh cut)
@@ -61,16 +68,17 @@
 ;------------------------------------------------------------------------------
 ; RAM ADDRESSES (VERIFIED + TIMING NEEDS DISCOVERY)
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 8-bit RPM/25
-PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: 3X period storage
-LIMITER_FLAG    EQU $01A0       ; ⚠️ UNVERIFIED: Limiter state flag
+RPM_ADDR EQU $00A2       ; ✅ VERIFIED: 8-bit RPM/25 ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: crank period storage ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 
 ; IGNITION TIMING RAM - NEEDS DISCOVERY
 ; These are guesses based on typical Delco layout:
 ; Look for where spark advance is stored before TIO output
 ;
 TIMING_ADVANCE  EQU $0190       ; ⚠️ UNVERIFIED: Spark advance (degrees)
-TIMING_DWELL    EQU $0199       ; ✅ VERIFIED: Dwell time
+TIMING_DWELL EQU $0199       ; ✅ VERIFIED: Dwell time ; Verified: DWELL_TIME_RAM (8 refs both) [Enhanced-fix]
 
 ;------------------------------------------------------------------------------
 ; SOFT LIMITER PARAMETERS
@@ -96,14 +104,18 @@ FAKE_PERIOD     EQU $3E80       ; Used if soft cut fails to limit RPM
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
-            ORG $0C500          ; ✅ VERIFIED: Free space
+; ⚠️ Code below still uses TST/STAA/CLR $01A0 — needs rewrite to BRSET/BSET/BCLR $46,$80
+; See spark_cut_chr0m3_method_VERIFIED_v38.asm for correct implementation
+;
+
+            ORG $0C500          ; ✅ VERIFIED: Free space ; Bank 1 (file 0x0C500). Free banks: [1], used: [2, 3]. 15192 bytes free [Enhanced-fix]
 
 ;==============================================================================
 ; SOFT LIMITER HANDLER - TWO-STAGE LIMITING
 ;==============================================================================
 ;
 ; Stage 1 (5900-6000 RPM): Retard timing to reduce power
-; Stage 2 (6000+ RPM): Hard cut via 3X period injection
+; Stage 2 (6000+ RPM): Hard cut via crank period injection
 ;
 ; This provides:
 ;   - Smooth transition as approaching limit
@@ -155,7 +167,7 @@ DO_SOFT_RETARD:
     ;   (requires finding the right hook point)
     ;
     ; Option C: Use dwell manipulation to affect timing indirectly
-    ;   (this we know works - see 3X period method)
+    ;   (this we know works - see crank period method)
     ;
     ; For now, we'll use a hybrid: slightly inflate the period
     ; This effectively retards timing without full cut
@@ -165,11 +177,11 @@ DO_SOFT_RETARD:
     
     ; Add 10% to period (retards timing ~10%)
     ; D = D + (D >> 3) ≈ D × 1.125
-    PSHD                        ; 3C       Save D
+    PSHD                        ; 3C       Save D          ; ❌ ERROR: HC11 has NO PSHD! $3C=PSHX. Need PSHB+PSHA to push D.
     LSRD                        ; 04       D >> 1
     LSRD                        ; 04       D >> 2
     LSRD                        ; 04       D >> 3 (D/8)
-    PSHD                        ; 3C       Save D/8
+    PSHD                        ; 3C       Save D/8        ; ❌ ERROR: HC11 has NO PSHD! Stack math below is BROKEN — entire DO_SOFT_RETARD needs rewrite.
     TSX                         ; 30       X = SP
     LDD     2,X                 ; EC 02    Load original D
     ADDD    0,X                 ; E3 00    Add D/8
@@ -177,12 +189,12 @@ DO_SOFT_RETARD:
     PULX                        ; 38       Clean stack
     
     ; Store modified period (slightly longer = retarded timing)
-    STD     PERIOD_3X_RAM       ; FD 01 7B
+    STD     PERIOD_24X_RAM      ; FD 19 4C
     RTS                         ; 39
 
 DO_HARD_CUT:
     ;--------------------------------------------------------------------------
-    ; STAGE 2: HARD CUT - Full spark cut via 3X period injection
+    ; STAGE 2: HARD CUT - Full spark cut via crank period injection
     ;--------------------------------------------------------------------------
     LDAA    #$02                ; 86 02    Flag = 2 (hard cut mode)
     STAA    LIMITER_FLAG        ; 97 A0
@@ -190,7 +202,7 @@ DO_HARD_CUT:
     PULB                        ; 33       Discard original period
     PULA                        ; 32
     LDD     #FAKE_PERIOD        ; CC 3E 80 Load fake period
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store → no spark
+    STD     PERIOD_24X_RAM      ; FD 19 4C Store → no spark
     RTS                         ; 39
 
 CLEAR_SOFT_FLAG:
@@ -205,7 +217,7 @@ EXIT_NORMAL:
     ;--------------------------------------------------------------------------
     PULB                        ; 33       Restore original period
     PULA                        ; 32
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store real period
+    STD     PERIOD_24X_RAM      ; FD 19 4C Store real period
     RTS                         ; 39
 
 ;==============================================================================
@@ -251,10 +263,10 @@ EXIT_NORMAL:
 ;     LDAA    #$00                ; 0 degrees (TDC)
 ;     STAA    TIMING_ADVANCE      ; Store override
 ;     
-;     ; Continue with normal 3X period storage
+;     ; Continue with normal crank period storage
 ;     PULB
 ;     PULA
-;     STD     PERIOD_3X_RAM
+;     STD     DWELL_INTERMEDIATE
 ;     RTS
 ;
 ; This would be cleaner but requires:
@@ -293,7 +305,7 @@ EXIT_NORMAL:
 ;
 ; File Offset | Bytes      | Verified      | Purpose
 ; ------------|------------|---------------|-------------------------------
-; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x101E1     | FD 01 7B   | ✅ STD $017B      | HOOK POINT — dwell intermediate store
 ; 0x0C500     | 00 00 00...| ✅ zeros      | FREE SPACE for code
 ; 0x0199      | (varies)   | ✅ RAM        | Dwell time storage
 ;

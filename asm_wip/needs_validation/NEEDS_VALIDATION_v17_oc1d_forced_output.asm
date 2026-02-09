@@ -64,7 +64,7 @@ PA4_MASK        EQU $10         ; Bit 4 - OC4 (low speed fan)
 PA3_MASK        EQU $08         ; Bit 3 - OC5/IC4
 
 ; RPM Variables
-RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
+RPM_ADDR EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 LIMITER_FLAG    EQU $77F4       ; Runtime flags byte
 
 ; Threshold Constants - CORRECTED to 8-bit scaled
@@ -158,7 +158,7 @@ EXIT_CUT_ACTIVE:
 ;
 ; If this doesn't work, try:
 ;   - v16 TCTL1 method (less aggressive)
-;   - v33 Chr0m3 3X period injection (validated)
+;   - v33 Chr0m3 crank period injection (validated)
 ;
 ;==============================================================================
 ; WARNINGS
@@ -173,7 +173,7 @@ EXIT_CUT_ACTIVE:
 ;   - Not produce reliable spark cut if OC1 isn't firing fast enough
 ;   - Require firmware analysis to find safe OC1 timing
 ;
-; RECOMMENDED: Use v33 Chr0m3 3X period injection first
+; RECOMMENDED: Use v33 Chr0m3 crank period injection first
 ;              This method is for research/validation only
 ;
 ;==============================================================================

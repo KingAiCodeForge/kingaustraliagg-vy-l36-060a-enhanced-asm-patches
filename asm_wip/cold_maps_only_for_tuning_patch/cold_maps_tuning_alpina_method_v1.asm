@@ -2,7 +2,7 @@
 ; VY V6 COLD MAPS ONLY TUNING PATCH v1 - ALPINA/OEM METHOD
 ;==============================================================================
 ; Author: Jason King (kingaustraliagg)
-; Date: January 18, 2026 (Updated January 25, 2026)
+; Date: January 18, 2026 (Updated February 3, 2026)
 ; Status: 📋 CONCEPT/OVERVIEW DOCUMENT - See separate patches below
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
@@ -71,18 +71,60 @@
 ; ALPINA/OEM IMPLEMENTATION (verified from binary comparison)
 ;==============================================================================
 ;
+; VERIFIED FROM EXPORT COMPARISON (February 3, 2026):
+;   Stock M52TUB25 EU3 RHD:   7 zero tables (normal for any BMW bin)
+;   Alpina B3 3.3L Stroker: 34 zero tables (27 intentionally zeroed!)
+;
 ; Zero the warm maps, tune the cold maps:
 ;   - Cold/diagnostic maps are designed robust and conservative
 ;   - Force ECU to use simplified calculation path
 ;   - Tune 3-5 tables instead of 50+
 ;
-; ALPINA ZEROED THESE (BMW MS42):
-;   ❌ ip_iga_ron_98_pl_ivvt = ALL ZEROS (no RON98 timing)
-;   ❌ ip_iga_ron_91_pl_ivvt = ALL ZEROS (no RON91 timing)
-;   ❌ ip_iga_tco_2_is_ivvt  = ALL ZEROS (no warm temp timing)
-;   ❌ ip_maf_vo_1 to vo_7   = ALL ZEROS (7 of 8 VANOS VE tables)
+;------------------------------------------------------------------------------
+; ALPINA ZEROED TABLES - BY CATEGORY
+;------------------------------------------------------------------------------
 ;
+; ━━━ VANOS VE TABLES (7 of 8 zeroed) ━━━
+;   ip_maf_vo_1, vo_3, vo_4, vo_5, vo_6, vo_7, vo_8 = ALL ZEROS
+;   Only ip_maf_vo_2 remains active (mid-cam position)
+;   RESULT: Single VE table regardless of cam position
+;
+; ━━━ RON FUEL GRADE TIMING (both zeroed) ━━━
+;   ip_iga_ron_91_pl_ivvt = ALL ZEROS
+;   ip_iga_ron_98_pl_ivvt = ALL ZEROS
+;   RESULT: No fuel grade timing adaptation - tuner controls all
+;
+; ━━━ TEMPERATURE TIMING/INJECTION (5 zeroed) ━━━
+;   ip_ti_tco_1_is_ivvt, ip_ti_tco_2_is_ivvt = ALL ZEROS
+;   ip_ti_tco_2_pl_ivvt_1, ip_ti_tco_2_pl_ivvt_2 = ALL ZEROS
+;   ip_iga_tco_2_is_ivvt = ALL ZEROS
+;   RESULT: No temp-based timing changes - predictable behavior
+;
+; ━━━ IGNITION CORRECTIONS (7 zeroed) ━━━
+;   ip_iga_optm_dif, ip_iga_optm_tco_2, ip_iga_cor_cam_dif_ex,
+;   ip_iga_cor_cam_dif_in, ip_iga_cs_is, ip_iga_maf_n_knk_diag,
+;   ip_igab = ALL ZEROS
+;   RESULT: No ignition offsets - base timing only
+;
+; ━━━ CATALYST/EMISSIONS (3 zeroed) ━━━
+;   ip_fac_tqd_cat, ip_t_ch_puc_deacc, id_t_ch_ti_cat_var = ALL ZEROS
+;   RESULT: No emissions timing modifications
+;
+; ━━━ START OF INJECTION (2 zeroed) ━━━
+;   ip_soi_tco_2_is, ip_soi_tco_2_pl = ALL ZEROS
+;   RESULT: Fixed SOI timing
+;
+; ━━━ DIAGNOSTIC THRESHOLDS (3 zeroed) ━━━
+;   ip_thd_is_er_diag, ip_thd_at_er, ip_thd_mt_er = ALL ZEROS
+;   RESULT: Disabled some error detection
+;
+; ━━━ MISCELLANEOUS (5 zeroed) ━━━
+;   ip_dist_min, ip_n_vim_tia, ip_n_sp_add_cs,
+;   ip_ti_add_cop_step_2, kf_fak_van_kh = ALL ZEROS
+;
+;------------------------------------------------------------------------------
 ; ALPINA TUNED THESE (kept active):
+;------------------------------------------------------------------------------
 ;   ✅ ip_maf_1_diag__n__tps_av = PRIMARY airflow (tuned for 3.3L)
 ;   ✅ ip_iga_knk_diag          = PRIMARY timing (knock fallback)
 ;   ✅ ip_maf_vo_2              = ONLY VE table used (mid-cam)

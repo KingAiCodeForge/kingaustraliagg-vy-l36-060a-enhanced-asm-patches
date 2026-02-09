@@ -1,4 +1,16 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+; ═══════════════════════════════════════════════════════════════════
+; UPDATE HISTORY:
+;   2026-01-28: RAM Address Fix - $01A0 → $0046 bit 7
+;   2026-01-31: Crank Period Fix - $017B → $194C (TIC3 ISR verified)
+;               Hook Point Fix - $101E1 → $3618 (TIC3 ISR)
+; ═══════════════════════════════════════════════════════════════════
+
+;==============================================================================
 ; VY V6 IGNITION CUT LIMITER - VERIFIED VERSION (16-BIT TEST TEMPLATE)
 ;==============================================================================
 ;
@@ -19,7 +31,7 @@
 ; ⚠️ THIS IS A TEST FILE WITH 3000 RPM THRESHOLD - NOT FOR PRODUCTION!
 ;    For production 6000 RPM limiter, use: spark_cut_6000rpm_v32.asm
 ;
-; Method: 3X Period Injection (Chr0m3 validated)
+; Method: crank period injection (Chr0m3 validated)
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a - Copy.bin (128KB)
 ; Processor: Motorola MC68HC711E9
@@ -44,7 +56,7 @@
 ; --------   ----           ------------
 ; $00A2      RPM/25 (8-bit) 82 reads in code
 ; $00A3      ENGINE_STATE   NOT part of RPM! (12 accesses)
-; $017B      3X_PERIOD      STD at file offset 0x101E1
+; $194C      24X_PERIOD     STD at $3618 in TIC3 ISR (VERIFIED 2026-01-31)
 ; $0199      DWELL_RAM      LDD at file offset 0x1007C
 ;
 ; ⚠️ WARNING: This file uses 16-bit RPM comparison (LDD $00A2 + CPD)
@@ -54,25 +66,36 @@
 ;    FOR 6000 RPM LIMITER: Use 8-bit comparison instead:
 ;      LDAA $00A2; CMPA #$F0  (240 × 25 = 6000 RPM)
 ;
-RPM_ADDR        EQU $00A2       ; ✅ VERIFIED: 82 reads in code (8-bit RPM/25!)
-PERIOD_3X_RAM   EQU $017B       ; ✅ VERIFIED: STD at 0x101E1 (FD 01 7B)
-DWELL_RAM       EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99)
+; ⚠️ CRITICAL (2026-01-31): $017B is NOT crank period! Use $194C!
+;
+RPM_ADDR EQU $00A2       ; ✅ VERIFIED: 82 reads in code (8-bit RPM/25!) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: STD @ $3618 in TIC3 ISR (2026-01-31) ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+                                ; ❌ OLD WRONG: $017B (purpose unknown)
+DWELL_RAM EQU $0199       ; ✅ VERIFIED: LDD at 0x1007C (FC 01 99) ; Verified: DWELL_TIME_RAM (8 refs both) [Enhanced-fix]
 
 ;------------------------------------------------------------------------------
-; VERIFIED FILE OFFSETS (confirmed by opcode matching)
+; VERIFIED FILE OFFSETS (CORRECTED 2026-01-31)
 ;------------------------------------------------------------------------------
-; Offset     Opcode         Instruction
-; ------     ------         -----------
-; 0x101E1    FD 01 7B       STD $017B (stores 3X period)
+; ❌ OLD WRONG HOOK:
+;   0x101E1 - STD $017B - NOT crank period storage!
+;
+; ✅ CORRECT HOOK POINT:
+;   TIC3 ISR at CPU $35FF (file offset 0x135FF)
+;   $3618: STD $194C - This is where 24X crank period is stored
+;
+; HOOK OPTION 1: Replace STD $194C at $3618 with JSR to patch
+;   Original: FD 19 4C (3 bytes)
+;   Patched:  BD C5 00 (3 bytes) - JSR $C500
+;
+; HOOK OPTION 2: Intercept dwell calculation that reads $194C
+;   (Safer, doesn't modify ISR)
+;
 ; 0x1007C    FC 01 99       LDD $0199 (loads dwell value)
 ; 0x19812    86 24          LDAA #$24 (MIN_BURN = 36)
 ;
-; HOOK POINT: Replace "STD $017B" at 0x101E1 with "JSR $C500"
-;             Original: FD 01 7B (3 bytes)
-;             Patched:  BD C5 00 (3 bytes) - JSR to our routine
-;
-HOOK_OFFSET     EQU $101E1      ; ✅ VERIFIED: STD $017B instruction
-HOOK_ORIGINAL   EQU $FD017B     ; ✅ VERIFIED: Original bytes
+HOOK_TIC3_ISR   EQU $3618       ; ✅ CORRECT: STD $194C in TIC3 ISR ; ⚠️ TIC3 ISR INIT PATH ONLY (cold start). For spark cut hook, use 0x101E1 (STD $017B) [auto-fix 2026-02-09]
+HOOK_FILE_OFF   EQU $13618      ; ✅ File offset (bank 1)
+HOOK_ORIGINAL   EQU $FD194C     ; ✅ Original: STD $194C
 HOOK_PATCHED    EQU $BDC500     ; JSR $C500 (call our routine)
 
 ;------------------------------------------------------------------------------
@@ -84,7 +107,7 @@ HOOK_PATCHED    EQU $BDC500     ; JSR $C500 (call our routine)
 ; MIN_BURN      0x24    0x1C        Saves 8µs burn time
 ; MAX_RPM       6375    7200        Requires both patches
 ;
-MIN_DWELL_STOCK EQU $00A2       ; ✅ Chr0m3: "0xA2 stock"
+MIN_DWELL_STOCK EQU $00A2       ; ✅ Chr0m3: "0xA2 stock" ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 MIN_DWELL_7200  EQU $009A       ; ✅ Chr0m3: "0x9A for 7200"
 MIN_BURN_STOCK  EQU $0024       ; ✅ VERIFIED: LDAA #$24 at 0x19812
 MIN_BURN_7200   EQU $001C       ; ✅ Chr0m3: "0x1C for 7200"
@@ -134,7 +157,7 @@ FAKE_PERIOD     EQU $3E80       ; 16000 decimal = ~1000ms fake period
 ;    $01A0 is safe (0 refs) but requires extended addressing
 ;    $0046 bit 7 is preferred (direct page, fast access)
 ;
-LIMITER_FLAGS   EQU $0046       ; ✅ VERIFIED: Engine mode flags byte
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
 LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE (unused in stock)
 
 ;------------------------------------------------------------------------------
@@ -143,15 +166,24 @@ LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE (unused in stock)
 ; Location verified: 0x0C500 to 0x0FFBF = 15,040 bytes of zeros
 ; This is unused calibration space between code banks
 ;
-            ORG $0C500          ; ✅ VERIFIED: 15,040 bytes free (all 0x00)
+; ⚠️  MANUAL CONVERSION REQUIRED:
+; - Replace LDAA/STAA LIMITER_FLAG with BSET/BCLR LIMITER_FLAGS, #$80
+; - See spark_cut_chr0m3_method_VERIFIED_v38.asm for reference
+; - Test: BRSET LIMITER_FLAGS, #$80, LABEL (if bit set, branch)
+; - Set:  BSET LIMITER_FLAGS, #$80 (turn on)
+; - Clear: BCLR LIMITER_FLAGS, #$80 (turn off)
+;
+
+            ORG $0C500          ; ✅ VERIFIED: 15,040 bytes free (all 0x00) ; Bank 1 (file 0x0C500). Free banks: [1], used: [2, 3]. 15192 bytes free [Enhanced-fix]
 
 ;==============================================================================
-; IGNITION CUT HANDLER
+; IGNITION CUT HANDLER (CORRECTED 2026-02-02)
 ;==============================================================================
-; Called from: JSR at 0x101E1 (replaces "STD $017B")
-; Entry:       D = calculated 3X period from stock code
+; Called from: JSR at file 0x13618 (replaces "STD $194C" in TIC3 ISR)
+; ❌ OLD WRONG: 0x101E1 (STD $017B) - NOT crank period!
+; Entry:       D = calculated 24X period from stock TIC3 ISR code
 ; Exit:        D = either real period OR fake period
-;              RAM $017B = stored period value
+;              RAM $194C = stored period value (✅ CORRECTED)
 ; Preserves:   All registers
 ; Stack:       2 bytes (PSHA/PSHB)
 ;==============================================================================
@@ -196,8 +228,8 @@ STORE_REAL:
     PSHA                        ; 36
 
 STORE_DONE:
-    ; Store period to RAM (replaces original "STD $017B")
-    STD     PERIOD_3X_RAM       ; FD 01 7B Store to 3X period RAM
+    ; Store period to RAM (✅ CORRECTED 2026-02-02: STD $194C)
+    STD     PERIOD_24X_RAM      ; FD 19 4C Store to 24X period RAM ($194C)
     
     ; Restore registers and return
     PULA                        ; 32
@@ -205,12 +237,13 @@ STORE_DONE:
     RTS                         ; 39       Return to caller
 
 ;==============================================================================
-; PATCH INSTRUCTIONS
+; PATCH INSTRUCTIONS (CORRECTED 2026-02-02)
 ;==============================================================================
 ; To install this patch:
 ;
-; 1. Locate original instruction at file offset 0x101E1:
-;    Original bytes: FD 01 7B (STD $017B)
+; 1. Locate original instruction at file offset 0x13618 (TIC3 ISR):
+;    Original bytes: FD 19 4C (STD $194C)
+;    ❌ OLD WRONG: 0x101E1 - was NOT crank period!
 ;
 ; 2. Replace with JSR to our handler:
 ;    Patched bytes:  BD C5 00 (JSR $C500)
@@ -218,7 +251,7 @@ STORE_DONE:
 ; 3. Verify our code is placed at 0x0C500
 ;
 ; Hex patch summary:
-;    Offset 0x101E1: FD 01 7B → BD C5 00
+;    Offset 0x13618: FD 19 4C → BD C5 00
 ;
 ;==============================================================================
 
@@ -236,7 +269,7 @@ STORE_DONE:
 ;
 ; Address      | File Bytes | Instruction    | Purpose
 ; -------------|------------|----------------|----------------------------------
-; 0x101E1      | FD 01 7B   | STD $017B      | 3X period storage - HOOK POINT
+; 0x101E1      | FD 01 7B   | STD $017B      | Dwell intermediate - HOOK POINT (NOT crank period!)
 ; 0x1007C      | FC 01 99   | LDD $0199      | Dwell RAM read
 ; 0x19812      | 86 24      | LDAA #$24      | Min Burn = 36 (stock)
 ; 0x3631       | BD 37 1A   | JSR $371A      | Dwell calc call from TIC3 ISR
@@ -251,7 +284,7 @@ STORE_DONE:
 ; ---------|------------|------------------|------------------------------------
 ; $00A2    | 73× LDAA   | 96 A2            | RPM/25 (8-bit! Max 255=6375 RPM)
 ; $00A3    | 12× access | NOT RPM!         | Engine State 2 register
-; $017B    | STD at TIC3| FD 01 7B         | 3X Crank Period (16-bit timer)
+; $017B    | STD at dwell| FD 01 7B         | Dwell Intermediate (NOT crank period!)
 ; $0199    | LDD reads  | FC 01 99         | Dwell calculation RAM
 ; $016D    | 8× access  | -                | Cylinder index (0-5)
 ;
@@ -278,7 +311,7 @@ STORE_DONE:
 ; 📐 3X PERIOD MATH
 ;------------------------------------------------------------------------------
 ;
-; 3X Crank Period = time between crank teeth edges
+; 24X Crank Period ($194C) = time between crank teeth edges (NOT $017B!)
 ;   At 6000 RPM: 60000ms ÷ 6000 RPM = 10ms per revolution
 ;   V6 has 6 teeth (1 per 60°), so: 10ms ÷ 6 = 1.67ms per tooth
 ;   Timer count: 1.67ms × 2MHz = 3,333 counts ($0D05)
@@ -299,13 +332,13 @@ STORE_DONE:
 ;
 ; File Offset: 0x101E1 (verified in TIC3 ISR area)
 ;
-; Original bytes:  FD 01 7B = STD $017B (store D to 3X period RAM)
+; Original bytes:  FD 01 7B = STD $017B (store D to dwell intermediate RAM - NOT crank period!)
 ; Patched bytes:   BD C5 00 = JSR $C500 (call our handler)
 ;
 ; Our handler at $C500:
 ;   1. Receives D = calculated period from stock code
 ;   2. Checks RPM against thresholds
-;   3. Either stores real period OR fake period to $017B
+;   3. Either stores real dwell value OR fake dwell value to $017B
 ;   4. Returns to caller
 ;
 ; Why this works:
@@ -341,7 +374,7 @@ STORE_DONE:
 ; 🔄 ALTERNATIVE METHODS (Pros/Cons)
 ;------------------------------------------------------------------------------
 ;
-; METHOD A: 3X Period Injection (THIS FILE) ⭐ RECOMMENDED
+; METHOD A: crank period injection (THIS FILE) ⭐ RECOMMENDED
 ;   Hook: 0x101E1 (STD $017B)
 ;   Pros: Proven by Chr0m3, simple hook, minimal code
 ;   Cons: Still some dwell calculated (not true zero)

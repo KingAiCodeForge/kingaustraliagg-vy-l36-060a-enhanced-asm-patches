@@ -1,4 +1,33 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+;==============================================================================
 ; VY V6 SPEED-DENSITY FALLBACK CONVERSION v1
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
@@ -18,11 +47,26 @@
 ;
 ; 🏁 PROFESSIONAL TUNER PHILOSOPHY: "Zero the Complex, Tune the Simple"
 ;
-; ALPINA B3 3.3L STROKER STRATEGY (M52TUB33):
-;   - ZEROED 7 of 8 VANOS VE tables (ip_maf_vo_1-7 = ALL ZEROS)
-;   - ZEROED RON91/RON98 timing tables
-;   - TUNED ip_maf_1_diag (fallback) as PRIMARY airflow table
-;   - Result: 3-5 tables to tune instead of 50+
+; ALPINA B3 3.3L STROKER STRATEGY - VERIFIED (February 3, 2026):
+;
+;   Binary Comparison:
+;     Stock M52TUB25 EU3:   7 zero tables (normal)
+;     Alpina B3 3.3L:      34 zero tables (27 intentionally zeroed!)
+;
+;   ALPINA ZEROED (key categories):
+;     ❌ 7/8 VANOS VE tables (ip_maf_vo_1, vo_3-vo_8)
+;     ❌ RON91/RON98 timing tables (both zeroed)
+;     ❌ Temperature timing corrections (5 tables)
+;     ❌ Ignition correction tables (7 tables)
+;     ❌ Catalyst/emissions tables (3 tables)
+;
+;   ALPINA KEPT ACTIVE:
+;     ✅ ip_maf_1_diag__n__tps_av = PRIMARY airflow (Alpha-N)
+;     ✅ ip_iga_knk_diag = PRIMARY timing
+;     ✅ ip_maf_vo_2 = SINGLE VE table (mid-cam)
+;
+;   Result: 3-5 tables to tune instead of 50+
+;   See MAFLESS_VARIANTS_COMPARISON.md for complete list.
 ;
 ; OSE 12P PARALLEL DESIGN (VL400):
 ;   NOTE: OSE = "Open Source ECM" for VN-VS Commodore (ECU 1227808)
@@ -104,16 +148,18 @@
 ; ⚠️ CRITICAL CORRECTION: 0x56D4 is a DTC ENABLE mask, NOT a failure flag!
 ;    To enable MAFless fallback, set 0x56F3 bit 6 = 1
 
-; DTC Mask Bytes (ROM calibration data)
-M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC)
+; DTC Mask Bytes (ROM calibration data) - FEBRUARY 2026 VERIFIED VALUES
+M32_DTC_ENABLE      EQU $56D4   ; KKMASK4 bit 6 = M32 DTC logging (stock=0xCC, set 0x8C to disable)
 M32_CEL_MASK        EQU $56DE   ; Check Trans Light bit 6 = M32 CEL (stock=0xC0)
-M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00) ← KEY!
+M32_ACTION_MASK     EQU $56F3   ; KKACT3 bit 6 = M32 action enable (stock=0x00, set 0x40 to enable)
+HOL_DISABLE_M32     EQU $577C   ; Hot Open Loop disable on M32 (set 0x00 to keep enabled)
+AE_DISABLE_M32      EQU $577D   ; Accel Enrichment disable on M32 (set 0x00 to keep enabled)
 
 ; RAM Variables (BARO_RAM needs validation)
-BARO_RAM            EQU $0199   ; Barometric pressure (need to confirm)
+BARO_RAM EQU $0199   ; Barometric pressure (need to confirm) ; Verified: DWELL_TIME_RAM (8 refs both) [Enhanced-fix]
 MAP_RAM             EQU $019B   ; MAP sensor value (DOES NOT EXIST - need to create!)
-IAT_RAM             EQU $01A0   ; Intake Air Temperature (UNVERIFIED)
-RPM_RAM             EQU $00A2   ; Engine RPM (VERIFIED)
+IAT_RAM             EQU $01A0   ; ⚠️  UNVERIFIED - address needs confirmation   ; ⚠️  UNVERIFIED - address needs confirmation   ; ⚠️  UNVERIFIED - address needs confirmation   ; Intake Air Temperature (UNVERIFIED) ; ⚠️ BINARY: 0 refs in stock! ZERO refs in stock binary - NOT a valid RAM variable [auto-fix 2026-02-09]
+RPM_RAM EQU $00A2   ; Engine RPM (VERIFIED) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 VE_TABLE_BASE       EQU $6D1D   ; Repurpose "Max Airflow Vs RPM" as VE table
 
 ;------------------------------------------------------------------------------
@@ -145,7 +191,7 @@ ADR7                EQU $1037   ; A/D Result Register 7 (PE7/AN7)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG - NOT in verified free space!
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; SPEED-DENSITY AIRFLOW CALCULATION ROUTINE
@@ -154,7 +200,8 @@ ADR7                EQU $1037   ; A/D Result Register 7 (PE7/AN7)
 ;
 ; Entry: None (reads sensors internally)
 ; Exit:  D register = calculated airflow (g/s × 128)
-;        RAM $017B = stored airflow value
+;        ⚠️ WARNING (2026-02-02): $017B is DWELL INTERMEDIATE, NOT airflow!
+;        TODO: Find actual airflow RAM address for storage
 ;
 ; Stack usage: 6 bytes
 ;==============================================================================
@@ -290,7 +337,10 @@ SIMPLE_VE_LOOKUP:
     ; Result in D register = calculated airflow (scaled)
     
     ; Step 6: Store and return
-    STD     $017B               ; Store calculated airflow
+    ; ⚠️ WARNING (2026-02-02): $017B is DWELL INTERMEDIATE, NOT airflow!
+    ; TODO: Find actual airflow RAM address. Using $017B will BREAK IGNITION!
+    ; STD     $017B               ; WRONG - DO NOT USE!
+    ; STD     $????               ; TODO: Replace with actual airflow RAM
     
     PULX
     PULA

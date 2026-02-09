@@ -106,6 +106,35 @@
 | RORA | 0x46 | INH | Rotate Right A |
 | RORB | 0x56 | INH | Rotate Right B |
 
+### Bit Manipulation Instructions
+
+| Mnemonic | Hex | Mode | Description |
+|----------|-----|------|-------------|
+| BSET | 0x14 | DIR | Set Bits in Memory, direct (M OR mask → M) |
+| BSET | 0x1C | IND,X | Set Bits in Memory, indexed |
+| BCLR | 0x15 | DIR | Clear Bits in Memory, direct (M AND NOT mask → M) |
+| BCLR | 0x1D | IND,X | Clear Bits in Memory, indexed |
+| BRSET | 0x12 | DIR | Branch if Bit(s) Set, direct |
+| BRSET | 0x1E | IND,X | Branch if Bit(s) Set, indexed |
+| BRCLR | 0x13 | DIR | Branch if Bit(s) Clear, direct |
+| BRCLR | 0x1F | IND,X | Branch if Bit(s) Clear, indexed |
+
+### Miscellaneous Single-Byte Opcodes (Missing from original dis68hc11 tables)
+
+| Mnemonic | Hex | Mode | Description |
+|----------|-----|------|-------------|
+| NOP | 0x01 | INH | No Operation (2 cycles) |
+| CBA | 0x11 | INH | Compare B to A (A - B, flags only) |
+| CLC | 0x0C | INH | Clear Carry Flag (same as ANDA #$FE on CCR) |
+| NEGA | 0x40 | INH | Negate A (two's complement) |
+| NEGB | 0x50 | INH | Negate B (two's complement) |
+| NEG | 0x70 | EXT | Negate Memory, extended |
+| NEG | 0x60 | IND,X | Negate Memory, indexed |
+| COMA | 0x43 | INH | Complement A (one's complement) |
+| COMB | 0x53 | INH | Complement B (one's complement) |
+| COM | 0x73 | EXT | Complement Memory, extended |
+| COM | 0x63 | IND,X | Complement Memory, indexed |
+
 ### Branch Instructions
 
 | Mnemonic | Hex | Condition | Description |
@@ -131,6 +160,8 @@
 | BVS | 0x29 | V=1 | Branch if Overflow Set |
 | BRSET | 0x12 | DIR | Branch if Bit(s) Set, direct |
 | BRSET | 0x1E | IND,X | Branch if Bit(s) Set, indexed |
+| BRCLR | 0x13 | DIR | Branch if Bit(s) Clear, direct |
+| BRCLR | 0x1F | IND,X | Branch if Bit(s) Clear, indexed |
 
 ### Compare Instructions
 
@@ -355,7 +386,7 @@ BCS   skip           ; Branch if below (25=BCS)
 
 **16-bit Period Load:**
 ```asm
-LDD   $017B          ; Load PERIOD_3X_RAM (DC=LDD dir)
+LDD   $017B          ; Load DWELL_INTERMEDIATE (DC=LDD dir)
 CPD   #$00C8         ; Compare to threshold (1A 83=CPD imm, Page 1A)
 ```
 

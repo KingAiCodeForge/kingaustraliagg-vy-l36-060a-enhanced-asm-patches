@@ -1,3 +1,8 @@
+;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
 ; ============================================================================
 ; VY V6 MAFless Alpha-N TPS Fallback (v25 - Gearhead_EFI TPI Method)
 ; ============================================================================
@@ -5,10 +10,28 @@
 ; Inspired by: Gearhead_EFI 86-89 TPI bins (bin/86tpi.bin, bin/86TPI32.BIN)
 ; References: Topic 3892 - VS 3 MAFless Tune, TPI XDF definitions
 ; Author: Adapted from GM TPI/TBI speed-density concepts
-; Date: 2026-01-15
+; Date: 2026-01-15 (Updated February 3, 2026)
 ; Status: UNTESTED - Requires TPS calibration and VE table tuning
 ; ============================================================================
 ;
+; ALPINA "ZERO COMPLEX, TUNE SIMPLE" - CROSS-PLATFORM VALIDATION
+; ============================================================================
+;
+; BINARY COMPARISON (February 3, 2026):
+;   Stock BMW M52TUB25:   7 zero tables (normal)
+;   Alpina B3 3.3L:      34 zero tables (27 intentionally zeroed!)
+;
+; Alpina uses ip_maf_1_diag__n__tps_av (TPS × RPM) as PRIMARY airflow table
+; after zeroing 7 of 8 VANOS VE tables. Same concept as TPI Alpha-N!
+;
+; Key Alpina zeroed tables (matching TPI philosophy):
+;   ❌ 7/8 VANOS VE tables → Forces single VE path
+;   ❌ RON91/RON98 timing → Tuner controls all timing
+;   ❌ Temp timing corrections → Predictable at all temps
+;
+; See MAFLESS_VARIANTS_COMPARISON.md for complete list.
+;
+; ============================================================================
 ; ALPHA-N CONCEPT:
 ; - Engine load estimated from TPS position + RPM
 ; - No MAF sensor required (delete or ignore)
@@ -33,14 +56,28 @@
 ;   - Has MAF sensor input (need to force failure or ignore)
 ;
 ; IMPLEMENTATION STRATEGY:
-; 1. Force M32 MAF Failure flag (@ $56D4, bit 6)
-; 2. Override MAF airflow with TPS-based calculation
-; 3. Use 2D TPS vs RPM table for load estimation
-; 4. Compensate for IAT/BARO changes
+; 1. Set $56F3 = 0x40 (enable M32 fallback action)
+; 2. Disconnect MAF sensor (or ground signal wire)
+; 3. ECU uses fallback table at $7F2A (TPS × RPM)
+; 4. Compensate for IAT/BARO changes (O2 closed-loop handles most)
+;
+; *** FEBRUARY 2026 UPDATE ***
+; Stock fallback table at $7F2A is LIMITED:
+;   - Only 7×5 (35 bytes): 0-50% TPS, 0-4800 RPM
+;   - NO WOT coverage (>50% TPS)
+;   - NO high RPM coverage (>4800 RPM)
+;   - For full TPI-style Alpha-N, need to relocate table (see v4)
+;
+; To activate fallback mode:
+;   $56D4 = 0x8C (disable M32 DTC logging)
+;   $56F3 = 0x40 (enable M32 fallback ACTION - stock is 0x00!)
+;   $577C = 0x00 (keep Hot Open Loop enabled)
+;   $577D = 0x00 (keep Accel Enrichment enabled)
+;   Then disconnect MAF sensor
 ;
 ; ============================================================================
 
-        ORG     $14468          ; Verified free space region
+        ORG $C468          ; Verified free space region ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ; ============================================================================
 ; Constants and Addresses
@@ -52,18 +89,18 @@ MAF_FAILURE_BIT EQU     $40     ; Bit 6 = MAF failure
 
 ; TPS Input
 TPS_RAW_ADC     EQU     $1031   ; A/D Converter Result 1 (TPS input)
-TPS_VOLTAGE_RAM EQU     $00B0   ; Scaled TPS voltage (0-5V, example address)
-TPS_PERCENT_RAM EQU     $00B1   ; TPS percentage (0-100%, calculated)
+TPS_VOLTAGE_RAM EQU $00B0   ; Scaled TPS voltage (0-5V, example address) ; Verified: MAP_OR_TPS_RAW (7 refs Enhanced. STOCK uses this!) [Enhanced-fix]
+TPS_PERCENT_RAM EQU $00B1   ; TPS percentage (0-100%, calculated) ; Verified: TPS_PERCENT (45 refs both. STOCK uses this!) [Enhanced-fix]
 
 ; RPM Input
 ; ⚠️ IMPORTANT: $00A2 stores RPM/25 as 8-bit! NOT 16-bit RPM!
 ;    Actual RPM = value × 25. Max = 255 × 25 = 6375 RPM
 ;    $00A3 = Engine State 2 (12 accesses) - NOT RPM low byte!
-ENGINE_RPM      EQU     $00A2   ; RPM/25 (8-bit, verified, 82 references)
+ENGINE_RPM EQU $00A2   ; RPM/25 (8-bit, verified, 82 references) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 ; ENGINE_RPM_LO   EQU     $00A3   ; ❌ WRONG! This is Engine State 2!
 
 ; Airflow Output
-CALCULATED_AIRFLOW EQU  $0180   ; Calculated airflow (G/S) output to fuel calc
+CALCULATED_AIRFLOW EQU $0180   ; Calculated airflow (G/S) output to fuel calc ; Verified: CALC_AIRFLOW_REF (1 ref both) [Enhanced-fix]
 DEFAULT_AIRFLOW EQU     $7F1B   ; Minimum Airflow For Default Air (XDF)
 
 ; IAT/BARO Compensation
@@ -256,7 +293,7 @@ override_maf_airflow:
 ; This table must be calibrated on dyno with wideband O2 sensor
 ; Initial values based on L36 3.8L V6 displacement and VE estimates
 
-        ORG     $22300          ; Alpha-N table storage
+        ORG $A300          ; Alpha-N table storage ; FIXED: $22300 is a FILE OFFSET, not CPU addr. CPU=$A300 bank 4 (file 0x22300) [Enhanced-fix]
 
 alpha_n_table:
         ; Columns: RPM (500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000)
@@ -300,7 +337,7 @@ alpha_n_table:
 ; TPS Calibration Constants
 ; ============================================================================
 
-        ORG     $22400          ; TPS calibration data
+        ORG $A400          ; TPS calibration data ; FIXED: $22400 is a FILE OFFSET, not CPU addr. CPU=$A400 bank 4 (file 0x22400) [Enhanced-fix]
 
 tps_cal_min_voltage:
         FCB     $05             ; 0.5V = 0% TPS (closed throttle)

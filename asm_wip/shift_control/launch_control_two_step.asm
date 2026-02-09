@@ -1,3 +1,27 @@
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
 ;==============================================================================
 ; VY V6 IGNITION CUT v7 - LAUNCH CONTROL TWO-STEP
 ;==============================================================================
@@ -25,8 +49,8 @@
 ;
 ; How It Works:
 ;   1. Monitor clutch switch input (needs hardware connection)
-;   2. If clutch pressed + RPM > 3500: Inject fake 3X period (spark cut)
-;   3. If clutch released + RPM > 6300: Inject fake 3X period (main limiter)
+;   2. If clutch pressed + RPM > 3500: Inject fake crank period (spark cut)
+;   3. If clutch released + RPM > 6300: Inject fake crank period (main limiter)
 ;   4. Creates "two-step" behavior: 3500 RPM launch, 6300 RPM main
 ;
 ; Hardware Required:
@@ -44,8 +68,10 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM address
-PERIOD_3X_RAM       EQU $017B       ; 3X period storage
+RPM_ADDR EQU $00A2       ; RPM address ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+; ⚠️ CORRECTED 2026-02-02: $017B is DWELL INTERMEDIATE, NOT crank period!
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: 24X crank period storage (TIC3 ISR) ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+; DWELL_INTERMEDIATE     EQU $017B       ; ❌ OLD WRONG - NOT crank period!
 CLUTCH_SWITCH       EQU $1008       ; Port D data register (HC11 PORTD = $1008, NOT $1004!)
 
 ; LAUNCH CONTROL THRESHOLDS
@@ -57,14 +83,39 @@ MAIN_RPM_HIGH       EQU $1770       ; 6000 RPM (main limiter activation - SAFE)
 MAIN_RPM_LOW        EQU $175C       ; 5980 RPM (hysteresis)
 
 FAKE_PERIOD         EQU $3E80       ; 16000 = 1000ms fake period
-LIMITER_STATE       EQU $01A0       ; State flag (0=off, 1=launch, 2=main)
+LIMITER_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_BIT     EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+; ⚠️  MANUAL CONVERSION REQUIRED:
+; - Replace LDAA/STAA LIMITER_FLAG with BSET/BCLR LIMITER_FLAGS, #$80
+; - See spark_cut_chr0m3_method_VERIFIED_v38.asm for reference
+; - Test: BRSET LIMITER_FLAGS, #$80, LABEL (if bit set, branch)
+; - Set:  BSET LIMITER_FLAGS, #$80 (turn on)
+; - Clear: BCLR LIMITER_FLAGS, #$80 (turn off)
+;
+
+; ⚠️  MANUAL CONVERSION REQUIRED:
+; - Replace LDAA/STAA LIMITER_FLAG with BSET/BCLR LIMITER_FLAGS, #$80
+; - See spark_cut_chr0m3_method_VERIFIED_v38.asm for reference
+; - Test: BRSET LIMITER_FLAGS, #$80, LABEL (if bit set, branch)
+; - Set:  BSET LIMITER_FLAGS, #$80 (turn on)
+; - Clear: BCLR LIMITER_FLAGS, #$80 (turn off)
+;
+
+; ⚠️  MANUAL CONVERSION REQUIRED:
+; - Replace LDAA/STAA LIMITER_FLAG with BSET/BCLR LIMITER_FLAGS, #$80
+; - See spark_cut_chr0m3_method_VERIFIED_v38.asm for reference
+; - Test: BRSET LIMITER_FLAGS, #$80, LABEL (if bit set, branch)
+; - Set:  BSET LIMITER_FLAGS, #$80 (turn on)
+; - Clear: BCLR LIMITER_FLAGS, #$80 (turn off)
+;
+
+            ORG $C468          ; Free space VERIFIED (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; TWO-STEP LAUNCH CONTROL HANDLER
@@ -111,22 +162,22 @@ CLUTCH_PRESSED:
     BRA     DEACTIVATE_LIMITER
 
 ACTIVATE_LAUNCH_LIMITER:
-    LDD     #FAKE_PERIOD        ; Load fake 3X period
-    STD     PERIOD_3X_RAM       ; Store (cuts spark)
+    LDD     #FAKE_PERIOD        ; Load fake period
+    STD     PERIOD_24X_RAM      ; Store (cuts spark)
     LDAA    #$01
     STAA    LIMITER_STATE       ; State = launch active
     BRA     EXIT_HANDLER
 
 ACTIVATE_MAIN_LIMITER:
     LDD     #FAKE_PERIOD
-    STD     PERIOD_3X_RAM
+    STD     PERIOD_24X_RAM
     LDAA    #$02
     STAA    LIMITER_STATE       ; State = main active
     BRA     EXIT_HANDLER
 
 DEACTIVATE_LIMITER:
     CLR     LIMITER_STATE       ; State = off
-    ; Don't modify PERIOD_3X_RAM, let stock code handle it
+    ; Don't modify DWELL_INTERMEDIATE, let stock code handle it
     
 EXIT_HANDLER:
     PULX

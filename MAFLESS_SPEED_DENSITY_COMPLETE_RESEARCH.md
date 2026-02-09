@@ -1103,7 +1103,7 @@ This is virgin territory - you'd be pioneering!
 **Crank Reference:**
 ```
 Issue: VT PCM needs RPM signal to stay alive
-Solution: Feed 3X crank reference to PCM (not just O2 sensor wire!)
+Solution: Feed 24X crank reference to PCM (not just O2 sensor wire!)
 
 Quote: "i hooked up the crank reference wire instead of the 02 wire 
 (come on there both violet!!) lol now i have an rpm signal"
@@ -3705,5 +3705,5 @@ c_conf_ff = 1: Enabled
 | 2026-01-13 | Initial document creation |
 
 For VY V6 spark cut assembly patches, see: `SPARK_CUT_RESEARCH.md`  
-For 3X period injection theory, see: `PCM_ARCHIVE_RESEARCH_FINDINGS.md`
+For crank period injection theory, see: `PCM_ARCHIVE_RESEARCH_FINDINGS.md`
 all the above needs double checking for the right xdfs or other ways this would work 100 percent. 

@@ -77,7 +77,7 @@ made by me and a computer robot.
 **CRITICAL FINDING:** TIC3 ISR is at **$35FF** (file offset 0x155FF), NOT $2BAC!  
 The vector at $200F is the proper entry point for Input Capture 3 (crank/spark timing).
 
-**Action Required:** Disassemble $35FF to find 16-bit RPM and PERIOD_3X storage.
+**Action Required:** Disassemble $35FF to find 16-bit RPM and PERIOD_24X storage (crank period at $194C).
 
 ### TIC3 ISR Analysis (File 0x135FF, CPU $35FF)
 
@@ -106,7 +106,7 @@ $361B:  BRA $3633        ; Branch ahead
 ```
 
 **Candidate Addresses:**
-- **PERIOD_3X_16BIT:** `$194C` (16-bit crank period)
+- **PERIOD_24X_16BIT:** `$194C` (16-bit crank period)
 - **RPM_CALC_TEMP:** `$1492` (16-bit intermediate)
 - **PERIOD_FLAGS:** `$194A` (calculation control flags)
 
@@ -530,7 +530,7 @@ Result: dwell + burn = 0 → no spark
 
 ### Extended RAM ($0100-$03FF)
 
-- **0x017B**: ~~3X period storage~~ **DWELL INTERMEDIATE** (NOT crank period! - CORRECTED 2026-01-31)
+- **0x017B**: ~~crank period storage~~ **DWELL INTERMEDIATE** (NOT crank period! - CORRECTED 2026-01-31)
 - **0x194C**: **24X Crank Period** (ACTUAL crank period storage - verified in TIC3 ISR)
 - **0x01xx-0x02xx**: Timer/calculation scratch space
 - **0x03xx**: Stack area
@@ -645,7 +645,7 @@ INJECTOR_PW_RAM     EQU $0153       ; 🔬 THEORETICAL Jan 27 2026 - UNTESTED!
 
 | Address | Purpose | Evidence | XDF Status |
 |---------|---------|----------|------------|
-| $0178 | Secondary 3X period storage | STD at $363E in TIC3 ISR | ❌ Not in XDF |
+| $0178 | Secondary crank period storage | STD at $363E in TIC3 ISR | ❌ Not in XDF |
 | $017D | Period calculation result | STAA $017D in TIC3 ISR | ❌ Not in XDF |
 | $016D | Cylinder index counter | LDAB $016D in TIC3 ISR | ❌ Not in XDF |
 | $01B3 | Previous TIC3 capture value | LDD $01B3 in TIC3 ISR | ❌ Not in XDF |

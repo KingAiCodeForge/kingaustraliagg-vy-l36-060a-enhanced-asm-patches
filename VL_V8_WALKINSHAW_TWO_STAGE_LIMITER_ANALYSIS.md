@@ -494,7 +494,97 @@ SHIFT_DONE:
 
 ---
 
-## 11. Conclusion
+## 11. Cross-Reference: OSE 11P and 12P Limiter Implementations
+
+> **Source:** PCMHacking Topic 3798, Topic 7922, and binary pattern analysis
+
+### OSE Platform Limiter Comparison
+
+The Open Source ECU (OSE) project developed custom firmware for Delco 424 and 808 ECUs, implementing different limiter strategies based on hardware capabilities:
+
+| Feature | VL $5D (Stock 808) | OSE 12P (808) | OSE 11P (424) | VY Stock |
+|---------|-------------------|---------------|---------------|----------|
+| **ECU Hardware** | Delco 1227808 | Delco 1227808 | Delco 1227424 | Flash PCM |
+| **Spark Control** | External timer IC | External timer IC | CPU-based TIO | CPU-based TIO |
+| **Limiter Method** | Fuel cut hysteresis | TCTL1 toggle | Dwell starvation | Fuel cut only |
+| **Hysteresis** | ✅ 94 RPM band | ❌ None | ✅ ~100 RPM | ❌ None |
+| **Soft Zone** | ❌ None | ❌ None | ✅ 150 RPM retard | ❌ None |
+| **Delay Timer** | ✅ 0.1 sec | ❌ None | ❌ Instant | ❌ None |
+| **Sound Character** | "Valve bounce" | Sharp toggle | Progressive | Harsh stutter |
+
+### Why OSE 12P Can't Have Spark Cut
+
+From antus (Topic 2518):
+> "12P doesnt have spark cut because the '808 family of ecus has a **hardware chip driving spark** which fires with the amount of timing it was last asked to deliver automatically when its running."
+
+The 808 ECU uses an **external timer IC** that continues firing spark pulses even when the main CPU stops commanding them. The only workaround is BennVenn's TCTL1 master enable toggle at $3FFC.
+
+### Why OSE 11P Can Have Spark Cut
+
+From antus (Topic 2518):
+> "'424 based computers (and later, such as all the1's enhanced bins use) **moved spark on to the main CPU** so 11P and these operating systems can with software mods."
+
+The 424 ECU has **CPU-integrated spark control** via the Timer Input Capture (TIO) system. This allows software to directly control dwell time, enabling spark cut by reducing dwell below the ignition threshold.
+
+### OSE 11P Two-Stage Limiter (Forum-Derived)
+
+Based on VL400's forum descriptions (Topic 3798), OSE 11P implements:
+
+1. **Spark Cut Enable Flag** - Separate enable for Econ and Power modes
+2. **Soft Zone** - Progressive spark retard ~150 RPM before hard cut
+3. **Hard Cut** - Dwell reduced to 200µs (too short to charge coil)
+4. **Return Hysteresis** - ~100 RPM band below cut threshold
+5. **EST Error Bypass** - DTC 41/42 suppression during spark cut
+
+**VL400 Quote (Topic 3798):**
+> "Dwell is set to 200us so cant ignite and keeps things happy. It also disables some of the EST error logic only during spark cut so no code 41/42 errors are logged."
+
+### OSE 12P TCTL1 Spark Cut (BennVenn Method)
+
+From Topic 7922, BennVenn discovered a hardware workaround for 808's external timer IC:
+
+```
+$3FFC Bit 1 = Master Timer Enable/Disable
+- Setting bit HIGH = No EST pulse output (spark cut)
+- Setting bit LOW = Normal EST pulse output
+```
+
+**BennVenn Quote:**
+> "Bit 1 at $3FFC is the master timer enable disable bit. Setting the bit high will not output an EST pulse."
+
+**Limitation:** Must toggle bit every other reference pulse to prevent bypass mode triggering.
+
+### VL V8 vs OSE 11P Limiter Architecture
+
+| Feature | VL $5D | OSE 11P | Purpose |
+|---------|--------|---------|---------|
+| **High Threshold** | KFCORPMH (5617 RPM) | Upper RPM (~5800) | Hard cut activation |
+| **Low Threshold** | KFCORPML (5523 RPM) | Return RPM (~5700) | Resume threshold |
+| **Hysteresis Band** | 94 RPM | ~100 RPM | Prevents oscillation |
+| **Soft Zone** | ❌ None | ✅ 150 RPM | Progressive power reduction |
+| **Method** | Fuel cut | Spark cut (dwell) | Combustion control |
+| **Delay** | ✅ 0.1 sec | ❌ Instant | False trigger prevention |
+
+**Key Insight:** VL $5D uses **fuel cut with hysteresis** (similar to BMW DFCO), while OSE 11P uses **spark cut with soft zone** (similar to BMW ignition cut limiter). Both achieve smooth limiter sound through different mechanisms.
+
+### Applying to VY V6
+
+For VY V6, the **OSE 11P dwell method** is most applicable because:
+
+1. ✅ VY uses CPU-based spark control (same as 424)
+2. ✅ Dwell can be manipulated via calibration or code patch
+3. ✅ Same MC68HC11 instruction set
+4. ✅ No external timer IC to bypass
+
+**Required VY patches:**
+- Find dwell calculation routine
+- Inject code to force 200-300µs dwell when RPM > limit
+- Add soft zone with progressive timing retard
+- Bypass EST error detection during spark cut
+
+---
+
+## 12. Conclusion
 
 The VL V8 Walkinshaw (1988 Delco 808) implements a **BMW MS43-style two-stage fuel cutoff limiter with 94 RPM hysteresis**, despite being 13+ years older than the VY V6 (2001-2004 HC11) which only has a simple single-threshold limiter.
 

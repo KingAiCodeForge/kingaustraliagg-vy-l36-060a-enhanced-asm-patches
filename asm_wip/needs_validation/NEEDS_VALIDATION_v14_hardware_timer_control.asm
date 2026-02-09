@@ -96,7 +96,7 @@ OC3_SET         EQU %00110000   ; 11 = Set PA5 on OC3 match (HIGH)
 OC3_MASK        EQU %11001111   ; Mask to clear OC3 mode bits
 
 ; RPM Variables
-RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!)
+RPM_ADDR EQU $00A2       ; 8-BIT RPM/25 (NOT 16-bit!) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
 LIMITER_FLAG    EQU $77F4       ; Flags byte
 
 ; Thresholds - CORRECTED to 8-bit scaled
@@ -250,7 +250,7 @@ COMBINED_EXIT:
 ;   1. TCTL1 only (v16 method)
 ;   2. OC1M only (v17 method)
 ;   3. Combined approaches
-;   4. Compare with Chr0m3 3X period method
+;   4. Compare with Chr0m3 crank period method
 ;
 ; Equipment needed:
 ;   - Oscilloscope (4-channel preferred)

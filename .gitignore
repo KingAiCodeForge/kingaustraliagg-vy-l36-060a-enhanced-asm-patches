@@ -2,7 +2,9 @@
 bin_patch_test/
 
 # Development Tools (local only - not for GitHub)
-tools/
+tools/*
+# Allow the HC11 bank splitter script (the tool that generates the bank splits)
+!tools/split_and_disassemble.py
 priority_analysis/
 
 # Analysis scripts (generated during RAM mapping)
@@ -22,6 +24,15 @@ spi_adc_mapping_*.json
 68HC11_Reference/udis/
 68HC11_Reference/capstone_m680x/
 68HC11_Reference/PIS/
+
+# Converted PDF→MD reference docs (too large for GitHub, generated locally)
+68HC11_Reference/AN432.md
+68HC11_Reference/M68HC11ERG.md
+68HC11_Reference/M68HC11RM.md
+68HC11_Reference/M68HC11RM_Reference_Manual.md
+
+# WIP spark cut variant (not ready for GitHub)
+asm_wip/spark_cut/spark_cut_11p_style_v42.asm
 
 # Local-only working documents
 VERIFIED_ADDRESSES_SUMMARY.md
@@ -435,3 +446,54 @@ DEEP_DIVE_INVESTIGATION_TARGETS.md
 # BANK_SWITCHING_AND_ISR_ANALYSIS.md - REMOVED FROM IGNORE (now pushed to GitHub)
 SPARK_CUT_PATCH_ANALYSIS.md
 icv_iac_delete_patch.md
+
+# Windows thumbnail cache
+Thumbs.db
+
+# Untracked WIP files
+asm_wip/fuel_systems/MAFLESS_VARIANTS_COMPARISON.md
+asm_wip/fuel_systems/mafless_alpha_v4.asm
+
+# Local images/diagrams
+vy wip bench diagram.png
+
+# VY V6 binary disassembly/flash plan (local working doc)
+a_plan.md
+
+# Bank split output — ignore everything EXCEPT the verified Enhanced v1.0a bank splits
+bank_split_output/*
+!bank_split_output/Enhanced_v1.0a_bank1.asm
+!bank_split_output/Enhanced_v1.0a_bank1.bin
+!bank_split_output/Enhanced_v1.0a_bank2.asm
+!bank_split_output/Enhanced_v1.0a_bank2.bin
+!bank_split_output/Enhanced_v1.0a_bank3.asm
+!bank_split_output/Enhanced_v1.0a_bank3.bin
+
+# HC11 bank splitter script is un-ignored above (tools/split_and_disassemble.py)
+
+# Refactored plan chapters (local working docs)
+68HC11_C_COMPILER_ANALYSIS.md
+OSE_FLASH_TOOL_REFERENCE.md
+SPARK_TABLE_MERGE_PLAN.md
+a_plan_BACKUP_20260209.md
+
+# ASM address fix reports (generated)
+asm_wip/ADDRESS_FIX_REPORT_20260209.md
+
+# XDF/analysis scripts (local dev tools)
+fix_all_asm_addresses.py
+inspect_xdf_structure.py
+parse_xdf_209b.py
+parse_xdf_209b_v2.py
+read_xdf_209b_docs.py
+run_export.py
+validate_all_asm_addresses.py
+fix_tracked_files.py
+
+# Wrong disassemblies (marked for deletion)
+*_wrong_needs_delete.asm
+
+# Local test/query scripts
+query_xdf_for_sparkcut.py
+test_apply_v38.py
+verify_v38_offsets.py

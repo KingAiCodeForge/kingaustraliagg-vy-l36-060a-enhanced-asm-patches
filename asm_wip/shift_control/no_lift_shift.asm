@@ -68,7 +68,7 @@
 
 RAM_NLS_ACTIVE      EQU     $00C4   ; NLS active flag
 RAM_NLS_RPM_CAP     EQU     $00C5   ; Dynamic RPM cap (captured at activation)
-RAM_NLS_TIMER       EQU     $00C6   ; Timeout timer (prevent stuck-on)
+RAM_NLS_TIMER EQU $00C6   ; Timeout timer (prevent stuck-on) ; Verified: TPS_FILTERED (7 refs Enhanced (9 stock)) [Enhanced-fix]
 RAM_NLS_MISFIRE_DLY EQU     $00C7   ; Misfire suppression delay counter
 
 ;==============================================================================

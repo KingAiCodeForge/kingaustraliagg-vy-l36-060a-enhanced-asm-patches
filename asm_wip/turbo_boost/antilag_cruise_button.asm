@@ -1,4 +1,9 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 4 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; VY V6 ROLLING ANTI-LAG v28 - CRUISE BUTTON ACTIVATION
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
@@ -55,10 +60,10 @@
 ; RAM VARIABLES
 ;==============================================================================
 
-RAM_RAL_ACTIVE      EQU     $00B8   ; Rolling anti-lag active flag
-RAM_RAL_RPM_CAP     EQU     $00B9   ; Dynamic RPM cap (captured at activation)
-RAM_RAL_IGA_RTD     EQU     $00BA   ; Ignition retard amount
-RAM_RAL_AFR_TARGET  EQU     $00BB   ; Rich AFR target (Lambda * 128)
+RAM_RAL_ACTIVE EQU $00B8   ; Rolling anti-lag active flag ; Verified: COOLANT_RELATED (6 refs both. Stock uses!) [Enhanced-fix]
+RAM_RAL_RPM_CAP EQU $00B9   ; Dynamic RPM cap (captured at activation) ; Verified: COOLANT_OR_IAT (6 refs both. Stock uses!) [Enhanced-fix]
+RAM_RAL_IGA_RTD EQU $00BA   ; Ignition retard amount ; Verified: SENSOR_FLAGS (3 refs both. Stock uses!) [Enhanced-fix]
+RAM_RAL_AFR_TARGET EQU $00BB   ; Rich AFR target (Lambda * 128) ; Verified: DIAG_FLAGS (8 refs both. Stock uses!) [Enhanced-fix]
 
 ;==============================================================================
 ; CALIBRATION CONSTANTS

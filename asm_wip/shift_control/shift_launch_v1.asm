@@ -1,3 +1,27 @@
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
+; ═══════════════════════════════════════════════════════════════════
+; AUTO-UPDATED: January 28, 2026 - RAM Address Fix
+; ═══════════════════════════════════════════════════════════════════
+; CHANGED: $01A0 (UNVERIFIED) → $0046 bit 7 (VERIFIED FREE)
+; REFERENCE: spark_cut_chr0m3_method_VERIFIED_v38.asm
+; STATUS: ⚠️  MANUAL REVIEW REQUIRED - Check LDAA/STAA replacements
+; ═══════════════════════════════════════════════════════════════════
+
 ;==============================================================================
 ; VY V6 IGNITION CUT LIMITER v5 - RAPID CYCLE "AK47" PATTERN
 ;==============================================================================
@@ -30,11 +54,11 @@
 ;   2. When RPM > threshold, enter rapid cycle mode
 ;   3. Increment CYCLE_COUNT on each main loop pass
 ;   4. If (CYCLE_COUNT % 3) == 2 → FIRE spark (one cycle)
-;   5. Otherwise → CUT spark via 3X_PERIOD manipulation
+;   5. Otherwise → CUT spark via 24X_PERIOD manipulation
 ;   6. Result: Cut-Cut-Fire-Cut-Cut-Fire-Cut-Cut-Fire = BRRRT!
 ;
 ; Why This Works on VY V6:
-;   ✅ Uses 3X_PERIOD register (proven Method A technique)
+;   ✅ Uses 24X_PERIOD register (proven Method A technique)
 ;   ✅ Single EST signal means all cylinders cut/fire together
 ;   ✅ Works WITH DFI module, not against it
 ;   ✅ Rapid cycling creates the "AK47" effect
@@ -46,7 +70,7 @@
 ; Implementation Status: 🔬 EXPERIMENTAL - Needs Chr0m3 validation
 ;
 ; VALIDATION STATUS:
-;   ✅ Uses proven 3X Period injection (Method A base)
+;   ✅ Uses proven crank period injection (Method A base)
 ;   ✅ Should work in theory (builds on working method)
 ;   ⚠️ NOT tested by Chr0m3 yet
 ;   ⚠️ Rapid cycling may stress TIO hardware
@@ -69,16 +93,19 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM)
+RPM_ADDR EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
                                 ; NOTE: $00A3 = Engine State, NOT RPM!
 
-; 3X Period Register (controls ignition timing reference)
+; ⚠️ CORRECTED 2026-02-02: $017B is DWELL INTERMEDIATE, NOT crank period!
+; 24X Crank Period Register (controls ignition timing reference)
 ; Setting to $FFFF blocks spark output = ignition cut
-PERIOD_3X_HI    EQU $017A       ; 3X Reference Period high byte
-PERIOD_3X_LO    EQU $017B       ; 3X Reference Period low byte
+; PERIOD_24X_HI    EQU $017A       ; ❌ OLD WRONG - NOT crank period!
+; PERIOD_24X_LO    EQU $017B       ; ❌ OLD WRONG - NOT crank period!
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: 24X crank period (TIC3 ISR @ $3618) ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
 
 ; Rapid Cycle State Variables (in RAM)
-CYCLE_COUNT     EQU $01A0       ; Current cycle counter (0-255)
+CYCLE_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+CYCLE_BIT       EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 LIMITER_ACTIVE  EQU $01A1       ; Flag: 0=normal, 1=limiting
 
 ; RPM THRESHOLD (XDF-editable) - 8-bit scaled
@@ -103,7 +130,7 @@ CUT_CYCLES      EQU $02         ; Cut 2, fire 1 = BRRRT! (AK47 sound)
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+            ORG $C468          ; Free space VERIFIED (was $18156 WRONG!) ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ignition_cut_handler:
     ;--------------------------------------------------------------------------
@@ -157,19 +184,19 @@ check_fire:
 
 spark_cut:
     ;--------------------------------------------------------------------------
-    ; CUT SPARK: Set 3X Period to $FFFF (blocks EST output)
+    ; CUT SPARK: Set 24X crank period to $FFFF (blocks EST output)
     ;--------------------------------------------------------------------------
-    ; This is the "Chr0m3 Method A" - proven to work on VY V6
-    LDAA #$FF
-    STAA PERIOD_3X_HI           ; High byte = $FF
-    STAA PERIOD_3X_LO           ; Low byte = $FF
+    ; This is the "Chr0m3 Method" - proven to work on VY V6
+    ; ⚠️ CORRECTED 2026-02-02: Now uses PERIOD_24X_RAM ($194C) instead of $017B
+    LDD  #$FFFF
+    STD  PERIOD_24X_RAM         ; Store $FFFF to 24X crank period
     BRA  handler_done
 
 spark_fire:
     ;--------------------------------------------------------------------------
     ; FIRE SPARK: Allow normal spark timing
     ;--------------------------------------------------------------------------
-    ; Don't modify 3X Period - let stock code calculate timing
+    ; Don't modify period - let stock code calculate timing
     ; The next main loop iteration will set proper timing
     
     ; Reset cycle count to prevent overflow
@@ -223,7 +250,7 @@ handler_done:
 ; 2. Convert assembled bytes to hex and apply to binary at offset $18156
 ;    File offset = $18156 - $8000 = $10156 (65878 decimal)
 ;
-; 3. Hook into main loop by patching $181E1:
+; 3. Hook into main loop by patching $101E1:
 ;    Original: STD $017B        ; Store timing
 ;    Patched:  JSR $18156       ; Call our handler first
 ;
@@ -271,15 +298,15 @@ handler_done:
 ;   - ECU only controls TIMING, not which coil fires
 ;
 ; But rapid cycling WORKS because:
-;   - We block the EST signal entirely (via 3X_PERIOD = $FFFF)
+;   - We block the EST signal entirely (via 24X_PERIOD = $FFFF)
 ;   - DFI module receives no EST → no coils fire
 ;   - Rapidly toggling EST on/off = rapid cut/fire = AK47 sound
 ;
 ; Technical Details:
 ;   - EST signal: Pin B3 (WHITE wire) → DFI module input
 ;   - EST bypass: Pin B4 (TAN/BLACK) → allows bypass during cranking
-;   - 3X_PERIOD register: Controls timing reference period
-;   - Setting 3X_PERIOD = $FFFF = no spark events scheduled
+;   - 24X_PERIOD register: Controls timing reference period
+;   - Setting 24X_PERIOD = $FFFF = no spark events scheduled
 ;
 ;------------------------------------------------------------------------------
 ; COMPARISON: Method A (Full Cut) vs Method V5 (AK47 Rapid Cycle)
@@ -297,7 +324,7 @@ handler_done:
 ;   - Sound: Machine gun "BRRRT" exhaust pops
 ;   - Good for: Motorsport, drift, show car, burnouts
 ;
-; BOTH METHODS use same underlying technique (3X_PERIOD blocking)
+; BOTH METHODS use same underlying technique (24X_PERIOD blocking)
 ; Only difference is PATTERN of cutting
 ;
 ;------------------------------------------------------------------------------

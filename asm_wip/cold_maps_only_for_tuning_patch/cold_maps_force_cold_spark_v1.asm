@@ -1,8 +1,13 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; VY V6 COLD MAPS ONLY PATCH v1.0 - FORCE COLD SPARK ALWAYS
 ;==============================================================================
 ; Author: Jason King (kingaustraliagg)
-; Date: January 25, 2026
+; Date: January 25, 2026 (Updated February 3, 2026)
 ; Status: 🔬 EXPERIMENTAL - Derived from BMW MS42/MS43 "Map Reduction" patch
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
@@ -23,6 +28,23 @@
 ;   - Category 0x8: Map Reduction
 ;   - Forces ECU to use tco_1 (cold temperature) tables
 ;   - Sets ip_fac_* multipliers to constant value
+;
+;==============================================================================
+; ALPINA "ZERO COMPLEX, TUNE SIMPLE" - VERIFIED PARALLEL
+;==============================================================================
+;
+; BINARY COMPARISON (February 3, 2026):
+;   Stock M52TUB25:   7 zero tables
+;   Alpina B3 3.3L: 34 zero tables (27 intentionally zeroed!)
+;
+; Alpina zeroed ALL temperature-based timing corrections:
+;   ❌ ip_ti_tco_1_is_ivvt, ip_ti_tco_2_is_ivvt = ALL ZEROS
+;   ❌ ip_ti_tco_2_pl_ivvt_1, ip_ti_tco_2_pl_ivvt_2 = ALL ZEROS
+;   ❌ ip_iga_tco_2_is_ivvt = ALL ZEROS
+;   ❌ ip_iga_cs_is (cold start ignition) = ALL ZEROS
+;
+; This VY V6 patch achieves the SAME EFFECT by forcing cold multiplier to 1.0
+; at all temps instead of zeroing tables. Same philosophy, cleaner approach.
 ;
 ;==============================================================================
 ; HOW VY V6 COLD SPARK WORKS (STOCK BEHAVIOR)
@@ -95,7 +117,7 @@ PATCH_ADDR_3            EQU $64D4   ; 80°C  (0x00 → 0xFF) ← Most important!
 ; Free space: 0x14468+ (verified)
 ;------------------------------------------------------------------------------
 
-            ORG $14468          ; Verified free space
+            ORG $C468          ; Verified free space ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; FORCE_COLD_SPARK - Ensure cold spark compensation is always enabled

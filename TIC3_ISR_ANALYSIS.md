@@ -19,14 +19,23 @@ Deep verification (Jan 22, 2026) confirms:
 **For spark cut implementation, THIS ANALYSIS IS NOT NEEDED!**
 
 Use the verified hook point instead:
-- ✅ **File offset 0x101E1** = `STD $017B` (CONFIRMED in STOCK)
+- ✅ **File offset 0x101E1** = `STD $017B` (dwell intermediate - CONFIRMED in STOCK)
 - ✅ **Hook with JSR $C500** = spark_cut_chr0m3_method_VERIFIED_v38.asm
 - ✅ **Use $0046 bit 7 ($80) for limiter flag** - verified FREE (0 stock refs)
 
+> **⚠️ CORRECTION (2026-02-07):** The `STD $194C` at $3618 in the TIC3 ISR is the
+> **cold-start initialization path only** (stores D=$0000 when $194A==0). During normal
+> engine operation, real period values are written to $194C by the **filter subroutine
+> $050C** (called via $35CB → $24AA → $050C) using indexed writes (`STD 0,X` with
+> X=$194C). **Hooking $3618 is INEFFECTIVE** — the filter would overwrite any fake
+> period. The **$017B dwell intermediate hook at 0x101E1** is the correct approach.
+
 **Next Steps:**
-- [ ] Check Enhanced v1.0a binary for ISR code at 0x35FF
-- [ ] Search for alternate TIC3 ISR location in STOCK
-- [ ] Verify if $0178 vs $017B are both valid period storage
+- [x] Check Enhanced v1.0a binary for ISR code at 0x35FF — ✅ Found
+- [x] Search for alternate TIC3 ISR location in STOCK
+- [x] Verify $0178 vs $017B roles (both are dwell/timing intermediates, NOT crank period)
+- [ ] Analyze filter subroutine $050C for alternative hook points
+- [ ] Verify $017B hook works with bench test
 
 ---
 
@@ -136,11 +145,11 @@ spark_cut_check:
     
     ; ABOVE LIMIT - Inject fake period to starve dwell
     LDD    #$3E80        ; 16,000 = Chr0m3's recommended value
-    STD    $017B         ; Store to VERIFIED period address
+    STD    $017B         ; Store to dwell intermediate (NOT crank period!)
     RTS
     
 normal_exit:
-    STD    $017B         ; Store real period (original instruction)
+    STD    $017B         ; Store real dwell intermediate (original instruction)
     RTS
 ```
 
@@ -179,7 +188,7 @@ This shows:
 
 | File Offset | CPU Address | Name | Description |
 |-------------|-------------|------|-------------|
-| 0x0178 | $0178 | RAM_3X_PERIOD | 3X period storage (16-bit) |
+| 0x0178 | $0178 | RAM_24X_PERIOD | crank period storage (16-bit) |
 | 0x017D | $017D | RAM_PERIOD_RESULT | Period calculation result |
 | 0x0171 | $0171 | RAM_CYL_INDEX | Cylinder index counter |
 | 0x01B3 | $01B3 | RAM_PREV_TIC3 | Previous TIC3 capture |
@@ -232,26 +241,35 @@ The actual **TIC3 hardware register** is at $1014, but the code reads from $15CA
 
 ## ✅ What This Means for Spark Cut Patch
 
-**Two valid hook approaches (verified 2026-01-31/02-02):**
+**Only ONE valid hook approach (corrected 2026-02-07):**
 
-**Option 1: Dwell Intermediate Hook ($017B) - RECOMMENDED**
+**Option 1: Dwell Intermediate Hook ($017B) - RECOMMENDED ✅**
 - Hook at file offset 0x101E1 (replaces STD $017B with JSR $C500)
+- Directly affects dwell calculation — fake value starves dwell
+- Runs on every dwell calc cycle (not just cold start)
 - Easier to debug (main code, not ISR)
-- See: `spark_cut_chr0m3_method_VERIFIED_v38.asm`
+- See: `spark_cut_chr0m3_method_VERIFIED_v38.asm` (needs update to use $017B)
 
-**Option 2: Crank Period Hook ($194C)**  
-- Hook at file offset 0x13618 (in TIC3 ISR)
-- Manipulates actual crank period
+**~~Option 2: Crank Period Hook ($194C)~~ — ❌ INEFFECTIVE**  
+- Hook at file offset 0x13618 (STD $194C in TIC3 ISR)
+- ❌ This is the **cold-start init path only** (D=$0000 when $194A==0)
+- ❌ During normal operation, code takes `BNE $3633` and **skips $3618 entirely**
+- ❌ Real period is written by filter sub $050C via indexed `STD 0,X` — would **overwrite** any fake value
+- ❌ **DO NOT USE THIS HOOK POINT**
 
 ```asm
-; Working patch at $C500 (Option 1 - dwell hook)
+; Working patch at $C500 (Option 1 - dwell intermediate hook)
+    PSHA                  ; Save A register
     LDAA   $00A2          ; Load RPM/25 (VERIFIED address)
     CMPA   #$F0           ; Compare to 240 = 6000 RPM
-    BLO    normal_exit
-    LDD    #$3E80         ; Fake period (16000)
-    STD    $017B          ; Store to dwell intermediate
+    BCS    normal_exit    ; RPM < threshold → normal
+    BSET   $46,$80        ; Set limiter flag
+    PULA                  ; Clean stack
+    LDD    #$3E80         ; Fake dwell intermediate (16000)
+    STD    $017B          ; Store fake value → starves dwell
     RTS
 normal_exit:
+    PULA                  ; Restore A
     STD    $017B          ; Store real value (original instruction)
     RTS
 ```

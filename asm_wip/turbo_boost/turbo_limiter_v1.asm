@@ -1,4 +1,9 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; VY V6 IGNITION CUT LIMITER v5 - CYLINDER SELECTIVE CUT (WASTESPARK)
 ;==============================================================================
 ; Author: Jason King kingaustraliagg
@@ -83,7 +88,7 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR        EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM)
+RPM_ADDR EQU $00A2       ; 8-BIT RPM/25 (value × 25 = actual RPM) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
                                 ; NOTE: $00A3 = Engine State, NOT RPM!
 
 ; Coil driver control - IMPOSSIBLE without hardware mod (see notes above)
@@ -115,12 +120,23 @@ RPM_LOW         EQU $74         ; 116 × 25 = 2900 RPM deactivation
 ; RPM_HIGH_HARD   EQU $8D         ; 141 × 25 = 3525 RPM hard cut
 ; RPM_LOW         EQU $8B         ; 139 × 25 = 3475 RPM deactivation
 
-LIMITER_STATE   EQU $01A0       ; Limiter state: 0=off, 1=soft, 2=hard
+; ⚠️ LIMITER_STATE: For two-stage (0=off, 1=soft, 2=hard), need 2 bits.
+; Use $0046 bits 6+7 which are verified FREE:
+;   Bit 6 ($40) = Soft cut active
+;   Bit 7 ($80) = Hard cut active
+; Or use alternate free RAM byte (needs verification)
+LIMITER_FLAG_ADDR EQU $0046    ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_SOFT_BIT   EQU $40      ; ✅ Bit 6 is FREE (verified Jan 27 2026)
+LIMITER_HARD_BIT   EQU $80      ; ✅ Bit 7 is FREE (verified Jan 27 2026)
 
 ;------------------------------------------------------------------------------
-; CODE SECTION
+; CODE SECTION - ADDRESS MAPPING (VERIFIED Jan 27 2026 with udis)
 ;------------------------------------------------------------------------------
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+; ⚠️ ADDRESS CORRECTED 2026-01-27: $14468 was INVALID (17-bit address!)
+; HC11 has 16-bit addresses only: $0000-$FFFF
+; File offset 0x0C468 = CPU address $C468 (when low bank active)
+; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
+            ORG $C468           ; ✅ FIXED: CPU address (was $14468 INVALID!) ; ⚠️ MUST BE bank 1 (file 0x0C468). 15,192 bytes free: $C468-$FFBF. [auto-fix 2026-02-09]
 
 ignition_cut_handler:
     ; Read current RPM (8-bit scaled)
@@ -320,7 +336,7 @@ disable_two_coils:
 ;   3. Test of unbalanced firing on dyno (engine damage risk)
 ;   4. Chr0m3 consultation (did he try selective cylinder cut?)
 ;
-; Recommendation: Focus on Method A (3X Period Injection) first
+; Recommendation: Focus on Method A (crank period injection) first
 ;                 This method (v5) is interesting but complex and risky
 ;                 Chr0m3's full-cut approach is simpler and proven
 ;

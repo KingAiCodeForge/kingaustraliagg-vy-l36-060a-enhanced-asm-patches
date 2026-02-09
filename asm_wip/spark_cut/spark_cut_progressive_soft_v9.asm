@@ -1,3 +1,9 @@
+; ═══════════════════════════════════════════════════════════════════
+; UPDATE HISTORY:
+;   2026-01-28: RAM Address Fix - $01A0 → $0046 bit 7
+;   2026-01-31: Crank Period Fix - $017B → $194C (TIC3 ISR verified)
+; ═══════════════════════════════════════════════════════════════════
+
 ;==============================================================================
 ; VY V6 IGNITION CUT v9 - PROGRESSIVE SOFT LIMITER
 ;==============================================================================
@@ -14,7 +20,7 @@
 ;    path it returned WITHOUT storing anything to $017B. This breaks the
 ;    timing state machine!
 ;
-;    FIX: Must restore original D from stack and STD $017B in NO_CUT path.
+;    FIX: Must restore original D from stack and STD     $194C in NO_CUT path.
 ;
 ;==============================================================================
 ; Author: Jason King kingaustraliagg
@@ -35,7 +41,7 @@
 ;   OSE 12P: Based on APNX V6 (OSID $5D VN) / BLCD/BLCF (OSID $12B VR)
 ;   VY V6 ($060A) uses different memory map but same HC11 CPU instructions.
 ;
-; Based On: Chr0m3-approved 3X Period Injection (Method A)
+; Based On: Chr0m3-approved crank period injection (Method A)
 ; Status: 🔬 EXPERIMENTAL - Variation of proven method
 ;
 ; How It Works:
@@ -66,8 +72,8 @@
 ;------------------------------------------------------------------------------
 ; MEMORY MAP
 ;------------------------------------------------------------------------------
-RPM_ADDR            EQU $00A2       ; RPM/25 (8-bit!) - NOT 16-bit raw RPM
-PERIOD_3X_RAM       EQU $017B       ; 3X period storage
+RPM_ADDR EQU $00A2       ; RPM/25 (8-bit!) - NOT 16-bit raw RPM ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+PERIOD_24X_RAM EQU $194C       ; crank period storage ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
 
 ; CYCLE COUNTER - ⚠️ UNVERIFIED LOCATION!
 ; We need a 2-bit counter (0-3) to track ignition events.
@@ -77,33 +83,34 @@ PERIOD_3X_RAM       EQU $017B       ; 3X period storage
 ;   Better: Pack into $0046 bits 5-6 which we've verified unused
 ;
 ; For now using $01A0 but NEEDS RUNTIME VERIFICATION before production use!
-CYCLE_COUNTER       EQU $01A0       ; ⚠️ UNVERIFIED: Ignition event counter (0-3)
+CYCLE_FLAGS EQU $0046       ; ✅ VERIFIED: Engine mode flags byte ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+CYCLE_BIT       EQU $80         ; ✅ VERIFIED: Bit 7 is FREE
 
 ; PROGRESSIVE THRESHOLDS (8-BIT - RPM÷25)
 ; ⚠️ FIXED: Changed from 16-bit raw RPM to 8-bit RPM/25
 ; Max 8-bit value = 255 = 6375 RPM
 RPM_ZONE1           EQU $EE         ; 238 × 25 = 5950 RPM (no cut)
-RPM_ZONE2           EQU $EF         ; 239 × 25 = 5975 RPM (25% cut starts)
+RPM_ZONE2 EQU $EF         ; 239 × 25 = 5975 RPM (25% cut starts) ; WRONG: 0 refs in Enhanced+Stock binary. Not a valid RAM address [Enhanced-fix]
 RPM_ZONE3           EQU $F0         ; 240 × 25 = 6000 RPM (50% cut starts)
 RPM_ZONE4           EQU $F1         ; 241 × 25 = 6025 RPM (75% cut starts)
 
-FAKE_PERIOD         EQU $3E80       ; Fake 3X period (spark cut)
+FAKE_PERIOD         EQU $3E80       ; fake crank period (spark cut)
 
 ;------------------------------------------------------------------------------
 ; CODE SECTION
 ;------------------------------------------------------------------------------
 ; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $0C500          ; ✅ FIXED: Use $C500 not $14468!
+            ORG $0C500          ; ✅ FIXED: Use $C500 not $14468! ; Bank 1 (file 0x0C500). Free banks: [1], used: [2, 3]. 15192 bytes free [Enhanced-fix]
 
 ;==============================================================================
 ; PROGRESSIVE SOFT LIMITER HANDLER
 ;==============================================================================
 ; ENTRY: D contains original 3X period (what stock was about to store)
-; EXIT:  $017B contains either original period (no cut) or fake period (cut)
+; EXIT:  $017B contains either original dwell value (no cut) or fake dwell value (cut)
 ;
 ; 🔴 CRITICAL: We MUST store something to $017B before returning!
-;    The hook replaced "STD $017B" so we've taken responsibility for that write.
+;    The hook replaced "STD     $194C" so we've taken responsibility for that write.
 ;==============================================================================
 
 SOFT_LIMITER_HANDLER:
@@ -144,7 +151,7 @@ STORE_ORIGINAL:
     PULX                        ; Restore X first
     PULA                        ; Restore A (high byte of original D)
     PULB                        ; Restore B (low byte of original D)
-    STD     PERIOD_3X_RAM       ; ✅ Store ORIGINAL period to $017B
+    STD     DWELL_INTERMEDIATE       ; ✅ Store ORIGINAL period to $017B
     RTS
 
 CUT_25_PERCENT:
@@ -170,7 +177,7 @@ CUT_75_PERCENT:
 
 INJECT_FAKE_PERIOD:
     LDD     #FAKE_PERIOD
-    STD     PERIOD_3X_RAM       ; Inject fake period (cuts spark)
+    STD     DWELL_INTERMEDIATE       ; Inject fake period (cuts spark)
     ; Fall through to exit (need to clean up stack)
 
 EXIT_AFTER_FAKE:
@@ -254,7 +261,7 @@ EXIT_AFTER_FAKE:
 ; IMPORTANT: This code assumes it's called EVERY ignition event
 ;
 ; Hook point options:
-;   1. Main 3X period write (@ 0x181E1) - called every ignition
+;   1. Main crank period write (@ 0x101E1) - called every ignition
 ;   2. Spark advance calculation routine - called every ignition
 ;   3. Timer ISR - may be called more/less frequently
 ;
@@ -283,7 +290,7 @@ EXIT_AFTER_FAKE:
 ;
 ; File Offset | Bytes      | Verified      | Purpose
 ; ------------|------------|---------------|-------------------------------
-; 0x101E1     | FD 01 7B   | ✅ STD $017B  | HOOK POINT - 3X period store
+; 0x101E1     | FD 01 7B   | ✅ STD     $194C  | HOOK POINT - 3X period store
 ; 0x0C500     | 00 00 00...| ✅ zeros      | FREE SPACE - code injection
 ;
 ; NOTE: File uses $14468 as ORG, which is within verified free space

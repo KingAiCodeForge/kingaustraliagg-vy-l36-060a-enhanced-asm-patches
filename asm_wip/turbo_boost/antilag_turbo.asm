@@ -1,4 +1,9 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 2 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; VY V6 IGNITION CUT v10 - ANTI-LAG STYLE (TURBO ONLY)
 ;==============================================================================
 ; Author: Jason King kingaustraliagg
@@ -36,13 +41,13 @@
 ;   - Ignites in exhaust manifold/turbo
 ;   - Maintains turbo boost during gear changes
 ;
-; Based On: Chr0m3-approved 3X Period Injection (spark cut)
+; Based On: Chr0m3-approved crank period injection (spark cut)
 ; Status: 🔬 EXPERIMENTAL - EXTREME RISK
 ;
 ; How It Works:
 ;   1. Monitor RPM against threshold
 ;   2. When RPM > threshold:
-;      a) Inject fake 3X period (spark cut)
+;      a) Inject fake crank period (spark cut)
 ;      b) KEEP fuel injectors active (enriched by 20%)
 ;   3. Result: Unburned fuel + hot exhaust = combustion in exhaust
 ;   4. Maintains turbo spool during gear changes
@@ -67,30 +72,43 @@
 ; ⚠️ UPDATED Jan 17 2026: Changed to 8-bit RPM since 6000 RPM < 6375 limit
 ;    For turbo builds needing >6375 RPM, need dwell patches too!
 ;
-RPM_ADDR            EQU $00A2       ; ✅ VERIFIED: RPM/25 (8-bit!) - max 255 = 6375 RPM
-PERIOD_3X_RAM       EQU $017B       ; ✅ VERIFIED: 3X period storage (spark control)
-INJECTOR_PW_RAM     EQU $0150       ; ❌ UNVALIDATED - Need to find real injector PW addr
-FUEL_ENRICHMENT     EQU $0160       ; ❌ UNVALIDATED - Need to find real enrichment addr
+RPM_ADDR EQU $00A2       ; ✅ VERIFIED: RPM/25 (8-bit!) - max 255 = 6375 RPM ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+; ⚠️ CORRECTED 2026-02-02: $017B is DWELL INTERMEDIATE, NOT crank period!
+; DWELL_INTERMEDIATE     EQU $017B       ; ❌ OLD WRONG - NOT crank period!
+PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: 24X crank period (TIC3 ISR @ $3618) ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
+DWELL_INT_RAM EQU $017B       ; Dwell intermediate (alternative hook point) ; Verified: DWELL_INTERMEDIATE (2 refs both. HOOK TARGET at 0x101E1) [Enhanced-fix]
+INJ_PW_BANK1        EQU $013F       ; ✅ VERIFIED Jan 28: Bank 1 pulse width (STD @0x17243)
+INJ_PW_BANK2        EQU $0141       ; ✅ VERIFIED Jan 28: Bank 2 pulse width (STD @0x1727C)
+FUEL_ENRICHMENT     EQU $0160       ; ❌ UNVALIDATED - Need to find real enrichment addr ; ⚠️ BINARY: 0 refs in stock! ZERO refs in stock binary - NOT a valid RAM variable [auto-fix 2026-02-09]
 
 ; SAFE DEFAULT - 6000 RPM (8-BIT VALUES - FIXED Jan 17 2026)
 RPM_HIGH            EQU $F0         ; ✅ 240 × 25 = 6000 RPM activation
-RPM_LOW             EQU $EF         ; ✅ 239 × 25 = 5975 RPM deactivation
+RPM_LOW EQU $EF         ; ✅ 239 × 25 = 5975 RPM deactivation ; WRONG: 0 refs in Enhanced+Stock binary. Not a valid RAM address [Enhanced-fix]
 
-FAKE_PERIOD         EQU $3E80       ; ✅ Fake 3X period (spark cut)
-LIMITER_FLAG        EQU $01A0       ; ❌ WRONG! Use $0046 bit 7 like v38!
+FAKE_PERIOD         EQU $3E80       ; ✅ fake crank period (spark cut)
+LIMITER_FLAG_ADDR EQU $0046       ; ✅ FIXED: Engine mode flags (verified in binary) ; Verified: ENGINE_MODE_FLAGS (2 refs both bins, bits 3/6/7 free) [Enhanced-fix]
+LIMITER_FLAG_BIT    EQU $80         ; ✅ Bit 7 is FREE per mode_byte_flag_mapper.py
 NORMAL_FUEL_MULT    EQU $0100       ; Normal fuel multiplier (1.0x = 256 decimal)
 ENRICHED_FUEL_MULT  EQU $0133       ; 1.2x fuel multiplier (307 decimal = 120%)
 
 ;------------------------------------------------------------------------------
-; CODE SECTION
+; CODE SECTION - ADDRESS MAPPING (VERIFIED Jan 27 2026 with udis)
 ;------------------------------------------------------------------------------
-; ⚠️ ADDRESS CORRECTED 2026-01-15: $18156 was WRONG (contains active code)
-; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
+; ⚠️ ADDRESS CORRECTED 2026-01-27: $14468 was INVALID (17-bit address!)
+; 
+; HC11 ADDRESS SPACE:
+;   - HC11 has 16-bit addresses: $0000-$FFFF only
+;   - File offset 0x0C468 = CPU address $C468 (low bank)
+;   - File offset 0x1C468 = CPU address $C468 (high bank) - DIFFERENT DATA!
 ;
-; TODO: Check ISR and timer addresses for conflicts. Consider X/Y axis linking
-;       in XDF if TunerPro supports it for calibration constants.
+; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00/0xFF
+; ✅ CPU ADDRESS: $C468 (when low bank is paged in for execution)
 ;
-            ORG $14468          ; Free space VERIFIED (was $18156 WRONG!)
+; NOTE: VY V6 uses bank switching. Patch code must be in a bank that's
+;       active when the hook is called. Low bank ($0000-$FFFF from file
+;       0x00000-0x0FFFF) is typically active for calibration routines.
+;
+            ORG $C468           ; ✅ FIXED: CPU address (was $14468 INVALID!) ; ⚠️ MUST BE bank 1 (file 0x0C468). 15,192 bytes free: $C468-$FFBF. [auto-fix 2026-02-09]
 ;==============================================================================
 ; ANTI-LAG STYLE LIMITER HANDLER
 ;==============================================================================
@@ -109,14 +127,14 @@ ANTILAG_CUT_HANDLER:
     BLS     DEACTIVATE_ANTILAG
     
     ; Hysteresis zone - maintain current state
-    LDAA    LIMITER_FLAG
-    BNE     ACTIVATE_ANTILAG
+    ; ✅ FIXED: Use BRSET to test bit 7 of $0046
+    BRSET   LIMITER_FLAG_ADDR,#LIMITER_FLAG_BIT,ACTIVATE_ANTILAG
     BRA     DEACTIVATE_ANTILAG
 
 ACTIVATE_ANTILAG:
-    ; Method 1: Cut spark (3X period injection)
+    ; Method 1: Cut spark (24X period injection)
     LDD     #FAKE_PERIOD
-    STD     PERIOD_3X_RAM       ; Inject fake 3X period (no spark)
+    STD     PERIOD_24X_RAM      ; Inject fake 24X crank period (no spark)
     
     ; Method 2: ENRICH fuel (DO NOT cut fuel!)
     ; ⚠️ CRITICAL: This causes unburned fuel to enter exhaust
@@ -130,14 +148,15 @@ ACTIVATE_ANTILAG:
     PULB                        ; Restore B
     
     ; Set limiter active flag
-    LDAA    #$01
-    STAA    LIMITER_FLAG
+    ; ✅ FIXED: Use BSET to set bit 7 of $0046
+    BSET    LIMITER_FLAG_ADDR,#LIMITER_FLAG_BIT
     
     BRA     EXIT_HANDLER
 
 DEACTIVATE_ANTILAG:
     ; Clear limiter flag
-    CLR     LIMITER_FLAG
+    ; ✅ FIXED: Use BCLR to clear bit 7 of $0046
+    BCLR    LIMITER_FLAG_ADDR,#LIMITER_FLAG_BIT
     
     ; Restore normal fuel multiplier
     LDD     #NORMAL_FUEL_MULT

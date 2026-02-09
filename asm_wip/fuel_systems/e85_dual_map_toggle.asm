@@ -1,11 +1,21 @@
+;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
 ; ============================================================================
 ; VY V6 E85 Dual-Map Toggle Patch (v24)
 ; ============================================================================
 ; Purpose: Manual E85/Petrol fuel map toggle via button input
 ; Inspired by: BMW MS43X flex_fuel + OSE 12P multi-fuel maps
-; Author: Adapted from BMW MS43X and OSE 12P concepts
-; Date: 2026-01-15
+; Author: Jason King (kingaustraliagg)
+; Date: 2026-01-15 (Updated February 2026)
 ; Status: UNTESTED - Proof of concept
+;
+; ⚠️ COMPATIBILITY NOTE:
+;   This patch can work WITH or WITHOUT MAFless conversion.
+;   If using MAFless Alpha-N, the E85 VE table values need ~30% higher
+;   airflow estimates to account for E85's different stoichiometry.
 ; ============================================================================
 ;
 ; OSE 12P PLATFORM NOTE:
@@ -44,7 +54,7 @@
 ;
 ; ============================================================================
 
-        ORG     $14468          ; Verified free space region
+        ORG $C468          ; Verified free space region ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ; ============================================================================
 ; Constants and Addresses
@@ -190,7 +200,7 @@ indicator_done:
 ;   - Cold start: E85 needs MORE enrichment (harder to vaporize)
 ;   - WOT: E85 can run richer safely (cooling effect)
 
-        ORG     $22000          ; E85 map storage (example address)
+        ORG $A000          ; E85 map storage (example address) ; FIXED: $22000 is a FILE OFFSET, not CPU addr. CPU=$A000 bank 4 (file 0x22000) [Enhanced-fix]
 
 ve_table_e85:
         ; Placeholder - copy from petrol VE and multiply by 1.3

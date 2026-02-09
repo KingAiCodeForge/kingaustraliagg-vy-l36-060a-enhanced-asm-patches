@@ -1,8 +1,13 @@
 ;==============================================================================
+; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
+; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
+; Fixes: 1 issues found and annotated
+;==============================================================================
+;==============================================================================
 ; VY V6 MAFLESS ALPHA-N CONVERSION v3 - MINIMAL ROM FOOTPRINT
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  
-; Date: January 16, 2026
+; Date: January 16, 2026 (Updated February 3, 2026)
 ; Method: Force MAF sensor failure to enable fallback Alpha-N mode
 ; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
 ; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
@@ -12,37 +17,55 @@
 ; ⚠️ This will trigger MAF failure DTC (Code M32) - expected behavior
 ;
 ;==============================================================================
-; OEM TUNING PHILOSOPHY (Alpina/BMW/Bosch-Siemens Analysis)
+; ALPINA "ZERO COMPLEX, TUNE SIMPLE" - VERIFIED DATA
 ;==============================================================================
 ;
-; 🏁 "ZERO THE COMPLEX, TUNE THE SIMPLE" - Professional OEM Approach
+; BINARY COMPARISON (February 3, 2026):
+;   Stock M52TUB25 EU3 RHD:   7 zero tables (normal)
+;   Alpina B3 3.3L Stroker: 34 zero tables (27 intentionally zeroed!)
 ;
-; Key Discovery from Alpina B3 3.3L Stroker (M52TUB33) vs Stock M52TUB28:
+; 🏁 PROFESSIONAL OEM APPROACH: Zero complex tables, tune fallback tables
 ;
-; ALPINA ZEROED THESE TABLES:
-;   ❌ ip_iga_ron_98_pl_ivvt = ALL ZEROS (no RON98 timing)
-;   ❌ ip_iga_ron_91_pl_ivvt = ALL ZEROS (no RON91 timing)
-;   ❌ ip_iga_tco_2_is_ivvt  = ALL ZEROS (no temp timing)
-;   ❌ ip_maf_vo_1 to vo_7   = ALL ZEROS (7 of 8 VANOS VE tables)
+; ALPINA ZEROED 34 TABLES INCLUDING:
+;   ❌ ip_maf_vo_1, vo_3-vo_8 = ALL ZEROS (7 of 8 VANOS VE tables)
+;   ❌ ip_iga_ron_91, ip_iga_ron_98 = ALL ZEROS (fuel grade timing)
+;   ❌ ip_ti_tco_1/tco_2 tables = ALL ZEROS (temp timing corrections)
+;   ❌ ip_iga_optm/cor/cs tables = ALL ZEROS (ignition corrections)
+;   ❌ ip_soi, ip_thd, catalyst tables = ALL ZEROS
+;   (Full list: see MAFLESS_VARIANTS_COMPARISON.md)
 ;
-; ALPINA TUNED THESE FALLBACK TABLES:
-;   ✅ ip_maf_1_diag__n__tps_av = PRIMARY airflow (tuned for 3.3L)
+; ALPINA KEPT ACTIVE (Tuned for 3.3L):
+;   ✅ ip_maf_1_diag__n__tps_av = PRIMARY airflow (Alpha-N table)
 ;   ✅ ip_iga_knk_diag          = PRIMARY timing
-;   ✅ ip_maf_vo_2              = ONLY VE table used
+;   ✅ ip_maf_vo_2              = SINGLE VE table (mid-cam)
 ;
 ; WHY THIS WORKS:
-;   - Stock has 50+ interacting tables - changing one affects others
-;   (by this the x and y is linked in the xdf for tunerpro, for some ms42 ger partial and full bins. (cal the holden community would call the partial) and eng and ms42 version.
-;   vy v6 flashing uses padded to 128kb for the cal flash and read version. so it flashes just the cal not the full os like a full write does for both flash tools for both ecus.)
-;   - Alpina zeros complex tables, leaving predictable fallback path
-;   - Diagnostic/fallback systems are designed robust and conservative
-;   - Tune 3-5 tables instead of 50+ = faster, more predictable
+;   - Stock: 50+ interacting tables (complex, weeks of dyno time)
+;   - Alpina: 3-5 key tables (rest zeroed = predictable, fast calibration)
+;   - Fallback tables are designed robust and conservative by OEM
 ;
 ; VY V6 PARALLEL:
-;   - Set $56D4 bit 6 = 1 (like Alpina zeroing RON tables)
+;   - Set $56F3 = 0x40 (enable M32 action - same philosophy)
 ;   - ECU enters MAF failure fallback mode
-;   - Tune $7F1B "Minimum Airflow For Default Air" or inject TPS×RPM table
+;   - Tune "Default Airflow Table" at $7F2A (TPS × RPM)
 ;   - Same philosophy, different platform!
+;
+;==============================================================================
+; FEBRUARY 2026 CODE FLOW DISCOVERY
+;==============================================================================
+;
+; *** HOW THE FALLBACK TABLE IS ACTUALLY ACTIVATED ***
+;
+; The stock code controls fallback mode via RAM $25 bit 3:
+;
+;   0x117AF: BRSET $25,#$08,$117CE   ; If RAM $25 bit 3 SET, skip fallback
+;   0x117CA: JSR $264A               ; ← FALLBACK ROUTINE (uses $7F2A table)
+;
+; RAM $25 bit 3 meaning:
+;   - BIT SET   = MAF is VALID → use normal MAF-based airflow
+;   - BIT CLEAR = MAF is INVALID → use fallback table at $7F2A
+;
+; Fallback routine output: RAM $0128 (CYLAIR) - same variable as MAF path!
 ;
 ;==============================================================================
 ;
@@ -52,7 +75,7 @@
 ;   Converts MAF-based fuel to Alpha-N (TPS+RPM) via MAF failure fallback.
 ;
 ; v3 Differences from v1/v2:
-;   ✅ Smaller code footprint (~30 bytes vs ~50+ bytes)
+;   ✅ Smaller code footprint (~12 bytes vs ~50+ bytes)
 ;   ✅ No optional features (airflow override removed)
 ;   ✅ Simplified initialization (single-pass flag set)
 ;   ✅ Removed placeholder routines (cleaner binary injection)
@@ -112,9 +135,11 @@ MAX_AIRFLOW_TABLE   EQU $6D1D   ; Maximum Airflow Vs RPM table (17 elements)
 ;------------------------------------------------------------------------------
 ; RAM VARIABLES (for reference - not modified by this patch)
 ;------------------------------------------------------------------------------
-TPS_RAM             EQU $00C6   ; Throttle Position Sensor % (0-255)
-RPM_RAM             EQU $00A2   ; Engine RPM (16-bit)
-AIRFLOW_RAM         EQU $017B   ; Calculated airflow storage (g/s scaled)
+TPS_RAM EQU $00C6   ; Throttle Position Sensor % (0-255) ; Verified: TPS_FILTERED (7 refs Enhanced (9 stock)) [Enhanced-fix]
+RPM_RAM EQU $00A2   ; Engine RPM (16-bit) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
+; WARNING (2026-02-02): $017B is DWELL INTERMEDIATE, NOT airflow!
+; The actual airflow RAM location is UNKNOWN - needs disassembly verification
+; AIRFLOW_RAM       EQU $????   ; TODO: Find actual airflow RAM variable
 
 ;------------------------------------------------------------------------------
 ; BINARY HEX PATCHES REQUIRED (Apply with hex editor BEFORE code injection)
@@ -131,7 +156,7 @@ AIRFLOW_RAM         EQU $017B   ; Calculated airflow storage (g/s scaled)
 ; CODE SECTION - MINIMAL ALPHA-N ENABLER
 ;------------------------------------------------------------------------------
 ; ✅ VERIFIED FREE SPACE: File 0x0C468-0x0FFBF = 15,192 bytes of 0x00
-            ORG $14468          ; Free space VERIFIED
+            ORG $C468          ; Free space VERIFIED ; FIXED: $14468 is a FILE OFFSET, not CPU addr. CPU=$C468 bank 2 (file 0x14468) [Enhanced-fix]
 
 ;==============================================================================
 ; FORCE_MAF_FAILURE - Minimal Alpha-N Enable Routine

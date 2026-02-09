@@ -56,7 +56,7 @@
 
 ; Dwell-related RAM addresses
 DWELL_TIME      EQU $00C4       ; Calculated dwell time (may be incorrect)
-MIN_DWELL       EQU $00C6       ; Minimum dwell value
+MIN_DWELL EQU $00C6       ; Minimum dwell value ; Verified: TPS_FILTERED (7 refs Enhanced (9 stock)) [Enhanced-fix]
 BURN_TIME       EQU $00C8       ; Burn time after spark
 
 ; These addresses need validation - they may not be correct for VY V6
@@ -85,10 +85,10 @@ TOC3            EQU $101A       ; Timer Output Compare 3 (EST)
 ; WHAT CHR0M3 ACTUALLY DOES (THE WORKING METHOD)
 ;==============================================================================
 ;
-; Chr0m3's approach (3X Period Injection) works because:
+; Chr0m3's approach (crank period injection) works because:
 ;
 ;   1. He doesn't try to control dwell directly
-;   2. Instead, he injects a FAKE 3X period value
+;   2. Instead, he injects a FAKE crank period value
 ;   3. The ECU calculates dwell based on (fake) period
 ;   4. Fake period = very long → calculated dwell = ~100µs
 ;   5. 100µs is below TIO minimum enforcement threshold
@@ -125,7 +125,7 @@ EXIT_NO_ACTION:
 ; RECOMMENDED ALTERNATIVE
 ;==============================================================================
 ;
-; Use the Chr0m3 validated 3X Period Injection method:
+; Use the Chr0m3 validated crank period injection method:
 ;
 ;   File: ignition_cut_patch_v33_chrome_method.asm
 ;   File: ignition_cut_patch_v32_6000rpm_spark_cut.asm
@@ -145,7 +145,7 @@ EXIT_NO_ACTION:
 ;   - Coil fires at any dwell above ~200µs
 ;
 ; The 200µs threshold is the "spark cut" point. To achieve this,
-; you need the 3X Period Injection method which causes the ECU
+; you need the crank period injection method which causes the ECU
 ; to CALCULATE a ~100µs dwell (below the threshold).
 ;
 ; If someone finds a way to make dwell override work, document it
