@@ -1,6 +1,9 @@
 # Test Binaries (patched BINs - copyrighted ECU code, DO NOT PUSH)
 bin_patch_test/
 
+# 11P test disassembly output (local only)
+bank_split_output/11p_test/
+
 # Development Tools (local only - not for GitHub)
 tools/*
 # Allow the HC11 bank splitter script (the tool that generates the bank splits)
@@ -45,9 +48,9 @@ vy_v6_na_pointers.md
 DTC_FLAGS_MASKS_LOCAL.md
 UNKNOWN_BYTES_ANALYSIS_LOCAL.md
 mode 4 vy v6.md
+issues_github_personal_notes.md
 
 # Work-in-progress documents (not ready for GitHub yet)
-VY_V6_SPARK_CUT_IMPLEMENTATION_GUIDE.md
 exports/RKGarage_L67_comparison/
 VY_V6_128KB_BINARY_SPLITTING_AND_PATCHING_GUIDE.md
 
@@ -115,6 +118,9 @@ KNOWLEDGE_*.md
 *_validation_*.txt
 *_verification_*.txt
 deep_verification_full.txt
+VY_V6_SPARK_CUT_IMPLEMENTATION_GUIDE.md
+segments_splits_compared_to_bank_spliting.md
+segments_splits_compared_to_bank_spliting_part_2.md
 
 # Python cache
 __pycache__/
@@ -493,7 +499,24 @@ fix_tracked_files.py
 # Wrong disassemblies (marked for deletion)
 *_wrong_needs_delete.asm
 
-# Local test/query scripts
-query_xdf_for_sparkcut.py
-test_apply_v38.py
-verify_v38_offsets.py
+# Local test/query scripts — REMOVED FROM IGNORE (Feb 15, 2026)
+# These are verified working tools with proper headers, ready for GitHub:
+# query_xdf_for_sparkcut.py, test_apply_v38.py, verify_v38_offsets.py
+
+# Untracked local-only docs and READMEs (Feb 12, 2026)
+GM_DELCO_ABBREVIATION_GLOSSARY.md
+VY_V6_ADVANCED_MODIFICATION_THEORY_AND_METHODS.md
+asm_wip/README.md
+fix_plans_consolidation_plans/
+research_document.md
+
+# Untracked items (Feb 14, 2026)
+68HC11_Reference/m6811-elf/
+FREE_SPACE_ANALYSIS_DEFINITIVE.md
+RACE_ECU_EFFICIENCY_REPORT.md
+custom_ose_$060_445_plan.md
+techedge_decompiled/
+
+# Working documents (Feb 15, 2026)
+209b_porting_to_262_for_92118883_stock_vy_v6.md
+commieflashtool.md
