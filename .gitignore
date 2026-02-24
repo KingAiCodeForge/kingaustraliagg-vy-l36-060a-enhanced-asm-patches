@@ -8,6 +8,14 @@ bank_split_output/11p_test/
 tools/*
 # Allow the HC11 bank splitter script (the tool that generates the bank splits)
 !tools/split_and_disassemble.py
+# Curated patch tools (verified working)
+!tools/apply_spark_cut_v38.py
+!tools/verify_v38_offsets.py
+!tools/query_xdf_for_sparkcut.py
+!tools/test_apply_v38.py
+!tools/analyze_v38_patch.py
+!tools/_disasm_hook_context.py
+!tools/_verify_stock.py
 priority_analysis/
 
 # Analysis scripts (generated during RAM mapping)
@@ -41,6 +49,7 @@ asm_wip/spark_cut/spark_cut_11p_style_v42.asm
 VERIFIED_ADDRESSES_SUMMARY.md
 chatgpt*.md
 11p_local_documentation.md
+issues_github.md
 LOCAL_ONLY_XDF_Axis_Linking_Reference.md
 TunerPro_XDF_Axis_Linking_Guide.md
 hardlimits_microcode.md
@@ -467,7 +476,7 @@ vy wip bench diagram.png
 # VY V6 binary disassembly/flash plan (local working doc)
 a_plan.md
 
-# Bank split output — ignore everything EXCEPT the verified Enhanced v1.0a bank splits
+# Bank split output — ignore everything EXCEPT verified Enhanced v1.0a splits
 bank_split_output/*
 !bank_split_output/Enhanced_v1.0a_bank1.asm
 !bank_split_output/Enhanced_v1.0a_bank1.bin
@@ -475,6 +484,15 @@ bank_split_output/*
 !bank_split_output/Enhanced_v1.0a_bank2.bin
 !bank_split_output/Enhanced_v1.0a_bank3.asm
 !bank_split_output/Enhanced_v1.0a_bank3.bin
+# Labeled disassembly (XDF labels applied)
+!bank_split_output/Enhanced_v1.0a_bank1_labeled_v2.asm
+!bank_split_output/Enhanced_v1.0a_bank2_labeled_v2.asm
+!bank_split_output/Enhanced_v1.0a_bank3_labeled_v2.asm
+# Diff files (stock vs enhanced comparison)
+!bank_split_output/diff_STOCK_vs_Enhanced_v1.0a_bank1.txt
+!bank_split_output/diff_STOCK_vs_Enhanced_v1.0a_bank2.txt
+!bank_split_output/diff_STOCK_vs_Enhanced_v1.0a_bank3.txt
+!bank_split_output/README.md
 
 # HC11 bank splitter script is un-ignored above (tools/split_and_disassemble.py)
 

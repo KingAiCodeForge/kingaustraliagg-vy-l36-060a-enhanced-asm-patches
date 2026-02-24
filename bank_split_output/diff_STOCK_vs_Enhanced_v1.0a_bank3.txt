@@ -1,0 +1,25 @@
+Binary Diff: STOCK vs Enhanced_v1.0a — bank3
+======================================================================
+Bank CPU base: $8000
+Total: 5 regions, 5 bytes changed
+
+--- Offset $0CB0 (CPU $8CB0), 1 byte(s) ---
+  STOCK: 34
+  Enhanced_v1.0a:   22
+
+--- Offset $0CFA (CPU $8CFA), 1 byte(s) ---
+  STOCK: BD
+  Enhanced_v1.0a:   C2
+
+--- Offset $0CFC (CPU $8CFC), 1 byte(s) ---
+  STOCK: BA
+  Enhanced_v1.0a:   AA
+
+--- Offset $0D4E (CPU $8D4E), 1 byte(s) ---
+  STOCK: 34
+  Enhanced_v1.0a:   22
+
+--- Offset $0DA8 (CPU $8DA8), 1 byte(s) ---
+  STOCK: C3
+  Enhanced_v1.0a:   C1
+
