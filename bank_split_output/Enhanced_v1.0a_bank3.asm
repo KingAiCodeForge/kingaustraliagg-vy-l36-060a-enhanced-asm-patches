@@ -7,6 +7,7 @@
         .org    $8000
 
 
+
 ; === Code region $8000-$FFFF ===
 
 
@@ -27630,13 +27631,14 @@ LFFF6:  20 1E            bra      $0016
 LFFF8:  20 21            bra      $001b
 
 ; --- Vector: COP_Watchdog ---
-LFFFA:  C0 15            subb     #21
+; NOTE: Bank 3 uses direct address pointers here, NOT BRA trampolines
+LFFFA:  C0 15            .word    $C015            ; -> COP handler at $C015
 
 ; --- Vector: Clock_Monitor ---
-LFFFC:  C0 19            subb     #25
+LFFFC:  C0 19            .word    $C019            ; -> Clock Monitor handler at $C019
 
 ; --- Vector: RESET ---
-LFFFE:  C0 11            subb     #17
+LFFFE:  C0 11            .word    $C011            ; -> RESET handler at $C011
 
 ; === Summary ===
 ; Instructions disassembled: 27582

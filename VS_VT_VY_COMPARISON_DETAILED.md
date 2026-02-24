@@ -222,12 +222,12 @@ DONE:
 ---
 
 ## 📋 Action Plan: Disassemble VY TI3 ISR
-R:\VY_V6_Assembly_Modding\VY_V6_Enhanced.bin
+
 ### Commands to Run
 
 ```bash
-# 1. Extract TI3 ISR region from VY binary
-dd if=A:\repos\VY_V6_Assembly_Modding\xdfs_and_adx_and_bins_related_to_project\VY_V6_Enhanced.bin of=vy_ti3_isr.bin bs=1 skip=8192 count=1024
+# 1. Extract TI3 ISR region from VY binary (run from repo root)
+dd if=xdfs_and_adx_and_bins_related_to_project/VY_V6_Enhanced.bin of=vy_ti3_isr.bin bs=1 skip=8192 count=1024
 # (skip=$2000 in decimal, count=1KB)
 
 # 2. Disassemble with m68hc11 tools
@@ -244,8 +244,8 @@ m6811-elf-objdump -D -b binary -m m68hc11 vy_ti3_isr.bin
 ### Python Script to Extract ISR
 
 ```python
-# Extract VY TI3 ISR
-with open('A:\\repos\\VY_V6_Assembly_Modding\\xdfs_and_adx_and_bins_related_to_project\\VY_V6_Enhanced.bin', 'rb') as f:
+# Extract VY TI3 ISR (run from repo root)
+with open('xdfs_and_adx_and_bins_related_to_project/VY_V6_Enhanced.bin', 'rb') as f:
     f.seek(0x2000)  # TI3 ISR location
     ti3_code = f.read(512)  # Read 512 bytes
     

@@ -5,7 +5,7 @@
 **Date:** January 13, 2026 (Updated: January 22, 2026)  
 **Compiled From:** PCM_SCRAPING_TOOLS FULL_ARCHIVE_V2 + OSE Project Files + Alpha-N Feasibility Analysis + MS43X Custom Firmware  
 **Purpose:** Complete MAFless tuning knowledge for Delco platforms
-
+; wip needs comaparison to other tool outputs and could be wrong, addresses and concepts need checking against the bin and way it runs itself internally. not just guesses, from official and pcmhacking sources and cross references between tool outputs. and disasm of bins (multiple) and decompilations of tools
 ---
 
 ## 📖 Table of Contents
@@ -144,6 +144,10 @@ Where:
 **Source:** BMW topic_3392 - GM V6 OBD2 PCM disassembly
 
 #### Key Memory Addresses (P59 128k ROM)
+
+> ⚠️ **These are P59/P01 (LS1/LS2) addresses — NOT VY V6 ($060A).**
+> The VY V6 uses a completely different memory map. These are included
+> for cross-platform reference only. Do NOT use these offsets on a VY binary.
 
 ```
 SPEED-DENSITY COMPENSATION TABLES:
@@ -1938,6 +1942,7 @@ CHANGES NEEDED:
 2. Add TPS-indexed VE table to unused ROM
 3. Define TPS axis (0-100%)
 4. Update checksum
+5. theres baro we can leave which might account for altitude changes?
 ```
 
 **Implementation Steps:**
@@ -2591,12 +2596,27 @@ This is the **same philosophy** Alpina applied to BMW engines 15+ years ago.
 ```asm
 ; VY V6 "Alpina Method" - Force MAF Fallback Mode
 ; Mimics: Alpina forcing ip_maf_1_diag as primary MAF table
+;
+; ⚠️ WARNING: $56D4 and $5795 are ROM/calibration addresses!
+; You CANNOT write to them at runtime with STAA.
+; These must be modified in the binary/flash image BEFORE flashing.
+; The code below shows the CONCEPT — actual implementation requires:
+;   Option A: Modify $56D4/$5795 bytes in the .bin file with hex editor
+;   Option B: Find the RAM shadow copy these are loaded into at startup
 
+; FOR HEX EDITOR (modify .bin file directly):
+;   At file offset $56D4: set bit 6 (OR with $40) → forces M32 MAF failure
+;   At file offset $5795: bit 6 already set in stock ($40 = bypass MAF during crank)
+;   Problem: $5795 bit 6 is "during crank" only — need to find where this flag
+;   is checked and patch the branch to always-take
+
+; This is a RESEARCH CONCEPT — not ready to flash!
 ALPINA_STYLE_PATCH:
     ; Step 1: Force MAF failure flag (like Alpina zeros RON tables)
-    LDAA    #$01
-    STAA    $56D4           ; M32 MAF Failure = 1
-    STAA    $5795           ; Bypass MAF filtering = 1 (bit 6)
+    LDAA    #$40
+    STAA    $56D4           ; ⚠️ ROM ADDRESS — see warning above! Sets bit 6 = M32 MAF Failure
+    LDAA    #$40
+    STAA    $5795           ; ⚠️ ROM ADDRESS — see warning above! Sets bit 6 = Bypass MAF filtering
     
     ; Step 2: ECU now uses "Minimum Airflow For Default Air" @ $7F1B
     ; Problem: This is a single scalar, not a table
@@ -2611,20 +2631,23 @@ ALPINA_STYLE_PATCH:
 ; VY V6 "Full Alpina Method" - Create ip_maf_1_diag equivalent
 ; Creates TPS×RPM lookup table like BMW's ip_maf_1_diag__n__tps_av
 
-; Constants (place in unused ROM space $F800+)
+; Constants (place in free ROM space — see CROSS-BANK WARNING)
+; ⚠️ If hooking from bank 2, code at $C468+ (bank 1) is NOT directly
+;    accessible via JSR — need trampoline in common area ($5D05)
+;    See ADDRESS_FIX_REPORT_20260209.md
 ALPHA_N_TABLE:      ; 16×16 = 256 bytes, airflow values
     ; Scaled from Alpina M52TUB28 for 3.8L VY V6
     .byte ...       ; See v3.asm for full table
 
 ALPHA_N_CALC:
-    ; Read TPS (0-255)
-    LDAA    TPS_RAM
-    ; Read RPM (divide by 256 for table index)
-    LDAB    RPM_RAM+1
+    ; Read TPS — verified at $00B6 (66R/27W in stock binary)
+    LDAA    $00B6           ; TPS_ADC_RAW (0-255)
+    ; Read RPM — verified at $00A2 (94R/2W, ×25 scaling, 8-bit)
+    LDAB    $00A2           ; RPM_DIV25
     ; 2D table lookup
-    JSR     TABLE_2D_INTERP
+    JSR     TABLE_2D_INTERP ; ⚠️ Need to find stock 2D interp routine address
     ; Store result where ECU expects MAF reading
-    STD     AIRFLOW_RAM
+    STD     $XXXX           ; ⚠️ AIRFLOW_RAM address unknown — needs disassembly trace
     RTS
 ```
 
@@ -2925,8 +2948,14 @@ FUEL_DONE:
 | **Hybrid MAF/Alpha-N** | ~2,300 bytes | ⚠️ TIGHT |
 
 **Available Free Space:**
-- 0x0C468-0x0FFBF: 15,192 bytes (✅ VERIFIED)
-- 0x19B0B-0x1BFFF: 9,461 bytes (✅ VERIFIED)
+- 0x0C468-0x0FFBF: 15,192 bytes (✅ VERIFIED) — **Bank 1 only** — needs trampoline if hooking from bank 2
+- 0x19B0B-0x1BFFF: 9,461 bytes (✅ VERIFIED) — **Bank 3** — transmission overlay
+- 0x05D05-0x05EFC: 504 bytes (✅ VERIFIED) — **Common area** — always visible, use for trampoline stubs
+- 0x17E87-0x17FBF: 313 bytes — **Bank 2** — same bank as dwell hook, JSR works directly
+
+> ⚠️ **CROSS-BANK WARNING:** Code at file 0x101E1 (dwell hook) runs in bank 2.
+> `JSR $C500` from bank 2 hits file 0x1C500 (bank 3), NOT 0x0C500 (bank 1).
+> Must use trampoline in common area ($5D05) to reach bank 1 free space.
 
 ---
 
@@ -3686,7 +3715,7 @@ c_conf_ff = 1: Enabled
 
 **End of Document**  
 **Total Pages:** 22  
-**Last Updated:** January 16, 2026
+**Last Updated:** February 20, 2026
 
 ---
 
@@ -3694,6 +3723,13 @@ c_conf_ff = 1: Enabled
 
 | Date | Changes |
 |------|---------|
+| 2026-02-20 | Fixed ROM vs RAM confusion in Alpina method code (can't STAA to ROM addresses at runtime) |
+| 2026-02-20 | Fixed bit mask values (was #$01, should be #$40 for bit 6) |
+| 2026-02-20 | Replaced placeholder addresses (TPS_RAM, RPM_RAM, AIRFLOW_RAM) with verified addresses ($00B6, $00A2) |
+| 2026-02-20 | Added cross-bank JSR warning to free space section and code examples |
+| 2026-02-20 | Added P59/P01 address warning (not VY V6 addresses) |
+| 2026-02-20 | Added bank 2 and common area free space to inventory |
+| 2026-01-22 | Disassembly-verified $56D4 bit map and $7F2A code references (0 refs found) |
 | 2026-01-16 | Added comprehensive BMW MS43X Custom Firmware reference (Appendix E) |
 | 2026-01-16 | Added MS43X selectable load input, VE tables, boost controller, flex fuel, launch control, NLS, RAL details |
 | 2026-01-16 | Added BARO vs MAP hardware clarification for VX/VY V6 |

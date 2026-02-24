@@ -431,11 +431,11 @@ OP_ADCB_IMM = 0xd9,  // Actually DIR!
 
 ## Reference Sources (Verified)
 
-1. **M68HC11E Family Datasheet** - `A:\repos\VY_V6_Assembly_Modding\datasheets\M68HC11E_Family_Datasheet.pdf` (3.5MB, official Freescale)
-2. **dasmfw Dasm68HC11.cpp** - `68HC11_Reference\dasmfw\Dasm68HC11.cpp` (authoritative opcode tables)
-3. **Ghidra SLEIGH HC11.slaspec** - `68HC11_Reference\ghidra_hc11\HC11.slaspec` (2465 lines, verified)
-4. **AN1060 Bootstrap Mode** - `A:\repos\VY_V6_Assembly_Modding\datasheets\AN1060.pdf` (M68HC11 bootstrap)
-5. **EB729 Engineering Bulletin** - `A:\repos\VY_V6_Assembly_Modding\datasheets\EB729.pdf` (technical details)
+1. **M68HC11E Family Datasheet** - `datasheets/M68HC11E_Family_Datasheet.pdf` (3.5MB, official Freescale)
+2. **dasmfw Dasm68HC11.cpp** - `68HC11_Reference/dasmfw/Dasm68HC11.cpp` (authoritative opcode tables)
+3. **Ghidra SLEIGH HC11.slaspec** - `68HC11_Reference/ghidra_hc11/HC11.slaspec` (2465 lines, verified)
+4. **AN1060 Bootstrap Mode** - `datasheets/AN1060.pdf` (M68HC11 bootstrap)
+5. **EB729 Engineering Bulletin** - `datasheets/EB729.pdf` (technical details)
 
 ---
 

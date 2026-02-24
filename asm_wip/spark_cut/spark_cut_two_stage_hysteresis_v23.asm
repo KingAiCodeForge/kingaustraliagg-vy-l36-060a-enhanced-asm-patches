@@ -1,4 +1,13 @@
-;==============================================================================
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; !! CROSS-BANK BUG (2026-02-13): This file places code at ORG $C468+ !!
+; !! (bank 1 free space). The hook at file 0x101E1 (STD $017B) is in  !!
+; !! bank 2 (0x10000-0x17FFF). JSR $C500 from bank 2 hits file        !!
+; !! 0x1C500 (LIVE TRANS CODE), NOT 0x0C500 (our patch).               !!
+; !! FIX: Relocate to common area $5D05 (always visible, 504 bytes    !!
+; !! free) or bank 2 free space at file 0x17EA2 (286 bytes).           !!
+; !! See custom_ose_$060_445_plan.md section 3.1a/3.1b for details.   !!
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;;==============================================================================
 ; VY V6 IGNITION CUT v23 - TWO-STAGE HYSTERESIS LIMITER
 ;==============================================================================
 ;
@@ -86,6 +95,10 @@
 ;------------------------------------------------------------------------------
 ; Hardware Registers
 TCTL1_REG       EQU $1020       ; Timer Control (for spark cut)
+; ⚠️ WARNING: STD $194C at $3618 is INIT PATH ONLY (cold start, D=$0000).
+;    Real period updates use filter sub $050C via indexed STD 0,X.
+;    Hooking $3618 does NOT affect normal engine operation!
+;    Use $017B hook at 0x101E1 instead (dwell intermediate).
 PERIOD_24X_RAM EQU $194C       ; ✅ VERIFIED: 24X crank period @ TIC3 ISR $3618 ; Verified: CRANK_PERIOD_24X (5 refs bank 2 both. TIC3 ISR variable) [Enhanced-fix]
                                 ; ❌ OLD WRONG: $017B (purpose unknown)
 

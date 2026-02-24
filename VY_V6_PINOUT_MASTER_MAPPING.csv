@@ -697,13 +697,13 @@ Primary Sources:
   - VX_VY_VU Engine and trans TP5 V104.adx
   - VX VY_V6_$060A_Enhanced_v2.09a.xdf
 
-Archive Locations:
-  A:\repos\PCM_SCRAPING_TOOLS\FULL_ARCHIVE_V2\downloads_md\Wiring\topic_3641\
-  A:\repos\PCM_SCRAPING_TOOLS\FULL_ARCHIVE_V2\markdown\Wiring\
-  A:\repos\PCM_SCRAPING_TOOLS\FULL_ARCHIVE_V2\markdown\Hardware\
-  A:\repos\PCM_SCRAPING_TOOLS\FULL_ARCHIVE_V2\markdown\Custom Code\
-  A:\repos\PCM_SCRAPING_TOOLS\FULL_ARCHIVE_V2\markdown\Holden ALDL ECUs\
-  A:\repos\PCM_SCRAPING_TOOLS\FULL_ARCHIVE_V2\markdown\Engineering and Reverse Engineering\
+Archive Locations (in PCM_SCRAPING_TOOLS repo):
+  FULL_ARCHIVE_V2/downloads_md/Wiring/topic_3641/
+  FULL_ARCHIVE_V2/markdown/Wiring/
+  FULL_ARCHIVE_V2/markdown/Hardware/
+  FULL_ARCHIVE_V2/markdown/Custom Code/
+  FULL_ARCHIVE_V2/markdown/Holden ALDL ECUs/
+  FULL_ARCHIVE_V2/markdown/Engineering and Reverse Engineering/
 
 ===============================================================================
 END OF VY_V6_PINOUT_MASTER_MAPPING.csv

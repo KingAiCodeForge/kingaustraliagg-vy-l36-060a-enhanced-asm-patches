@@ -71,19 +71,23 @@ HC11 CPU Address Space (64KB visible at any time):
 | RESET | `$202A` (jump table) | `$C011` | Trans has its own reset/boot |
 | All others | Point to `$2000-$201E` | **Same as LOW** | Shared ISR jump table |
 
-### Bank Switching Mechanism — PORTC
+### Bank Switching Mechanism — PORTG (HC11F)
 
-**Hardware:** The HC11's external address line A16 is controlled by PORTC bit 3 to select which 32KB block appears in the `$8000-$FFFF` window.
+> **CORRECTED 2026-02-20:** Previous version said "PORTC". The HC11F variant uses PORTG at register
+> offset +$02 (runtime $1002). Register at +$03 (runtime $1003) is DDRG, not DDRC/PORTD.
+> LDS #$03FF in the binary proves 1KB RAM → HC11F, which has PORTG/DDRG/PORTF instead of PORTC.
+
+**Hardware:** The HC11F's external address line A16 is controlled by PORTG bit 3 to select which 32KB block appears in the `$8000-$FFFF` window.
 
 **From pcmhacking (malser, Topic 82 Post 31):**
 > "Memory AM29F010 — it has two banks on 64K. 1 — from 0000 to FFFF and 2 from 10000 to 1FFFF. Switching between banks occurs to the senior A16 address."
 
 **Found in binary:**
 
-- `STAB $1003` at file `0x1476A` — writes `$F7` to PORTC (clears bit 3 → A16=0 → engine bank)
-- `BSET $03,#$CC` at file `0x0B0B9` — sets bits 7,6,3,2 of PORTC (bit 3 → A16=1 → trans bank)
+- `STAB $1003` at file `0x1476A` — writes `$F7` to DDRG (clears bit 3 → A16=0 → engine bank)
+- `BSET $03,#$CC` at file `0x0B0B9` — sets bits 7,6,3,2 of PORTG/DDRG (bit 3 → A16=1 → trans bank)
 
-> ⚠️ **PORTC bit 3 is the likely bank select pin.** Setting bit 3 = A16 high = file offsets 0x18000-0x1FFFF visible at `$8000-$FFFF`. Clearing bit 3 = A16 low = file offsets 0x08000-0x0FFFF visible.
+> ⚠️ **PORTG bit 3 is the likely bank select pin.** Setting bit 3 = A16 high = file offsets 0x18000-0x1FFFF visible at `$8000-$FFFF`. Clearing bit 3 = A16 low = file offsets 0x08000-0x0FFFF visible.
 
 ### Address Conversion Formulas (CORRECTED 2026-02-09)
 
@@ -187,7 +191,7 @@ This is a **software jump table** in the always-visible calibration area. Both e
 | +36 | 0x02024 | **$2024** | `7E 20 24` | JMP $2024 | **∞ loop (COP - engine bank)** | $FFFA (LOW) |
 | +39 | 0x02027 | **$2027** | `7E 20 27` | JMP $2027 | **∞ loop (CMF - engine bank)** | $FFFC (LOW) |
 | +42 | 0x0202A | **$202A** | `7E 20 2A` | JMP $202A | **∞ loop (RESET - engine bank)** | $FFFE (LOW) |
-| +45 | 0x202D | $A02D | `7E 2B B0` | JMP $2BB0 | Unknown ISR 15 |
+| +45 | 0x0202D | **$202D** | `7E 2B B0` | JMP $2BB0 | Unknown ISR 15 | — |
 
 ### How Pseudo-Vectors Work
 
@@ -340,29 +344,27 @@ $3633:  STAA $1948       ; Store A to $1948
 
 ### Current Hook Point
 
-**Location:** File offset `0x101E1` → CPU address `$81E1` (engine bank, `$8000-$FFFF`)
+**Location:** File offset `0x101E1` → CPU address `$81E1` (in `$8000-$FFFF` paged region)
 **Instruction:** `STD $017B` (store dwell intermediate to RAM)
-**Replacement:** `JSR $C468` (jump to our patch code in engine bank free space)
+**Replacement:** `JSR $5D05` (jump to trampoline in common area)
 
-### Bank Switching Considerations (CORRECTED 2026-02-09)
+### Bank Switching Considerations (CORRECTED 2026-02-20)
 
-**✅ VERIFIED: Hook and patch are in the SAME bank — engine bank (`$8000-$FFFF`)**
+**⚠️ CROSS-BANK BUG: Hook and free space are in DIFFERENT banks!**
 
-Our patch code at file offset `0x0C468` maps to CPU `$C468` when the engine bank is active. The hook at file `0x101E1` maps to CPU `$81E1` — but WAIT:
+File offset `0x101E1` is in the HIGH half (0x10000-0x17FFF). When this code runs, CPU $8000-$FFFF maps to file 0x10000-0x17FFF. Our free space at file `0x0C468` ($C468) is in the LOW half — it's only visible when A16=0 (engine bank active).
 
-> ⚠️ **File offset `0x101E1` is in the HIGH half** (0x10000-0x1FFFF = transmission bank!).
-> CPU address = `$101E1 - $10000` = `$01E1`.
-> This is actually in **RAM space** (`$0100-$03FF`), which means the disassembly context needs re-examination.
-> Alternatively, this code may be reached when the trans bank is active and addresses wrap.
->
-> **TODO:** Re-verify which bank context the hook at `0x101E1` executes in. If it's in the transmission bank, then `$C468` might not be visible (that's engine bank free space). If so, we need to use free space in the HIGH half instead.
+> **❌ `JSR $C468` from 0x101E1 will NOT reach file 0x0C468!**
+> When the code at 0x101E1 is executing, $C468 resolves to file 0x1C468 (trans/HIGH half).
+
+**Fix:** Use a trampoline stub in the **common area** ($5D05-$5EFC, always visible at $2000-$7FFF regardless of bank). `JSR $5D05` always works from any bank.
 
 **Corrected Address Mapping:**
 
 | File Offset | CPU Address | Bank | Contents |
 |-------------|-------------|------|----------|
 | `0x0C468` | `$C468` | Engine (LOW) | **FREE SPACE** — 15,192 bytes |
-| `0x101E1` | `$01E1` (RAM?) or `$81E1`? | **AMBIGUOUS** | Hook point — needs verification |
+| `0x101E1` | `$81E1` | HIGH half (paged, bank 2) | Hook point — **NOT in same bank as $C468 free space** |
 
 **Antus's Patching Advice (Topic 8500):**
 > "Instead we ended up using the disassembly work to understand the code, but patched the factory bins with jumps to jump out to unused space and implement additional logic there, without reassembling the bin. This side steps the whole bank switching problem quite effectively."
@@ -469,13 +471,13 @@ $35D5:  PULB             ; Restore
 - ✅ The filter chain is: $35CB (LDX #$194C) → JSR $24AA → JSR $050C → STD 0,X
 - ✅ 24X sensor = 24 pulses per revolution = 15° per pulse
 - ✅ TIC3 ISR at $35FF handles crank sensor input
-- ✅ No bank switching issues for spark cut patch (calibration ROM always visible)
+- ⚠️ **Cross-bank JSR bug:** Hook at 0x101E1 (HIGH half) cannot JSR to $C468 (LOW half free space). Must trampoline via common area ($5D05).
 
 **⚠️ Revised Hook Strategy (2026-02-07):**
 - ❌ Hooking `STD $194C` at $3618 = **INEFFECTIVE** (init path only, filter overwrites)
-- ✅ **Option A:** Hook `STD $017B` at 0x101E1 (dwell intermediate) — affects dwell calc directly
-- ✅ **Option B:** Hook inside filter sub $050C — intercepts real period updates
-- ✅ **Option C:** Hook `$35D2` (JSR $24AA) — intercept before filter runs
+- ✅ **Option A:** Hook `STD $017B` at 0x101E1 (dwell intermediate) — affects dwell calc directly. **⚠️ Must use trampoline in common area ($5D05), NOT direct JSR to $C468!**
+- ✅ **Option B:** Hook inside filter sub $050C — intercepts real period updates. $050C is in common area ($0000-$7FFF), no bank issue.
+- ✅ **Option C:** Hook `$35D2` (JSR $24AA) — intercept before filter runs. $35D2 is in common area, no bank issue.
 
 ### Implementation Options for Spark Cut (REVISED 2026-02-07)
 
@@ -485,7 +487,15 @@ Hooking $3618 would only intercept initialization, NOT real period values.
 
 **Option 1: Hook Dwell Intermediate at $017B (RECOMMENDED)**
 ```assembly
-; Hook at file offset 0x101E1 (replaces STD $017B with JSR $C500)
+; Hook at file offset 0x101E1 (replaces STD $017B with JSR $5D05)
+; ⚠️ CANNOT use JSR $C500 directly — hook is in HIGH half, $C500 would
+;   resolve to file 0x1C500 (trans code), not 0x0C500 (free space)!
+; Must trampoline via common area stub at $5D05.
+;
+; TRAMPOLINE STUB (at file 0x05D05, CPU $5D05 — always visible):
+;   JMP $C500   ; 3 bytes — executes after bank switch to engine bank
+;               ; ⚠️ TODO: need to verify engine bank is selected before this JMP
+;
 ; $017B is in the dwell calculation path - injecting a fake value here
 ; directly affects dwell time without needing to intercept the period filter.
 SPARK_CUT_HANDLER:
@@ -538,7 +548,7 @@ STORE_NORMAL:
 2. ✅ **Where is the pseudo-vector jump table?** → `0x2000-0x2030`
 3. ✅ **Which ISR handles crank sensor?** → `$35FF` via TIC3 vector
 4. ✅ **Where is 24X crank period stored?** → `$194C` (verified via TIC3 ISR)
-5. ✅ **How does bank switching affect patches?** → No issues (calibration ROM always visible)
+5. ⚠️ **How does bank switching affect patches?** → **Cross-bank JSR bug discovered!** Hook at 0x101E1 (HIGH half) can't directly reach free space at 0x0C468 (LOW half). Must use common area trampoline. See README.
 6. ✅ **Where is $017B actually used?** → See below (RESOLVED)
 7. ❌ **Where does dwell calculation read $194C?** → Needs analysis
 8. ❌ **What are the 8 unknown ISRs?** → Need systematic disassembly
@@ -598,6 +608,198 @@ The original analysis (November 2025) found `STD $017B` at offset `0x101E1` and 
 2. **hc11_disassembler.py outputs** - Used by AI to generate incorrect ASM files
 3. **All spark_cut_*.asm versions v1-v37** - Used $017B based on early analysis
 4. **VERIFIED_ADDRESSES_SUMMARY.md** - Listed $017B as verified (it was, just wrong purpose)
+
+---
+
+## 📊 Meticulous Free Space Analysis (VERIFIED 2026-02-10, CORRECTED 2026-02-12)
+
+> **⚠️ CORRECTION 2026-02-12:** Previous version did not account for cross-bank JSR/JMP references or XDF table overlap.  
+> **See [`FREE_SPACE_ANALYSIS_DEFINITIVE.md`](FREE_SPACE_ANALYSIS_DEFINITIVE.md) for the triple-checked definitive analysis.**  
+> Key corrections: Bank3 `$9B0B-$BFFF` has 182 JSR refs + Bank1 has 96% code there — NOT truly free.  
+> Common area `$5117-$5248` has 14 XDF torque tables — NOT free (zero-valued cal data ≠ unused space).  
+> Safest always-visible free space: **~1,370 bytes** at `$3E87`, `$5C31`, `$5D05`, `$6559` only.
+
+> **Method:** Every byte of VY_V6_Enhanced.bin (131,072 bytes) analyzed via PowerShell.
+> Zero bytes (0x00) and FF bytes (0xFF) mapped. Contiguous runs identified.
+> Cross-bank comparison performed byte-by-byte across all three banked regions.
+
+### 4KB Block Composition (All Banks)
+
+```
+Block               Zeros   0xFF   Code/Data   % Free   Notes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+── COMMON AREA (0x00000-0x07FFF) ──────────────────────────────────
+0x00000-0x00FFF        0   4096         0     100%   ALL 0xFF (HC11 RAM shadow)
+0x01000-0x01FFF        0   4096         0     100%   ALL 0xFF (I/O register shadow)
+0x02000-0x02FFF      424     53      3619    11.6%   ISR jump table + shared code
+0x03000-0x03FFF      551     48      3497    14.6%   Shared code continues
+0x04000-0x04FFF      492    176      3428    16.3%   Calibration tables start
+0x05000-0x05FFF     1291     44      2761    32.6%   Calibration (sparse tables)
+0x06000-0x06FFF      753     64      3279    19.9%   Spark/fuel tables
+0x07000-0x07FFF      853    142      3101    24.3%   Calibration continues
+
+── BANK1 / ENGINE (0x08000-0x0FFFF) ──────────────────────────────
+0x08000-0x08FFF      150     29      3917     4.4%   Dense engine code
+0x09000-0x09FFF      265     25      3806     7.1%   Dense engine code
+0x0A000-0x0AFFF       98     12      3986     2.7%   Dense engine code
+0x0B000-0x0BFFF      126     51      3919     4.3%   Engine code ends ~$C468
+0x0C000-0x0CFFF     2989      5      1102    73.1%   ← FREE SPACE STARTS at $C468
+0x0D000-0x0DFFF     4096      0         0     100%   ✅ ALL ZERO (free)
+0x0E000-0x0EFFF     4096      0         0     100%   ✅ ALL ZERO (free)
+0x0F000-0x0FFFF     4050      0        46    98.9%   Mostly free, vectors at $FFC0+
+
+── BANK2 (0x10000-0x17FFF) ───────────────────────────────────────
+0x10000-0x10FFF       79     47      3970     3.1%   Dense code (dwell calc here)
+0x11000-0x11FFF       70     48      3978     2.9%   Dense code
+0x12000-0x12FFF       65     55      3976     2.9%   Dense code
+0x13000-0x13FFF      127     40      3929     4.1%   TIC3 ISR code ($35FF+)
+0x14000-0x14FFF       86     34      3976     2.9%   Dense code
+0x15000-0x15FFF       29     15      4052     1.1%   Most packed block in binary
+0x16000-0x16FFF       67     36      3993     2.5%   Dense code
+0x17000-0x17FFF      406     37      3653    10.8%   Slight slack; 313B free at end
+
+── BANK3 / TRANS (0x18000-0x1FFFF) ───────────────────────────────
+0x18000-0x18FFF      278    145      3673    10.3%   Trans code (boot at $C011)
+0x19000-0x19FFF     1471     17      2608    36.3%   Trans code thins out
+0x1A000-0x1AFFF     4096      0         0     100%   ✅ ALL ZERO (free)
+0x1B000-0x1BFFF     4096      0         0     100%   ✅ ALL ZERO (free)
+0x1C000-0x1CFFF     1422     12      2662      35%   Mixed: island of trans code
+0x1D000-0x1DFFF     4096      0         0     100%   ✅ ALL ZERO (free)
+0x1E000-0x1EFFF     4096      0         0     100%   ✅ ALL ZERO (free)
+0x1F000-0x1FFFF     4096      0         0     100%   ✅ ALL ZERO (+ vectors at end)
+```
+
+### Precise Free Space Boundaries
+
+#### Bank1 (Engine Bank) — ONE contiguous block
+```
+┌─────────────────────────────────────────────────────────────┐
+│ File 0x0C468 — 0x0FFBF                                      │
+│ CPU  $C468  — $FFBF  (when engine bank is paged in)         │
+│ Size: 15,192 bytes (14.8 KB)   Fill: ALL 0x00               │
+│ Status: ✅ CONFIRMED 100% zero                               │
+│ Terminated by: $FFC0-$FFD5 pseudo-vector padding (20 00)    │
+│                $FFD6-$FFFF hardware interrupt vectors        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Bank2 — Almost completely FULL (critical code bank)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ File 0x17E87 — 0x17FBF                                      │
+│ CPU  $FE87  — $FFBF  (when bank2 is paged in)              │
+│ Size: 313 bytes (0.3 KB)   Fill: ALL 0x00                   │
+│ Status: ⚠️ TOO SMALL for meaningful patches                  │
+│ Contains: TIC3 ISR, dwell calc, ALL critical engine code    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Bank3 (Trans Bank) — THREE separate free regions
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Region 1: File 0x19B0B — 0x1BFFF                            │
+│           CPU  $9B0B  — $BFFF                               │
+│           Size: 9,461 bytes (9.2 KB)                        │
+│           Status: ✅ UNIQUE free space (no Bank1 overlap)    │
+│                                                             │
+│ Region 2: File 0x1CA57 — 0x1CBB6                            │
+│           CPU  $CA57  — $CBB6                               │
+│           Size: 352 bytes (0.3 KB)                          │
+│           Status: ⚠️ OVERLAPS Bank1 zeros (both are zero)    │
+│                                                             │
+│ Region 3: File 0x1CE3F — 0x1FFB1                            │
+│           CPU  $CE3F  — $FFB1                               │
+│           Size: 12,659 bytes (12.4 KB)                      │
+│           Status: ⚠️ OVERLAPS Bank1 zeros (both are zero)    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Common Area — Scattered small blocks only
+```
+27 blocks ≥ 32 bytes, totaling ~2,520 bytes
+Largest: $5D05-$5F04 (512 bytes, mixed 0x00/0xFF)
+         $3E87-$3FE1 (347 bytes, all zero)
+         $6559-$66D7 (383 bytes, all zero)
+Verdict: ⚠️ NOT suitable for patch code (too fragmented)
+```
+
+### Cross-Bank Comparison Results
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Comparison          Bytes Different    Percentage    Verdict
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Bank1 vs Bank2      31,996 / 32,768      97.6%       COMPLETELY DIFFERENT CODE
+ Bank1 vs Bank3      18,784 / 32,768      57.3%       ~42% identical (free space overlap)
+ Bank2 vs Bank3      31,921 / 32,768      97.4%       COMPLETELY DIFFERENT CODE
+ All 3 identical        556 / 32,768       1.7%       Almost nothing shared
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**256-byte block heatmap key findings:**
+
+| CPU Range | B1 vs B3 | Why |
+|-----------|----------|-----|
+| `$8000-$CA56` | 97-100% different | Different executable code in each bank |
+| `$CA57-$CBB6` | **0% different (IDENTICAL)** | Both are 352 bytes of zeros |
+| `$CBB7-$CE3E` | 58-228/256 different | Bank3 has code island, Bank1 is zeros |
+| `$CE3F-$FEB1` | **0% different (IDENTICAL)** | Both are 12,659 bytes of zeros |
+| `$FEB2-$FEFF` | 0% different | Both identical (Bank1=zeros, Bank3=JMP stubs+zeros) |
+| `$FF00-$FFFF` | 18 bytes different | Vector differences (COP/CMF/RESET) |
+
+### ⚠️ CRITICAL: The Free Space Overlap Explained
+
+```
+  CPU Address    Bank1 (file 0x08000+)    Bank3 (file 0x18000+)
+  ──────────────────────────────────────────────────────────────
+  $8000-$C467    ██████ Engine code        ██████ Trans code
+  $C468-$9B0A    ░░░░░░ FREE (zeros)       ██████ Trans code      ← Bank1 UNIQUE free
+  $9B0B-$BFFF    ░░░░░░ FREE (zeros)       ░░░░░░ FREE (zeros)   ← BOTH free, BUT:
+                 ↑ This is INSIDE Bank1    ↑ Bank3 UNIQUE free     Bank1 $9B0B doesn't
+                   free space already        (no B1 code here)    exist (B1 free starts
+                                                                  at $C468)
+  $C468-$CA56    ░░░░░░ FREE (zeros)       ██████ Trans code      ← Bank1 UNIQUE free
+  $CA57-$CBB6    ░░░░░░ FREE (zeros)       ░░░░░░ FREE (zeros)   ← OVERLAP (both zero)
+  $CBB7-$CE3E    ░░░░░░ FREE (zeros)       ██████ Trans code      ← Bank1 UNIQUE free
+  $CE3F-$FFB1    ░░░░░░ FREE (zeros)       ░░░░░░ FREE (zeros)   ← OVERLAP (both zero)
+  $FFB2-$FFBF    ░░░░░░ FREE (zeros)       ██ JMP stubs (14B)    ← Bank3 has extra stubs
+  $FFC0-$FFD5    ▓▓ Pseudo-vec padding     ▓▓ Pseudo-vec padding  ← Both: [20 00] × 11
+  $FFD6-$FFFF    ▓▓ HW Vectors             ▓▓ HW Vectors (3 differ)
+```
+
+**What this means for patching:**
+
+1. **If you patch Bank1 free space at CPU $C468-$FFBF:** Code only runs when engine bank is active. Bank3 has zeros at the same CPU addresses from $CE3F+, so if the CPU ever reads those addresses while trans bank is paged in, it gets zeros (NOP sled → undefined behavior).
+
+2. **If you patch Bank3 unique free space at CPU $9B0B-$BFFF:** Code only runs when trans bank is active. Bank1 has engine code at this CPU range, so no conflict.
+
+3. **You CANNOT share patch code between banks** at the same CPU address unless you write identical code to BOTH file locations (0x0xxxx and 0x1xxxx).
+
+4. **The pseudo-vector jump table at $2000** is in the COMMON area — visible from BOTH banks. This is why ISR redirection works regardless of which bank is active.
+
+### Total Free Space Budget
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Location                  Size        Usable?   Notes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Bank1: $C468-$FFBF        15,192 B    ✅ YES    PRIMARY patch space
+ Bank2: $FE87-$FFBF           313 B    ⚠️ Tiny   Only for tiny hooks
+ Bank3: $9B0B-$BFFF         9,461 B    ✅ YES    UNIQUE to Bank3
+ Bank3: $CA57-$CBB6           352 B    ⚠️ Small  Overlaps B1 zeros
+ Bank3: $CE3F-$FFB1        12,659 B    ⚠️ Risky  Overlaps B1 zeros
+ Common: scattered          ~2,520 B   ❌ No     Too fragmented
+───────────────────────────────────────────────────────────────────
+ TOTAL UNIQUE FREE:        25,006 B    (24.4 KB)
+ TOTAL INCLUDING OVERLAP:  37,997 B    (37.1 KB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Recommended Patch Space Allocation:**
+- **Engine patches (spark cut, fuel, boost):** Bank1 $C468-$FFBF (15.2 KB)
+- **Trans patches (shift control):** Bank3 $9B0B-$BFFF (9.2 KB)
+- **Tiny ISR hooks (if needed in Bank2):** Bank2 $FE87-$FFBF (313 bytes max)
+- **ISR redirection (all banks):** Common area pseudo-vectors at $2000 (always visible)
 
 ---
 

@@ -350,6 +350,7 @@ xdf_gap_analysis.txt
 # Directories to ignore
 address_mapping/
 docs/
+ignore/
 
 # Embedded git repos (tools we cloned)
 68HC11_Reference/68HC11-resources/

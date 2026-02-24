@@ -43,16 +43,31 @@ made by me and a computer robot.
 
 ### ✅ HC11 INTERRUPT VECTORS & PSEUDO-VECTORS (January 31, 2026)
 
-**HC11 Hardware Vector Table** (file offset 0x1FFF0-0x1FFFF):
-| Vector | File Offset | CPU Address | Target |
-|--------|-------------|-------------|---------|
-| IRQ | 0x1FFF2 | $FFF2 | $C015 (DTC recovery) |
-| XIRQ | 0x1FFF4 | $FFF4 | $2021 → JMP $2BA6 |
-| SWI | 0x1FFF6 | $FFF6 | $201E → JMP $2BA0 |
-| Illegal Opcode | 0x1FFF8 | $FFF8 | $201B → JMP $2BAC (TIC3!) |
-| COP Failure | 0x1FFFA | $FFFA | $2018 → JMP $30BA |
-| COP Clock Monitor | 0x1FFFC | $FFFC | *Not analyzed* |
-| **RESET** | 0x1FFFE | $FFFE | **$2000** |
+**HC11 Hardware Vector Table** (file offset 0x0FFD6-0x0FFFF / 0x1FFD6-0x1FFFF):
+
+> ⚠️ **NOTE:** The binary has TWO copies of the vector table (engine bank at 0x0FFD6, trans bank at 0x1FFD6).
+> Most vectors are identical between banks. See `BANK_SWITCHING_AND_ISR_ANALYSIS.md` for full details.
+> Below shows the ENGINE bank (LOW half) vectors + pseudo-vector targets.
+
+| Vector | File Offset | CPU Address | Target | Purpose |
+|--------|-------------|-------------|---------|--------|
+| SCI | 0x0FFD6 | $FFD6 | $2003 → JMP $29D3 | Serial (ALDL) ISR |
+| SPI | 0x0FFD8 | $FFD8 | $2000 → JMP $2BAF | Default (unused) |
+| PAIE | 0x0FFDA | $FFDA | $2000 → JMP $2BAF | Default (unused) |
+| TOF | 0x0FFDE | $FFDE | $2000 → JMP $2BAF | Default (unused) |
+| TOC4 | 0x0FFE2 | $FFE2 | $2006 → JMP $35DE | TOC4 ISR |
+| TOC3 | 0x0FFE4 | $FFE4 | $2009 → JMP $35BD | TOC3 ISR |
+| TOC1 | 0x0FFE8 | $FFE8 | $200C → JMP $37A6 | TOC1 ISR |
+| **TIC3** | 0x0FFEA | **$FFEA** | **$200F → JMP $35FF** | **24X crank ISR** |
+| TIC2 | 0x0FFEC | $FFEC | $2012 → JMP $358A | TIC2 ISR |
+| TIC1 | 0x0FFEE | $FFEE | $2015 → JMP $301F | TIC1 ISR |
+| IRQ | 0x0FFF2 | $FFF2 | $2018 → JMP $30BA | IRQ handler |
+| XIRQ | 0x0FFF4 | $FFF4 | $201B → JMP $2BAC | XIRQ handler |
+| SWI | 0x0FFF6 | $FFF6 | $201E → JMP $2BA0 | SWI handler |
+| ILLOP | 0x0FFF8 | $FFF8 | $2021 → JMP $2BA6 | Illegal opcode |
+| COP | 0x0FFFA | $FFFA | $2024 → JMP $2024 | COP (∞ loop) |
+| CMF | 0x0FFFC | $FFFC | $2027 → JMP $2027 | CMF (∞ loop) |
+| **RESET** | 0x0FFFE | **$FFFE** | **$202A → JMP $202A** | RESET (∞ loop) |
 
 **Pseudo-Vector Jump Table** (file offset 0x2000-0x2030, CPU $A000-$A030):
 | Offset | File Addr | CPU Addr | Instruction | Target | Purpose |
@@ -74,12 +89,12 @@ made by me and a computer robot.
 | +42 | 0x202A | $A02A | JMP $202A | $202A | Infinite loop (unused) |
 | +45 | 0x202D | $A02D | JMP $2BB0 | $2BB0 | Unknown ISR 15 |
 
-**CRITICAL FINDING:** TIC3 ISR is at **$35FF** (file offset 0x155FF), NOT $2BAC!  
-The vector at $200F is the proper entry point for Input Capture 3 (crank/spark timing).
+**CRITICAL FINDING:** TIC3 ISR is at **$35FF** (file offset 0x035FF, in common area).
+The pseudo-vector at $200F is the entry point for Input Capture 3 (24X crank sensor).
 
 **Action Required:** Disassemble $35FF to find 16-bit RPM and PERIOD_24X storage (crank period at $194C).
 
-### TIC3 ISR Analysis (File 0x135FF, CPU $35FF)
+### TIC3 ISR Analysis (File 0x035FF, CPU $35FF — Common Area, Always Visible)
 
 **Critical RAM Addresses Found:**
 - `$194C` - 16-bit crank period storage (STD at $3618)
@@ -101,9 +116,13 @@ $360C:  BNE $3633        ; Branch if non-zero
 $360E:  CLR $194F        ; Clear high byte
 $3611:  CLR $194E        ; Clear low byte  
 $3614:  BCLR $50,#$01    ; Clear bit 0 of $50
-$3618:  STD $194C        ; ** STORE CRANK PERIOD **
+$3618:  STD $194C        ; ** INIT PATH ONLY — stores D=$0000 on cold start **
 $361B:  BRA $3633        ; Branch ahead
 ```
+
+> ⚠️ **NOTE:** The `STD $194C` at $3618 is the **initialization path only** (D=$0000 on cold start).
+> Real period updates happen through the filter sub `$050C` via indexed `STD 0,X` with X=$194C.
+> See `BANK_SWITCHING_AND_ISR_ANALYSIS.md` for the full period update mechanism.
 
 **Candidate Addresses:**
 - **PERIOD_24X_16BIT:** `$194C` (16-bit crank period)
@@ -289,28 +308,33 @@ Binary analysis using BRSET/BRCLR/BSET/BCLR opcode scanning revealed the most he
 | **0x017B** | DWELL_INTERMEDIATE | 2 bytes | Dwell calc | Intermediate dwell calculation (NOT crank!) |
 
 **Notes:**
-- **$194C** is the actual crank period storage (verified in TIC3 ISR at file 0x13618)
+- **$194C** is the actual crank period storage (verified in TIC3 ISR at file 0x035FF, CPU $35FF)
 - **$017B** is intermediate dwell calculation, NOT crank period
-- Both hooks are VALID for spark cut - choose based on preference:
-  - $017B hook (0x101E1) - in main code, easier to debug
-  - $194C hook (0x13618) - in TIC3 ISR, affects timing directly
+- The $017B hook at 0x101E1 is the recommended approach
+- ⚠️ The $194C write at $3618 is **INIT PATH ONLY** (cold start, D=$0000). Real period updates happen via filter sub $050C.
+- ⚠️ **Cross-bank bug:** Hook at 0x101E1 is in the HIGH half. Cannot JSR to $C468 (LOW half). Must use common area trampoline ($5D05). See BANK_SWITCHING_AND_ISR_ANALYSIS.md.
 
-**Spark Cut Injection (Option 1 - Dwell Hook at $017B):**
+**Spark Cut Injection (Option 1 - Dwell Hook at $017B) — RECOMMENDED:**
 ```assembly
 ; Hook at 0x101E1 - manipulate dwell intermediate
+; ⚠️ CROSS-BANK WARNING: 0x101E1 is in HIGH half!
+;    Cannot JSR to $C468 directly. Must trampoline via common area ($5D05).
+;    See BANK_SWITCHING_AND_ISR_ANALYSIS.md.
 ; When RPM > threshold, inject fake dwell value
 LDD #$0000          ; Zero dwell = no spark
 STD $017B           ; Store fake intermediate dwell
                     ; Result: Spark timing calculation uses wrong value
 ```
 
-**Spark Cut Injection (Option 2 - Crank Period Hook at $194C):**
+**Spark Cut Injection (Option 2 - Crank Period Hook at $194C) — ⚠️ INIT PATH ONLY:**
 ```assembly
-; Hook at 0x13618 in TIC3 ISR - manipulate crank period
-; When RPM > threshold, inject fake crank period
+; Hook at $3618 in TIC3 ISR (CPU $3618, file 0x03618)
+; ⚠️ WARNING: This STD only executes during cold-start init ($194A==0, D=$0000).
+;    Real period updates use filter sub $050C via indexed STD 0,X.
+;    Hooking here would NOT intercept normal-running period writes!
+;    DO NOT USE FOR SPARK CUT - use Option 1 ($017B) instead.
 LDD #$3E80          ; 16,000 = fake long period
-STD $194C           ; Store to ACTUAL crank period variable
-                    ; Result: Dwell calculation produces wrong timing
+STD $194C           ; Only fires on cold start, NOT during normal running!
 ```
 
 ---

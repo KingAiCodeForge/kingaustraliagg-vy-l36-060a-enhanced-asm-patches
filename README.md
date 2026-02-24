@@ -6,14 +6,15 @@
 
 > **Holden VY V6 Ecotec L36 (3.8L) - Assembly Patches for Delco $060A 92118883 ECU**
 >
-> Research-based 68HC11 assembly patches based on Chr0m3 Motorsport and The1's Enhanced OS, made by me and a computer robot.
+> Research-based 68HC11 assembly patches based on Chr0m3 Motorsport and The1's Enhanced OS, made by me and a computer robot. Can someone explain where this is wrong with real address and numbers snippets to replace the misinfomation, if you come across anything. feel free to add more concepts or explainations to anywhere with PR or message me to do it and i will fix it asap. looking for someone to upload the 3 split .asm from a ida and ghidra if anyone has actually got this. dont just tell me to do it myself, it gets this project nowhere. the concepts apply to many things not just delco.
+
+Who does this project serve: Everyone its on github.
 
 ⚠️ **ALL CODE IS UNTESTED - RESEARCH ONLY** ⚠️
 
 No patched binaries included. These are reference implementations requiring manual binary patching and oscilloscope verification before real-world use.
 
-> **Reality Check:** Most patches will likely work if applied correctly. However, use at your own risk. If you don't understand what connects to what in the binary, how one routine calls another, how RAM variables are shared between ISRs, or how timing-critical code interacts — you can brick your ECU or damage your engine. The HC11 has no safety net.
-need to map out every thing to the bone in the binary itself and correct any mistakes i make along the way. im only human after all.
+> **Reality Check:** Most patches concepts will likely work if applied correctly and checked over by experts, all the work has been done no point saying this wont work, custom ose will be coming soon, this is the blueprint, if you do actually know and see something wrong or 100 percent know something wont work and can logically explain with the numbers and corrections please do so if not just shut the f up. However, use at your own risk. If you don't understand what connects to what in the binary, how one routine calls another, how RAM variables are shared between ISRs, or how timing-critical code interacts — you can brick your ECU or damage your engine. The HC11 has no safety net. some of my offset out a bit and some opcodes could be out. still work in progress, need to map out every thing to the bone in the binary itself and correct any mistakes i make along the way. im only human after all, it is looking good now, i will push the bank 1 2 and 3 with labels to github from the bank spliting folder.
 
 ---
 
@@ -27,10 +28,28 @@ need to map out every thing to the bone in the binary itself and correct any mis
 | Unknown actual crank storage | **`$194C` = 24X crank period** (STD @ $3618 in TIC3 ISR) |
 
 **Both hooks are VALID for spark cut:**
-- **$017B hook** (@ 0x101E1) - In main code, easier to debug, manipulates dwell intermediate
-- **$194C hook** (@ 0x13618) - In TIC3 ISR, manipulates actual crank period
+- **$017B hook** (@ 0x101E1) - In bank 2 paged code, manipulates dwell intermediate — **RECOMMENDED**
+- **$194C hook** (@ 0x13618) - In TIC3 ISR, cold-start init path ONLY — not suitable for runtime limiter
 
-**See:** `BANK_SWITCHING_AND_ISR_ANALYSIS.md` for full TIC3 ISR disassembly
+**See:** [`BANK_SWITCHING_AND_ISR_ANALYSIS.md`](BANK_SWITCHING_AND_ISR_ANALYSIS.md) for full TIC3 ISR disassembly
+
+---
+
+## 🚨 CRITICAL: Cross-Bank JSR Bug (Identified 2026-02-09)
+
+**All ASM files that hook `0x101E1` (bank 2) and `JSR $C500` to bank 1 free space are broken as written.**
+
+The hook at file offset `0x101E1` runs in **bank 2** context (CPU $8000–$FFFF = file 0x10000–0x17FFF). Our patch code at file `0x0C500` is in **bank 1**. Banks 1 and 2 share the CPU address range $8000–$FFFF — only one is visible at a time. **`JSR $C500` from bank 2 code will hit file 0x1C500 (bank 3 — transmission code), NOT our patch at 0x0C500.**
+
+**Fix:** Use a trampoline stub in the **common area** ($5D05–$5EFC, 504 bytes, always visible from any bank). The stub at $5D05 is always mapped regardless of bank selection — `JSR $5D05` from bank 2 will always reach it.
+
+| Fix Option | Location | Size | Notes |
+|-----------|----------|------|-------|
+| **Common area stub** | $5D05–$5EFC | 504 bytes | ✅ Always visible — recommended for small patches |
+| **Bank 2 free space** | $FE87–$FFBF (file 0x17E87) | 313 bytes | Same bank as hook — JSR works directly |
+| **Trampoline** | Common stub → bank switch → bank 1 | N/A | Full 15 KB of bank 1 available |
+
+> **Status:** All `spark_cut/*.asm` files that use `ORG $C468` or `ORG $C500` need updating to use the trampoline pattern. See `ADDRESS_FIX_REPORT_20260209.md` (local) for per-file status.
 
 ---
 
@@ -150,6 +169,8 @@ asm_wip/
 │
 ├── cold_maps_only_for_tuning_patch/# ❄️ Alpina/OEM tuning method
 │   │   # NOTE: XDF TUNING PREFERRED - Disables STFT/LTFT for OL tuning
+│   ├── alpina_mafless_fallback_v1.asm        # Alpina MAFless fallback strategy
+│   ├── cold_maps_force_cold_spark_v1.asm     # Force cold spark maps
 │   └── cold_maps_tuning_alpina_method_v1.asm # Cold maps only strategy
 │
 ├── needs_validation/               # 🔬 Untested hardware timer methods
@@ -172,32 +193,26 @@ asm_wip/
     └── REJECTED_methodB_dwell_override.asm  # Dwell override (failed)
 
 68HC11_Reference/
-├── kingai_68hc11_resources/  # Complete HC11 instruction reference
-│   ├── 68HC11_COMPLETE_INSTRUCTION_REFERENCE.md
-│   ├── 68HC11_Opcodes_Reference.md
-│   ├── 68HC11_Mnemonics_Reference.md
-│   └── README.md             # Reference collection index
-├── A09_Assembler/            # HC11 assembler
-├── dis68hc11/                # Disassembler
-├── ghidra_hc11/              # Ghidra SLEIGH files
-└── M68HC11RM_Reference_Manual.pdf
+└── kingai_68hc11_resources/  # Complete HC11 instruction reference (on GitHub)
+    ├── 68HC11_COMPLETE_INSTRUCTION_REFERENCE.md
+    ├── 68HC11_CrossReference_Verification.md
+    ├── 68HC11_Descriptions_Reference.md
+    ├── 68HC11_Disassembler_Logic_Reference.md
+    ├── 68HC11_Mnemonics_Reference.md
+    ├── 68HC11_Opcodes_Reference.md
+    └── VY_V6_MEMORY_MAP_AND_MNEMONICS.md
 
-docs/
-├── FULL_TECHNICAL_REFERENCE.md   # Complete technical deep-dive (9000+ lines)
-└── ...
+tools/
+└── split_and_disassemble.py  # Custom HC11 bank splitter + disassembler (NOT Capstone — Capstone doesn't support HC11)
 
-xdfs_and_adx_and_bins_related_to_project/
-├── VS_V6_$51_Enhanced_v1.4g.xdf          # VS V6 NA (257 tables, 681 constants, 68 DTCs)
-├── VS_V6_SC_$51_Enhanced_v1.0d.xdf       # VS V6 Supercharged (254 tables, 68 DTCs)
-├── VS_V8_$A6F_Enhanced_v0.90b.xdf        # VS V8 (82 tables, 68 DTCs)
-├── VT_V6_$A5G_Enhanced_v1.0i.xdf         # VT V6 NA (118 tables, 68 DTCs)
-├── VT_V6_SC_$A5G_Enhanced_v1.3i.xdf      # VT V6 Supercharged (129 tables, 68 DTCs)
-├── VT_V8_$A6E_Enhanced_v1.04.xdf         # VT V8 (77 tables, 68 DTCs)
-├── VX VY_V6_$060A_Enhanced_v2.09b.xdf    # ⭐ VX/VY V6 NA (334 tables, 1546 constants, 68 DTCs)
-└── VX VY_V6_SC_$07_Enhanced_v2.6i.xdf    # VX/VY V6 Supercharged (175 tables, 68 DTCs)
+bank_split_output/            # Only Enhanced v1.0a splits on GitHub (plus 11p_test subfolder)
+├── Enhanced_v1.0a_bank1.asm / .bin   # 64KB — RAM, I/O, code, calibration, vectors
+├── Enhanced_v1.0a_bank2.asm / .bin   # 32KB — Engine code continuation (dwell calc, TIC3 ISR)
+├── Enhanced_v1.0a_bank3.asm / .bin   # 32KB — Transmission/diagnostic overlay
+└── 11p_test/                          # Disassemblies & diffs for OSE 11P vs stock CAKH binaries (used during cross-platform research)
 ```
 
-> **XDF versions above are the LATEST** — all include 68 DTC enable/disable flags added by Antus's XDF DTC Tool. Previous versions (v2.09a, v1.4f, v1.0h etc.) did NOT have individual DTC flags.
+> **XDF files and additional tools are kept locally** — they are not included in this repository. The Enhanced v2.09b XDF (334 tables, 1546 constants, 68 DTCs) and other platform XDFs can be obtained from PCMHacking.net.
 
 ---
 
@@ -240,11 +255,14 @@ Primary implementation based on **Dwell Intermediate Injection** (Chr0m3 validat
 
 | Step | Description |
 |------|-------------|
-| 1 | Hook at file offset `0x101E1` (replaces `STD $017B`) |
-| 2 | `JSR $C500` calls our patch in free space |
-| 3 | Check RPM against threshold (e.g., 6000 RPM = `$F0` for 8-bit or `$1770` for 16-bit) |
-| 4 | If over limit: inject fake period `$3E80` (16000) → starves dwell |
-| 5 | Result: Classic "pops and bangs" exhaust sound |
+| 1 | Hook at file offset `0x101E1` (replaces `STD $017B` — this is in **bank 2**) |
+| 2 | `JSR $5D05` calls trampoline in common area (always visible) |
+| 3 | Trampoline switches to bank 1, calls patch at `$C500` |
+| 4 | Check RPM against threshold (e.g., 6000 RPM = `$F0` for 8-bit) |
+| 5 | If over limit: inject fake period `$3E80` (16000) → starves dwell |
+| 6 | Result: Classic "pops and bangs" exhaust sound |
+
+> ⚠️ **Cannot use `JSR $C500` directly from hook point** — see [Cross-Bank JSR Bug](#-critical-cross-bank-jsr-bug-identified-2026-02-09) above.
 
 **Start here:** [`asm_wip/spark_cut/spark_cut_chr0m3_method_VERIFIED_v38.asm`](asm_wip/spark_cut/spark_cut_chr0m3_method_VERIFIED_v38.asm)
 
@@ -256,9 +274,10 @@ Primary implementation based on **Dwell Intermediate Injection** (Chr0m3 validat
 | `$017B` | RAM | ~~3X period~~ **DWELL INTERMEDIATE** (corrected 2026-01-31) |
 | `$194C` | RAM | **24X Crank Period** (actual crank storage in TIC3 ISR) |
 | `$0199` | RAM | Dwell time storage |
-| `$101E1` | ROM | Hook point (STD $017B) - **dwell intermediate hook** |
-| `$13618` | ROM | Hook point (STD $194C) - **crank period hook** |
-| `$0C468-$0FFBF` | ROM | 15,192 bytes free space |
+| `$101E1` | ROM | Hook point (STD $017B) - **dwell intermediate hook (RECOMMENDED)** ⚠️ **This is in bank 2** — see [cross-bank bug](#-critical-cross-bank-jsr-bug-identified-2026-02-09) |
+| `$13618` | ROM | Hook point (STD $194C) - **crank period hook** ⚠️ INIT PATH ONLY — see [BANK_SWITCHING_AND_ISR_ANALYSIS.md](BANK_SWITCHING_AND_ISR_ANALYSIS.md) |
+| `$C468-$FFBF` | ROM | 15,192 bytes free space (Bank1 overlay — **⚠️ only accessible when bank 1 paged in, need trampoline from bank 2 hooks**) |
+| `$5D05-$5EFC` | ROM | 504 bytes free space (**common area — always visible, use for trampoline stubs**) |
 
 **v1.1a (v2.04c) Additional Addresses** *(under investigation)*:
 
@@ -279,6 +298,8 @@ Primary implementation based on **Dwell Intermediate Injection** (Chr0m3 validat
 | [`MAFLESS_SPEED_DENSITY_COMPLETE_RESEARCH.md`](MAFLESS_SPEED_DENSITY_COMPLETE_RESEARCH.md) | MAFless and Speed Density implementation research |
 | [`VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md`](VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md) | VL V8 two-stage hysteresis limiter analysis |
 | [`VS_VT_VY_COMPARISON_DETAILED.md`](VS_VT_VY_COMPARISON_DETAILED.md) | VS/VT/VY platform differences and porting guide |
+| [`BANK_SWITCHING_AND_ISR_ANALYSIS.md`](BANK_SWITCHING_AND_ISR_ANALYSIS.md) | Bank switching, ISR analysis, TIC3 disassembly |
+| [`VY_V6_PINOUT_MASTER_MAPPING.csv`](VY_V6_PINOUT_MASTER_MAPPING.csv) | Complete ECU pinout mapping |
 | [`68HC11_Reference/kingai_68hc11_resources/`](68HC11_Reference/kingai_68hc11_resources/) | Complete HC11 instruction set reference collection |
 
 ---
@@ -309,7 +330,7 @@ Key differences from Chr0m3's method:
 
 **Status:** Addresses need mapping to $060A STOCK 99218883, 1,0 then 1,1a to fully understand.
 **Please** edit if you know and push corrections please.
-**See:** `spark_cut_the1_method_port_v39.asm` for research notes
+**See:** [`spark_cut_the1_method_port_v39.asm`](asm_wip/spark_cut/spark_cut_the1_method_port_v39.asm) for research notes
 
 ### Hardware Limits
 
@@ -529,6 +550,14 @@ Direct binary comparison of `92118883_STOCK.bin` vs `VY_V6_Enhanced.bin`:
 **Current Value at Offset $01A0:** `$FF` (part of empty $FF region)
 
 **Status:** Likely free, but treated as "scratch candidate" until runtime validation confirms stock code doesn't touch it via indexed/indirect addressing.
+
+> **Additional scratch candidates:** a grep of every bank-split ASM file returned
+> *no references* to either `$00FB` or `$00FC`. Those two page-zero bytes therefore
+> appear completely unused in the Enhanced v1.0a binary and make convenient
+> secondary scratch locations (e.g. one byte for a flag and one for a counter).
+> As with `$01A0`, an ALDL/Vecu log under stock operation should verify they
+> remain untouched before any patch code writes to them.
+
 
 ### Limitations of Static Analysis
 
@@ -794,13 +823,12 @@ The Holden L36/L67 **IS** the Buick 3800 (licensed from GM). Resources from Gear
 
 | Metric | Count | Notes |
 |--------|-------|-------|
-| **Python Tools** | 199 | Analysis, extraction, validation scripts |
-| **Assembly Files** | 52 | Spark cut, MAFless, launch control, etc. |
-| **Documentation Files** | 172+ | Markdown research notes |
-| **Total Project Size** | 1.5 GB | Including binaries, XDFs, datasheets |
-| **Research Duration** | 6 weeks | Nov 2025 - Jan 2026 |
+| **Assembly Files (on GitHub)** | 52 | Spark cut, MAFless, launch control, etc. |
+| **Documentation (on GitHub)** | 8 | Research docs + HC11 reference collection |
+| **Bank Splits (on GitHub)** | 6 | Enhanced v1.0a 3-bank ASM + BIN |
+| **Research Duration** | ~3 months | Nov 2025 - Feb 2026 (ongoing) |
 | **Forum Topics Analyzed** | 50+ | PCMHacking, GearheadEFI archives |
-| **XDF Definitions Examined** | 20+ | Cross-platform comparison |
+| **XDF Definitions Examined** | 20+ | Cross-platform comparison (local) |
 
 ### Key Discoveries Made
 
@@ -809,43 +837,40 @@ The Holden L36/L67 **IS** the Buick 3800 (licensed from GM). Resources from Gear
 | **Hook point at $101E1** | Entry point for patches | Binary pattern analysis |
 | **15KB+ free ROM space** | Room for complex patches | Zero-byte scanning |
 | **$0046 bit 7 is FREE** | Custom flag storage | BSET/BCLR pattern analysis |
-| **3X period at $017B** | ~~Chr0m3 method verified~~ **CORRECTED: $017B = dwell intermediate, $194C = crank period** | TIC3 ISR disassembly |
-| **RPM at $00A2 (×25 scaling)** | 8-bit RPM variable | 82 references in binary |
-| **VL uses BMW MS43-style limiter** | Two-stage hysteresis | XDF parameter extraction |
+| **$017B = dwell intermediate** | ~~$017B was crank period~~ **CORRECTED: $017B = dwell intermediate (best hook target), $194C = crank period (init path only!)** | TIC3 ISR disassembly |
+| **Free space is bank-aware** | 15KB at $C468 is bank1 overlay only; ~1.4KB always-visible. **JSR from bank 2 to bank 1 addresses hits bank 3 instead!** | Binary analysis |
+| **RPM at $00A2 (×25 scaling)** | 8-bit RPM variable | 94 reads, 2 writes in binary |
+| **Cross-bank JSR bug** | Hook at 0x101E1 (bank 2) can't JSR to $C500 (bank 1) — must trampoline via common area | ADDRESS_FIX_REPORT_20260209 |
+| **$01A0 has 0 code refs** | Used as placeholder in many ASM files but 0 reads/writes in stock binary | Binary opcode scan |
+| **VL Walkinshaw two-stage limiter** | Two-stage hysteresis, similar to BMW MS43 pattern | XDF parameter extraction |
 | **dis68hc11 has opcode bugs** | ADCA/ADCB modes swapped | Manual Motorola datasheet verification |
 
-### Tools Created
+### Tools
 
-| Tool | Purpose | Lines of Code |
-|------|---------|---------------|
-| `apply_spark_cut_v38.py` | Apply patches to binary | ~200 |
-| `hc11_disassembler_enhanced.py` | Better than dis68hc11 | ~800 |
-| `xdf_complete_extractor.py` | Full XDF parameter dump | ~400 |
-| `analyze_all_isrs.py` | Trace interrupt handlers | ~300 |
-| `find_free_space.py` | Locate empty ROM regions | ~150 |
-| `validate_readme_claims.py` | Fact-check documentation | ~250 |
+The only tool published on GitHub is `tools/split_and_disassemble.py` — a custom HC11 bank-aware splitter and disassembler (~600 lines). Note: Capstone does NOT support MC68HC11 — this uses a custom opcode scanner. Additional analysis scripts (XDF labeler, address validator, etc.) are maintained locally.
 
 ---
 
-## ?? Key Technical Discoveries
+## 🔑 Key Technical Discoveries
 
-1. **The 8-bit RPM limit is hardware** - 255 � 25 = 6375 RPM max. You need code changes to exceed this.
-2. **Zeroing dwell triggers bypass mode** - The ignition module has failsafe. Chr0m3 figured out you inject a fake period instead.
-3. **VY ISRs are at $2000, not $6000** - Every other platform has code at $6000+. VY is different.
-4. **$0046 is a mode byte** - Bits 0,1,2,4,5 used by stock. **Bits 3,6,7 are FREE** for custom use.
-5. **$01A0 doesn't exist** - Was a placeholder copied across 42 ASM files. Use $0046 bit 7 instead.
-6. **VL Walkinshaw has BMW-style limiter** - Two-stage with hysteresis. Same pattern as MS43.
-7. **Buick 3800 resources apply to Holden** - Same engine family. GearheadEFI's 8F Hack documentation is useful.
-
----
-
-## ?? Bench Testing Setup
-
-See [`BENCH_TESTING_SETUP.md`](BENCH_TESTING_SETUP.md) for hardware requirements and test procedures.
+1. **The 8-bit RPM limit is real** — `255 × 25 = 6375 RPM` max. You need code changes to exceed this.
+2. **Zeroing dwell triggers bypass mode** — The ignition module has failsafe. Chr0m3 figured out you inject a fake period instead.
+3. **VY ISRs are at $2000, not $6000** — Every other platform has code at $6000+. VY is different.
+4. **$0046 is a mode byte** — Bits 0,1,2,4,5 used by stock. **Bits 3,6,7 are FREE** for custom use.
+5. **$01A0 has 0 code references** — Was used as a placeholder in many ASM files but has zero reads/writes in the stock binary. Use $0046 bit 7 for flags instead.
+6. **Cross-bank JSR is the #1 bug** — Hook point at 0x101E1 is in bank 2. Jumping to $C500 (bank 1 free space) doesn't work — you hit bank 3 transmission code. Must trampoline via common area.
+7. **VL Walkinshaw has BMW-style limiter** — Two-stage with hysteresis. Same pattern as MS43.
+8. **Buick 3800 resources apply to Holden** — Same engine family. GearheadEFI's 8F Hack documentation is useful.
 
 ---
 
-## ?? Why This Project Exists
+## 🔬 Bench Testing Setup
+
+Bench testing documentation is maintained locally — not yet published to this repository.
+
+---
+
+## 💡 Why This Project Exists
 
 **Timeline:** 6 weeks from idea to 40+ assembly files (Nov 2025 - Jan 2026).
 
@@ -916,7 +941,7 @@ The people who **share knowledge freely** instead of gatekeeping it:
 
 This is **research code for educational purposes only**.
 
-- No warranty expressed or implied
+- No warranty expressed or implied,
 - Test on bench with oscilloscope before vehicle use
 - Author not responsible for engine damage
 - All code marked UNTESTED until hardware verified

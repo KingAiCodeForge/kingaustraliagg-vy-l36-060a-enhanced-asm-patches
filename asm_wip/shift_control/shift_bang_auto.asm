@@ -1,3 +1,13 @@
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; !! CROSS-BANK BUG (2026-02-13): This file places code in bank 1    !!
+; !! free space ($C468+). Hook at file 0x101E1 is in bank 2.        !!
+; !! JSR $C500 from bank 2 hits LIVE TRANS CODE at file 0x1C500,    !!
+; !! NOT our patch at file 0x0C500. THIS CODE WILL CRASH THE ECU.    !!
+; !! FIX: Relocate patch to common area $5D05 (always visible, 504  !!
+; !! bytes free) or bank 2 free space at file 0x17EA2 (286 bytes).   !!
+; !! See custom_ose_$060_445_plan.md section 3.1a/3.1b for details. !!
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;
 ;==============================================================================
 ; VY V6 SHIFT BANG / FIRM SHIFT PATCH v30 - AUTOMATIC TRANSMISSION
 ;==============================================================================

@@ -1,6 +1,19 @@
-; ═══════════════════════════════════════════════════════════════════
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; !! CROSS-BANK BUG (2026-02-13): This file places code at ORG $C468+ !!
+; !! (bank 1 free space). The hook at file 0x101E1 (STD $017B) is in  !!
+; !! bank 2 (0x10000-0x17FFF). JSR $C500 from bank 2 hits file        !!
+; !! 0x1C500 (LIVE TRANS CODE), NOT 0x0C500 (our patch).               !!
+; !! FIX: Relocate to common area $5D05 (always visible, 504 bytes    !!
+; !! free) or bank 2 free space at file 0x17EA2 (286 bytes).           !!
+; !! See custom_ose_$060_445_plan.md section 3.1a/3.1b for details.   !!
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;; ═══════════════════════════════════════════════════════════════════
 ; UPDATE HISTORY:
 ;   2026-01-28: RAM Address Fix - $01A0 → $0046 bit 7
+; ⚠️ WARNING: STD $194C at $3618 is INIT PATH ONLY (cold start, D=$0000).
+;    Real period updates use filter sub $050C via indexed STD 0,X.
+;    Hooking $3618 does NOT affect normal engine operation!
+;    Use $017B hook at 0x101E1 instead (dwell intermediate).
 ;   2026-01-31: Crank Period Fix - $017B → $194C (TIC3 ISR verified)
 ;   2026-02-09: Enhanced v1.0a ground truth: hook=0x101E1 STD $017B, bank 1 free $C468-$FFBF
 ; ═══════════════════════════════════════════════════════════════════

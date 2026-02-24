@@ -1,4 +1,13 @@
-;==============================================================================
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+; !! CROSS-BANK BUG (2026-02-13): This file places code at ORG $C468+ !!
+; !! (bank 1 free space). The hook at file 0x101E1 (STD $017B) is in  !!
+; !! bank 2 (0x10000-0x17FFF). JSR $C500 from bank 2 hits file        !!
+; !! 0x1C500 (LIVE TRANS CODE), NOT 0x0C500 (our patch).               !!
+; !! FIX: Relocate to common area $5D05 (always visible, 504 bytes    !!
+; !! free) or bank 2 free space at file 0x17EA2 (286 bytes).           !!
+; !! See custom_ose_$060_445_plan.md section 3.1a/3.1b for details.   !!
+; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+;;==============================================================================
 ; VY V6 MAFLESS ALPHA-N CONVERSION v2 - ALPINA "ZERO COMPLEX" METHOD
 ;==============================================================================
 ; Author: Jason King kingaustraliagg  

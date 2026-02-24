@@ -20,7 +20,7 @@ Deep verification (Jan 22, 2026) confirms:
 
 Use the verified hook point instead:
 - ✅ **File offset 0x101E1** = `STD $017B` (dwell intermediate - CONFIRMED in STOCK)
-- ✅ **Hook with JSR $C500** = spark_cut_chr0m3_method_VERIFIED_v38.asm
+- ⚠️ **Cross-bank bug:** Cannot use `JSR $C500` directly — hook is in HIGH half, must trampoline via common area `$5D05`. See `BANK_SWITCHING_AND_ISR_ANALYSIS.md`.
 - ✅ **Use $0046 bit 7 ($80) for limiter flag** - verified FREE (0 stock refs)
 
 > **⚠️ CORRECTION (2026-02-07):** The `STD $194C` at $3618 in the TIC3 ISR is the
