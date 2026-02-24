@@ -1,0 +1,1 @@
+## knock retard patch to a light, can set the light to flicker on light knock and then stay on when a heavy KR  has accured. 
