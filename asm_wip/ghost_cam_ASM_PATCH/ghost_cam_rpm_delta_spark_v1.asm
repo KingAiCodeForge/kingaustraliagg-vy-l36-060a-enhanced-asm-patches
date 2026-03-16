@@ -1,48 +1,63 @@
 ;==============================================================================
-; VY V6 GHOST CAM v1 - RPM DELTA SPARK MODULATION (ASM PATCH)
+; VY V6 GHOST CAM v1 — RPM DELTA SPARK MODULATION (ASM PATCH)
 ;==============================================================================
-; Author: Jason King (kingaustraliagg)
-; Date: January 18, 2026
-; Status: 🔬 NEEDS RESEARCH - Hook points not verified
-; Target: Holden VY V6 Enhanced v1.0a (OSID 92118883)
-; Binary: VX-VY_V6_$060A_Enhanced_v1.0a.bin
+; Author:   Jason King (kingaustraliagg / KingAI)
+; Date:     January 18, 2026 (refactored February 25, 2026)
+; Status:   NEEDS RESEARCH — Hook points not verified in disassembly
+; Target:   Holden VY V6 Enhanced v1.0a (OSID 92118883)
+; Binary:   VX-VY_V6_$060A_Enhanced_v1.0a.bin (128KB, 3-bank HC11)
 ; Processor: Motorola MC68HC11
 ;
-; TERMINOLOGY - TWO DIFFERENT THINGS:
+; PURPOSE:
+;   Implement ghost cam via RPM-delta spark correction, based on the
+;   BMW MS42 ip_iga_n_dif_is method. Applies a spark advance/retard
+;   correction proportional to how far actual RPM is from target idle.
+;   The correction is deliberately INVERTED from normal PID behavior —
+;   underspeed gets retard (not advance), overspeed gets advance (not retard).
+;   This makes the idle oscillate instead of stabilize.
+;
+; TERMINOLOGY:
 ;   "Lumpy Idle" = XDF-only approach, slow ~1Hz lope, no ASM patch
-;   "Ghost Cam"  = Fast aggressive lopey sound (method TBD)
+;   "Ghost Cam"  = Fast aggressive lopey sound, requires ASM patching
 ;
-; ⚠️ IMPORTANT (Jan 27, 2026): Rhysk94 (RKGarage) has a working ghost cam tune
-; on VY V6 but states his method does NOT use timing - "timing does not get touched".
-; WE DO NOT KNOW HOW HIS METHOD WORKS. This file is OUR OWN THEORETICAL approach
-; based on BMW MS42 and HPTuners LS methods, which may NOT apply to Delco PCMs.
-; Topic 8605 is about VY L67 idle spark XDFs, NOT ghost cam.
-; THIS FILE IS UNTESTED - use at your own risk.
+; COMPANION FILES:
+;   ghost_cam_rpm_rotating_idle.asm — Theory/concepts/idea bank
 ;
-; ⚠️ WARNING: EXPERIMENTAL - Creates intentional misfires for "lopey" sound
-; ⚠️ WARNING: Improper tuning = exhaust pops, flames, CAT damage!
-; This is a community project - push a new .asm if you have a better method.
+; WARNINGS:
+;   - EXPERIMENTAL — creates intentional misfires for "lopey" sound
+;   - Improper tuning = exhaust pops, flames, catalytic converter damage
+;   - Rhysk94 (RKGarage) has a working ghost cam on VY V6 but states he
+;     does NOT use timing. We DO NOT KNOW his method. This file is our own
+;     theoretical approach based on BMW MS42 and HPTuners LS research.
+;   - THIS FILE IS UNTESTED — use at your own risk.
 ;==============================================================================
 ; RESEARCH SOURCES
 ;==============================================================================
 ;
 ; 1. BMW MS42 ip_iga_n_dif_is__n_dif_cor table (Ghost Cam key table)
-;    - RPM Delta: -320 to +200 from target
+;    - Input: RPM delta from target idle (negative = under, positive = over)
+;    - RPM delta range: -320 to +200 RPM from target
+;    - Output: Spark correction (signed degrees)
 ;    - Spark swing: -27.4° (underspeed) to +19.5° (overspeed)
-;    - Total swing: 47° - VERY aggressive
+;    - Total swing: 47° — VERY aggressive
+;    - KEY: The correction is INVERTED from normal PID. Under target = RETARD.
+;      This is what makes it oscillate instead of stabilize.
 ;
 ; 2. HPTuners LS Ghost Cam (Idle Adaptive Spark Control)
-;    - Overspeed P/N: +30° across all cells
-;    - Underspeed P/N: -15° across all cells
+;    - Two separate tables: Overspeed and Underspeed
+;    - Overspeed P/N: +30° across all cells (advance when above target)
+;    - Underspeed P/N: -15° across all cells (retard when below target)
 ;    - Total swing: 45°
+;    - Simpler than BMW — flat values, not proportional to delta
 ;
 ; 3. Ford EL Intech XDF comment:
 ;    "For bogans looking to make their Intech sound lumpy, make the spark
 ;     correction values on the right very aggressive. Your welcome ;)"
+;    - Confirms the spark correction approach works across platforms
 ;
 ; 4. HPA Academy Ghost Cam Webinar:
 ;    "Basically, you turn the controller into a really bad controller. LOL."
-;
+;    - The core insight: ghost cam = intentional PID instability
 ;==============================================================================
 ; THEORY OF OPERATION
 ;==============================================================================
@@ -68,63 +83,121 @@
 ;   - Solution: Richen idle AFR 0.5-1.0 to compensate
 ;
 ;==============================================================================
-; VY V6 XDF ADDRESSES (Enhanced v2.09a) - VERIFIED
+; VY V6 XDF ADDRESSES — CONFIRMED (v3 audit Feb 25, 2026)
 ;==============================================================================
 ;
-; VERIFIED Idle Spark Tables (from XDF and binary analysis):
-;   0x6536-0x6540: Idle Spark Advance Vs Coolant (11 cells)
-;                  Stock warm: 0x79 = 12.5 deg
-;   0x6541-0x654B: Retarded Idle Spark Vs Coolant (11 cells)
-;                  Stock: 0x64 = 1.4 deg
-;   0x652C bit 2:  Enable Retarded Idle Spark flag (stock = 0)
+; All addresses below confirmed present in v3 labeled ASM with correct
+; equations and raw values. Verified by _check_ghost_cam_addrs.py.
 ;
-; Encoding: x/256*90-35 (degrees)
-;   0x60 = 0 deg, 0x79 = 12.5 deg, 0x64 = 1.4 deg, 0x54 = -5 deg
+; ── CALIBRATION ADDRESSES (BANK1) ────────────────────────────────────────
 ;
-; FROM XDF v2.09a (addresses verified from ghost_lumpy_idle_cam_asm.md):
-;   0x6524: IAC Spark Correction Lower Coolant Threshold (~40°C stock)
-;   0x6525: High RPM Spark Correction Multiplier (KSARPMHI) - 0.04 DEG%/RPM stock
-;   0x6527: Low RPM Spark Correction Multiplier (KSARPMLO) - 0.04 DEG%/RPM stock
-;   0x6529: RPM Error Limit For Spark Advance Correction - 512 RPM stock
-;   0x652B: Idle Spark Correction Limit (KSCORLIM) - ~15° stock
+; $6523: RPM Filter Coefficient = 2560.0 COEFF | eq=X*256 | stock=$0A
+;        *** CRITICAL: controls how fast ECU sees RPM changes.
+;        Reduce for faster ghost cam response.
 ;
-; Ghost Cam recommended values:
-;   0x6525: 0.15-0.25 DEG%/RPM (increase for more lope)
-;   0x6527: 0.15-0.25 DEG%/RPM (match high RPM)
-;   0x6529: 200-300 RPM (narrow deadband for faster engagement)
-;   0x652B: 25-35° (allow bigger swings)
+; $6524: IAC Spark Correction Lower Coolant Threshold = -40.0°C
+;        eq=X/256*192-40 | stock=$00. Below this = no spark correction.
+;
+; $6525-$6526: KSARPMHI = 0.044 DEG%/RPM (2-byte)
+;        eq=X/256/256*90 | stock=$0020
+;        Spark correction gain for overspeed.
+;        Ghost cam: $0075=0.16, $00C4=0.27 DEG%/RPM
+;
+; $6527-$6528: KSARPMLO = 0.044 DEG%/RPM (2-byte)
+;        eq=X/256/256*90 | stock=$0020
+;        Spark correction gain for underspeed. Match KSARPMHI.
+;
+; $6529-$652A: RPM Error Limit = 512.0 RPM (2-byte, straight RPM)
+;        stock=$0200. Ghost cam: $00FA (250 RPM).
+;
+; $652B: KSCORLIM — Idle Spark Correction Limit = 5.27 DEG
+;        eq=X/256*90 | stock=$0F
+;        *** MAIN LIMITER. Stock 5° means ±5° max swing.
+;        Ghost cam: $47=25°, $63=35°.
+;
+; $652C: Load Threshold For Closed Throttle Spark = 250.0 MG/CYL
+;        eq=X*3.90625 | stock=$40
+;
+; $6536-$6540: Idle Spark Advance Vs Coolant (11x1 table)
+;        eq=X/256*90-35 | stock warm=$AF (26.5°)
+;
+; $6541-$654B: Retarded Idle Spark Vs Coolant (11x1 table)
+;        eq=X/256*90-35 | stock warm=$AF (26.5°)
+;
+; $654C-$6555: Idle Spark Multiplier Vs CYLAIR50 (1x11 table)
+;        eq=X/128 | stock=$80 (1.0 = unity)
+;
+; ── CODE XREFS (BANK2) — idle spark calculation routine ──────────────────
+;
+;   $F835: CMPB $652C  — load vs closed throttle threshold
+;   $F85D: CMPB $652C  — second load check
+;   $F8D2: CMPA $6524  — coolant vs IAC spark threshold
+;   $F8D7: LDD  $6525  — *** load KSARPMHI (HOOK POINT A)
+;   $F8E0: CPX  $6529  — RPM error vs limit
+;   $F8E5: LDD  $6527  — load KSARPMLO
+;   $F8F7: CMPA $652B  — correction vs KSCORLIM (HOOK POINT B)
+;   $F8FC: LDAA $652B  — load KSCORLIM to clamp
+;
+;   HOOK POINT A ($F8D7): 3-byte LDD $6525 → replace with JSR patch
+;     This intercepts where the ECU loads the spark correction multiplier.
+;     Our patch can compute a ghost cam correction and return it in D.
+;
+;   HOOK POINT B ($F8F7): 3-byte CMPA $652B → replace with JSR patch
+;     This intercepts the clamp comparison. Our patch can widen the
+;     clamp dynamically or return a different KSCORLIM value.
 ;
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP - VERIFIED
+; MEMORY MAP — VERIFIED RAM ADDRESSES
 ;------------------------------------------------------------------------------
-RPM_ADDR EQU $00A2       ; Engine RPM (high byte, ×25 scaling) ; Verified: RPM_DIV25 (94 refs Enhanced (96 stock). RPM = value * 25) [Enhanced-fix]
-ECT_ADDR            EQU $00B4       ; Engine Coolant Temperature
-TPS_ADDR EQU $00B6       ; Throttle Position Sensor ; Verified: TPS_ADC_RAW (47 refs both) [Enhanced-fix]
+RPM_ADDR            EQU $00A2       ; Engine RPM high byte (×25 scaling, 94 refs)
+                                    ; RPM = value × 25. So $24 = 900 RPM.
+ECT_ADDR            EQU $00B4       ; Engine Coolant Temperature (ADC reading)
+TPS_ADDR            EQU $00B6       ; Throttle Position Sensor (ADC, 47 refs)
 
 ;------------------------------------------------------------------------------
-; MEMORY MAP - NEED RESEARCH (suspected from XDF analysis)
+; MEMORY MAP — SUSPECTED RAM (need disassembly confirmation)
 ;------------------------------------------------------------------------------
-RPM_TARGET_IDLE     EQU $01A4       ; 🔬 SUSPECTED: Target idle RPM (from XDF tables)
-SPARK_BASE EQU $01B0       ; 🔬 SUSPECTED: Base spark advance before corrections ; Verified: SPARK_BASE_ADV (5 refs both) [Enhanced-fix]
-SPARK_FINAL EQU $01B2       ; 🔬 SUSPECTED: Final spark advance after all corrections ; Verified: SPARK_FINAL_ADV (2 refs both) [Enhanced-fix]
-ENGINE_STATE EQU $01C0       ; 🔬 SUSPECTED: Engine state flags (idle, run, crank) ; Verified: ENGINE_STATE_WORD (4 refs both) [Enhanced-fix]
+RPM_TARGET_IDLE     EQU $01A4       ; SUSPECTED: Target idle RPM (working copy)
+SPARK_BASE          EQU $01B0       ; SUSPECTED → Verified: SPARK_BASE_ADV (5 refs)
+SPARK_FINAL         EQU $01B2       ; SUSPECTED → Verified: SPARK_FINAL_ADV (2 refs)
+ENGINE_STATE        EQU $01C0       ; SUSPECTED → Verified: ENGINE_STATE_WORD (4 refs)
 
 ;------------------------------------------------------------------------------
-; PATCH LOCATION
+; PATCH LOCATION & HOOK POINTS (confirmed from bank2 disassembly)
 ;------------------------------------------------------------------------------
-FREE_SPACE          EQU $C600       ; Free space for patch code
-; Hook point needs research - where does idle spark calculation occur?
+FREE_SPACE          EQU $C600       ; Free space for patch code (MUST VERIFY)
+                                    ; Need ≈60 bytes clear ($C600-$C63F)
+                                    ; Scan bank2 binary for $FF-filled runs.
+;
+; HOOK POINT A: $F8D7 in bank2  (LDD $6525 → 3 bytes: FC 65 25)
+;   Replace with: JSR $C600  (BD C6 00 → also 3 bytes, perfect fit)
+;   This is where KSARPMHI is loaded. Our routine can:
+;   - Load KSARPMHI ourselves
+;   - Compute ghost cam spark delta
+;   - Return modified value in D register
+;   - Original behavior restored by loading $6525 ourselves in the patch
+;
+; HOOK POINT B: $F8F7 in bank2  (CMPA $652B → 3 bytes: B1 65 2B)
+;   Replace with: JSR $C620  (BD C6 20)
+;   This is the KSCORLIM clamp. Our routine can:
+;   - Widen the clamp for ghost cam mode
+;   - Do the CMPA ourselves with a larger limit and RTS
+;   - The flags from CMPA are preserved through RTS
 
 ;------------------------------------------------------------------------------
-; CONFIGURATION - AGGRESSIVE GHOST CAM VALUES
+; CONFIGURATION — GHOST CAM PARAMETERS
 ;------------------------------------------------------------------------------
-; Based on BMW MS42 and HPTuners research
-SPARK_RETARD_MAX    EQU $E0         ; -32° retard maximum (when underspeed)
-SPARK_ADVANCE_MAX   EQU $1E         ; +30° advance maximum (when overspeed)
-RPM_DEADBAND        EQU $14         ; ±20 RPM deadband (no correction)
-COOLANT_ENABLE      EQU $3C         ; 60°C minimum for ghost cam (warm only)
+; These define the ghost cam behavior. Tunable in the binary.
+; Based on BMW MS42 (-27° to +19°) and HPTuners LS (-15° to +30°) research.
+
+SPARK_RETARD_MAX    EQU $E0         ; -32° maximum retard (when underspeed)
+SPARK_ADVANCE_MAX   EQU $1E         ; +30° maximum advance (when overspeed)
+RPM_DEADBAND        EQU $14         ; ±20 RPM deadband (±500 RPM real)
+                                    ; No correction within this window
+COOLANT_ENABLE      EQU $3C         ; 60°C minimum coolant for ghost cam
+                                    ; Keeps normal idle below operating temp
 
 ;------------------------------------------------------------------------------
 ; RPM DELTA TO SPARK CORRECTION TABLE
@@ -186,79 +259,123 @@ GhostCamSparkHook:
 ; Step 5: Lookup spark correction from table
 ;------------------------------------------------------------------------------
 .do_lookup:
-                    ; Scale RPM delta to table index (0-10)
-                    ; Delta is -16 to +16 (in ÷25 units)
-                    ; Need to map to 0-10 table index
-                    ADDA    #$10                ; Shift to 0-32 range
-                    LSRA                        ; Divide by 2
-                    LSRA                        ; Divide by 4
-                    LSRA                        ; Divide by 8 → 0-4 range
-                    ; TODO: Better scaling for 11-element table
-                    
-                    LDX     #GHOST_CAM_TABLE    ; Load table base
-                    ABX                         ; X = X + A (index into table)
-                    LDAA    0,X                 ; Load spark correction
+                    ; A contains signed RPM delta (÷25 units)
+                    ; Range: approx -16 to +16 (i.e. -400 to +400 RPM)
+                    ; Table has 11 entries indexed 0-10
+                    ; Map: delta(-16) → index 0,  delta(0) → index 5,  delta(+16) → index 10
+                    ;
+                    ; Algorithm: index = (delta + 16) / 3
+                    ;   -16+16=0  /3=0   ✓  (maps to -400 RPM entry)
+                    ;    0+16=16  /3=5   ✓  (maps to  0 RPM entry)
+                    ;   +16+16=32 /3=10  ✓  (maps to +400 RPM entry)
+
+                    ADDA    #$10                ; shift to 0-32 range (unsigned)
+                    ; Clamp to prevent table overrun
+                    BPL     .not_neg
+                    CLRA                        ; clamp below to 0
+.not_neg:
+                    CMPA    #$20                ; > 32?
+                    BLS     .not_over
+                    LDAA    #$20                ; clamp above to 32
+.not_over:
+                    ; Divide by 3: approximate with (A * 85) >> 8
+                    ; Simpler on HC11: just use a small division loop
+                    TAB                         ; B = A (save shifted delta)
+                    CLRA                        ; A = quotient
+.div3:
+                    CMPB    #$03
+                    BLO     .div3_done
+                    INCA
+                    SUBB    #$03
+                    BRA     .div3
+.div3_done:
+                    ; A = table index (0-10)
+                    CMPA    #$0A                ; clamp to max index 10
+                    BLS     .idx_ok
+                    LDAA    #$0A
+.idx_ok:
+                    TAB                         ; B = index (for ABX)
+                    LDX     #GHOST_CAM_TABLE    ; load table base address
+                    ABX                         ; X = X + B (index into table)
+                    LDAA    0,X                 ; load spark correction (signed)
 
 ;------------------------------------------------------------------------------
-; Step 6: Apply correction to base spark
+; Step 6: Apply correction to base spark and clamp
 ;------------------------------------------------------------------------------
-                    ADDA    SPARK_BASE          ; Add correction to base
+                    ADDA    SPARK_BASE          ; add correction to base advance
                     
-                    ; Clamp to limits
-                    CMPA    #$28                ; Max +40° (0x28 = 40)
-                    BLE     .check_min
-                    LDAA    #$28
+                    ; Clamp to safe limits (CRITICAL — prevents engine damage)
+                    CMPA    #$28                ; max +40° advance
+                    BLE     .check_min          ; signed compare
+                    LDAA    #$28                ; clamp to +40°
                     BRA     .store_spark
 
 .check_min:
-                    CMPA    #$F0                ; Min -16° (0xF0 = -16 signed)
-                    BGE     .store_spark
-                    LDAA    #$F0
+                    CMPA    #$F0                ; min -16° retard (signed: $F0 = -16)
+                    BGE     .store_spark        ; signed compare
+                    LDAA    #$F0                ; clamp to -16°
 
 .store_spark:
-                    STAA    SPARK_FINAL         ; Store final spark value
-                    RTS
+                    STAA    SPARK_FINAL         ; store final spark value
+                    RTS                         ; return to caller
 
 ;------------------------------------------------------------------------------
-; Exit without ghost cam modification
+; Exit — engine too cold, not at idle, or within deadband
+; Execute the ORIGINAL instruction that was replaced by the JSR hook
 ;------------------------------------------------------------------------------
 .exit_no_ghost:
-                    ; Execute original idle spark code here
-                    ; (replaced bytes from hook point)
-                    ; TODO: Fill in when hook point is known
-                    RTS
+                    ; Execute the original instruction we replaced with JSR.
+                    ; HOOK A replaced: LDD $6525 (FC 65 25) at $F8D7
+                    ; So we execute it here to preserve stock behavior:
+                    LDD     $6525               ; original: load KSARPMHI
+                    RTS                         ; return to $F8DA (next instr)
 
 ;------------------------------------------------------------------------------
-; RAM Variables (if needed)
+; RAM Variables for this patch
 ;------------------------------------------------------------------------------
-RPM_DELTA           EQU $0201               ; RAM: Calculated RPM delta
+RPM_DELTA           EQU $0201       ; RAM: Calculated RPM delta (signed)
 
 ;==============================================================================
-; TODO: RESEARCH REQUIRED
+; RESEARCH STATUS — NEXT STEPS (updated Feb 25, 2026)
 ;==============================================================================
 ;
-; 1. Find idle spark calculation routine in binary
-;    - Search for references to 0x6525 (KSARPMHI)
-;    - Search for LDA/LDB patterns near idle spark tables
+; 1. FIND IDLE SPARK CALCULATION ROUTINE
+;    STATUS: ✅ DONE. Found in BANK2 at $F835-$F8FC.
+;    All xrefs to $6524/$6525/$6527/$6529/$652B confirmed in v3 labeled ASM.
+;    The routine reads KSARPMHI at $F8D7, KSARPMLO at $F8E5, clamps at $F8F7.
 ;
-; 2. Identify hook point for intercepting spark calculation
-;    - Needs 3-byte JSR $C600 injection
-;    - Must preserve original behavior when ghost cam disabled
+; 2. IDENTIFY THE HOOK POINT
+;    STATUS: ✅ DONE. Two candidate hooks identified:
+;    HOOK A: $F8D7 (LDD $6525 → FC 65 25 → 3 bytes → JSR $C600)
+;    HOOK B: $F8F7 (CMPA $652B → B1 65 2B → 3 bytes → JSR $C620)
+;    Both are exact 3-byte replacements, no alignment issues.
 ;
-; 3. Verify RPM_TARGET_IDLE address in RAM
-;    - Check what address receives data from idle RPM tables
+; 3. VERIFY RPM_TARGET_IDLE ADDRESS
+;    STATUS: ⚠️ TODO. Search bank2 disassembly for code loading from
+;    idle RPM cal tables and trace to RAM working copy.
 ;
-; 4. Add fuel compensation to prevent backfires
-;    - See ghost_cam_fuel_compensation_v1.asm (TODO: create)(most likely not needed can be done in xdf with idle fuel in O/l or other methods.)
-;    - or tune pre ignition and
-     - wall wetting etc usually just the pre ignition and the time it lasts when key is set to pos 2. \
-     - and then cranked/started fuel trims can reach over 10 
-     - but start up will be great sound and no flames.
-; 5. Add P/N vs Drive differentiation
-;    - Ghost cam in P/N only, smooth in Drive (will get it to chop at idle in drive or gear. we need a new method or .asm file)
-;    - Need GEAR_STATE flag address
-;    - if the concept is ported to other memcal based ecotecs the moates could 
-;      theoretically let this be on tune bank 2, 3 or 4 but again different cpu address and xdf addresses.
+; 4. FIND FREE ROM SPACE IN BANK2
+;    STATUS: ⚠️ TODO. The hook is in bank2 ($F8D7), so the patch must
+;    also be in bank2 ($8000-$FFFF range). Scan for $FF-filled runs.
+;    Need ≈60 bytes for the ghost cam routine + lookup table.
+;    Common gap locations: end-of-bank padding before $FFD0 vectors.
+;
+; 5. FIND FREE RAM
+;    STATUS: ⚠️ TODO. Need 2-3 bytes for:
+;    - RPM_DELTA ($0201 suspected)
+;    - Ghost cam state/counter (1 byte)
+;    Check labeled disassembly for unused RAM in $01E0-$01FF.
+;
+; 6. FUEL COMPENSATION
+;    STATUS: ✅ LIKELY NOT NEEDED. Can be handled via XDF O/L idle fuel.
+;
+; 7. P/N vs DRIVE MODE
+;    STATUS: ⚠️ TODO. Need GEAR_STATE or PRNDL flag address in RAM.
+;
+; 8. PORTABILITY
+;    STATUS: Notes only. VX/VY/L67 use same code structure.
+;    Memcal Ecotecs have same PID concept, different CPU/addresses.
+;
 ;==============================================================================
 ; END OF FILE
 ;==============================================================================

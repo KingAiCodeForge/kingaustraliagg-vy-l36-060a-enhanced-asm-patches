@@ -1,0 +1,3 @@
+local file to be ignored and not pushed
+
+## are buttons like the cruise control buttons on the steering wheel mapped to anything in the ECU? what about the buttons on the dash? or the pwr (power) button? what about the handbrake. what is in the automatic. what can be used or repurposed. stereo would be its own system. bcm could be linked to pcm for some things. spark cut on and off? ghost cam on and off? any other things. that will work and why and what wont and why.

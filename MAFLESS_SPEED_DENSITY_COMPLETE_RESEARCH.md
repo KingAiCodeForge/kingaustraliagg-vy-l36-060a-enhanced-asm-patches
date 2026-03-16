@@ -3743,3 +3743,18 @@ c_conf_ff = 1: Enabled
 For VY V6 spark cut assembly patches, see: `SPARK_CUT_RESEARCH.md`  
 For crank period injection theory, see: `PCM_ARCHIVE_RESEARCH_FINDINGS.md`
 all the above needs double checking for the right xdfs or other ways this would work 100 percent. 
+
+## whats the point of alpha n over pmas and ls7 maf. on the stock ecu. top end power, if injectors tuned individually down low will be just as good as a maf or map tune.
+Pros and cons of something like this individual throttle ...Installing massive, open intake runners, ported ports, and a 
+ throttle body, while running Alpha-N (TPS-based) tuning without MAF/MAP, will create a high-RPM racing engine, but with poor low-end torque, erratic idle, and difficult tuning for daily driving. This setup maximizes high-RPM airflow, providing significant power gains at high RPMs, but risks stalling or poor throttle response. 
+
+Key Outcomes & Effects:
+Alpha-N Tuning Necessity: Since you are removing MAF/MAP sensors, the ECU must use throttle position (Alpha-N) as the primary load signal. This is required because ITBs or extremely high-flow intakes create inconsistent vacuum signals. vy has baro readings.
+Performance Shift: You will gain substantial top-end power, but long, wide-open runners can sometimes hurt low-end torque, making the car sluggish off the line.
+Tuning Difficulty: Tuning will be complex. While the engine will run, achieving smooth drivability and a stable idle requires highly experienced tuning of the fuel and ignition maps, often using a "carb balancer" to balance air flow across the runners. recommend building a sram moates/cobra rtp style emulator for RTT on vy v6 l36 ecus. solder in or piggyback or drop in.
+Risks:
+Irregular Idle: A large throttle body without a proper idle air control setup can lead to a high, hanging, or unstable idle. the vy v6 l36 has iac. it hasnt been deleted yet.
+Poor Part-Throttle Response: Without MAF/MAP, it can be difficult to manage air-fuel ratios during part-throttle, potentially causing bogging. 
+on and off switch is good for drags. who wants to be part throttle... they call it pedalling for a reason.
+
+This setup is ideal for track-focused cars that rarely operate at low RPMs. If it is a daily driver, the lack of a MAP/MAF sensor will make it difficult to manage air-fuel ratios properly at partial loads, people that are well over 4000rpm, that with a comp cam and stepped equal length headers a higher idle even over 1500rpm. chr0m3s patching for high rpm stability. in auto need a big converter. in manual need a clutch that can handle the power. torque reductions and intervention strategies and launch control. how to do this on the stock ecu will take some working out.

@@ -249,7 +249,7 @@ bank_split_output/            # Only Enhanced v1.0a splits on GitHub (plus 11p_t
 | **Enhanced v1.0a** | v2.09b | ❌ NO | This repo's target (v2.09b adds 68 DTC flags via Antus DTC Tool) |
 | **Enhanced v1.1a** | v2.04c | ✅ YES | The1's implementation (Topic 8852) |
 
-> **Note:** Enhanced v1.1a (v2.04c package, Topic 8852) includes The1's spark cut implementation. We are currently reverse-engineering that code to understand exactly what changed from v1.0a → v1.1a before documenting it publicly. Our v38 ASM patches are independent work based on Chr0m3's dwell intermediate method.
+> **Note:** Enhanced v1.1a (v2.04c package, Topic 8852) includes The1's spark cut implementation — **SHELVED** by The1 (DTC 41/42 bypass issues, Post #64). We are currently reverse-engineering that code to understand exactly what changed from v1.0a → v1.1a before documenting it publicly. Our v38 ASM patches are independent work based on Chr0m3's dwell intermediate method.
 
 Primary implementation based on **Dwell Intermediate Injection** (Chr0m3 validated method, originally called "crank period"):
 
@@ -336,7 +336,7 @@ Key differences from Chr0m3's method:
 
 | Limit | Value | Source |
 |-------|-------|--------|
-| Max RPM (8-bit) | 6,375 RPM | Chr0m3 Topic 8567 |
+| Max RPM (8-bit) | 6,375 RPM | Chr0m3 Topic 8567 Post #10 (✅ VERIFIED IN ARCHIVE) |
 | Spark loss point | ~6,500 RPM | Chr0m3 dwell research |
 | Safe patched limit | 6,000-6,350 RPM | Community testing |
 
