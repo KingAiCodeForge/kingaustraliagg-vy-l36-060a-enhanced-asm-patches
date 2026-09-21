@@ -1,0 +1,24 @@
+--- VX VY_V6_$060A_Enhanced_v2.09b.xdf
++++ vx_vy_v6_060a_enhanced_v2_09b_xdf_STATIC_REVIEW.xdf
+@@ -44938,4 +44938,29 @@
++<XDFCONSTANT uniqueid="0xF000">
++    <title>BLM learning - Light/default upper coolant limit</title>
++    <description>Source-correlated review definition. Learning is inhibited when filtered coolant is greater than OR EQUAL TO this calibration in this exact firmware. Selected unless both HEVYPURG and CCP_ON are set. Not a cooling/fan setting. Keep stock until individually reviewed; 255 is not a universal disable. Chr0m3 Motorsport: reverse-engineering/research assistance.</description>
++    <EMBEDDEDDATA mmedaddress="0x7636" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
++    <units>DEG C</units>
++    <datatype>0</datatype>
++    <unittype>0</unittype>
++    <DALINK index="0" />
++    <MATH equation="X*0.75-40"><VAR id="X" /></MATH>
++</XDFCONSTANT>
++<XDFCONSTANT uniqueid="0xF001">
++    <title>BLM learning - Heavy purge with purge active upper coolant limit</title>
++    <description>Source-correlated review definition. Learning is inhibited when filtered coolant is greater than OR EQUAL TO this calibration in this exact firmware. Selected only when both HEVYPURG and CCP_ON are set. Not a cooling/fan setting. Keep stock until individually reviewed; 255 is not a universal disable. Chr0m3 Motorsport: reverse-engineering/research assistance.</description>
++    <EMBEDDEDDATA mmedaddress="0x7637" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
++    <units>DEG C</units>
++    <datatype>0</datatype>
++    <unittype>0</unittype>
++    <DALINK index="0" />
++    <MATH equation="X*0.75-40"><VAR id="X" /></MATH>
++</XDFCONSTANT>
+ </XDFFORMAT>
