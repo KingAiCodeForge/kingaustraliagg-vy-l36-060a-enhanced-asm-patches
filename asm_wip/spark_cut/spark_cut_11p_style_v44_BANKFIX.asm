@@ -1,4 +1,10 @@
 ;==============================================================================
+; STATUS OVERRIDE — 2026-09-21
+; REFERENCE_ONLY. The cross-bank/common-area placement correction is useful,
+; but the underlying $017B period/dwell manipulation is not currently accepted
+; as a proved final spark-cut primitive. See ../REPAIR_MATRIX_2026-09-21.md.
+;==============================================================================
+;==============================================================================
 ; VY V6 SPARK CUT v44 — 11P STYLE, CROSS-BANK BUG FIXED
 ;==============================================================================
 ;

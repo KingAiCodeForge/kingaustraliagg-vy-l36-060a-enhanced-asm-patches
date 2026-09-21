@@ -1,4 +1,10 @@
 ;==============================================================================
+; STATUS OVERRIDE — 2026-09-21
+; REFERENCE_ONLY. Keep the $5D05/$FEA2 bank-placement analysis; do not promote
+; the underlying $017B fake-period mechanism as verified ignition cut.
+; See ../REPAIR_MATRIX_2026-09-21.md.
+;==============================================================================
+;==============================================================================
 ; VY V6 SPARK CUT v45 — 11P STYLE, ENGINE BANK FEASIBILITY ANALYSIS
 ;==============================================================================
 ;

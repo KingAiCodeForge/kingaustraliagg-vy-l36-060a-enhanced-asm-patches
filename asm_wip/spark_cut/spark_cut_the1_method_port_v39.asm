@@ -1,3 +1,10 @@
+;==============================================================================
+; STATUS OVERRIDE — 2026-09-21
+; REJECTED for production/clean-parent use. New exact analysis of the v1.1a
+; path shows the foreground JSR $31EF target belongs to an IRQ-tail/RTI return
+; contract. Do not port this mechanism into v1.0a.
+; See ../REPAIR_MATRIX_2026-09-21.md.
+;==============================================================================
 ; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ; !! CROSS-BANK BUG (2026-02-13): This file places code at ORG $C468+ !!
 ; !! (bank 1 free space). The hook at file 0x101E1 (STD $017B) is in  !!
