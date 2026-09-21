@@ -1,0 +1,16 @@
+--- a/tools/hc11_decode.py
++++ b/tools/hc11_decode.py
+@@ -107,8 +107,12 @@
+     0x8F: ("XGDY", INH), 0x9C: ("CPY", DIR), 0xBC: ("CPY", EXT), 0xCE: ("LDY", IMM16),
+     0xDE: ("LDY", DIR), 0xDF: ("STY", DIR), 0xEE: ("LDY", IDX), 0xEF: ("STY", IDX),
+     0xFE: ("LDY", EXT), 0xFF: ("STY", EXT),
+-    # all indexed base ops become ,Y under 0x18:
++    # Indexed addressing uses Y on page 0x18. The register-operation
++    # exceptions below MUST follow the comprehension (last key wins).
+     **{op: (mn, IDX) for op, (mn, md) in BASE.items() if md == IDX},
++    0xAC: ("CPY", IDX),
++    0xEE: ("LDY", IDX),
++    0xEF: ("STY", IDX),
+ }
+ PAGE_1A: dict[int, tuple[str, int]] = {
+     0x83: ("CPD", IMM16), 0x93: ("CPD", DIR), 0xA3: ("CPD", IDX), 0xB3: ("CPD", EXT),
