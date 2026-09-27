@@ -1,0 +1,10 @@
+* text=auto
+
+.gitattributes text eol=lf
+.gitignore text eol=lf
+*.asm text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+
+*.bin binary
