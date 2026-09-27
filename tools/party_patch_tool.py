@@ -84,16 +84,22 @@ def _relative_repo_path(path: Path, field: str) -> str:
 
 
 @dataclass(frozen=True)
-class PartyPatch:
-    name: str
-    title: str
-    manifest_path: str
-    asm_path: str
-    asm_sha256: str
+class PatchHook:
     hook_offset: int
     hook_cpu: str
     hook_stock: bytes
     hook_patch: bytes
+
+
+@dataclass(frozen=True)
+class PartyPatch:
+    name: str
+    title: str
+    status: str
+    manifest_path: str
+    asm_path: str
+    asm_sha256: str
+    hooks: tuple[PatchHook, ...]
     code_offset: int
     code_cpu: str
     code_free_end: int
@@ -106,7 +112,11 @@ def load_patch_manifest(manifest_path: Path) -> PartyPatch:
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
     if data.get("schema") != MANIFEST_SCHEMA:
         raise ValueError(f"unsupported patch manifest schema in {manifest_path}")
-    if data.get("status") != "STATIC_CANDIDATE_DO_NOT_FLASH":
+    allowed_statuses = {
+        "STATIC_CANDIDATE_DO_NOT_FLASH",
+        "STATIC_WIP_PROBE_DO_NOT_FLASH",
+    }
+    if data.get("status") not in allowed_statuses:
         raise ValueError(f"unsafe or missing status in {manifest_path}")
 
     target = data["target"]
@@ -125,7 +135,20 @@ def load_patch_manifest(manifest_path: Path) -> PartyPatch:
             f"assembly source hash mismatch for {asm_path}: {actual_asm_sha256}"
         )
 
-    hook = data["hook"]
+    hook_records = data.get("hooks")
+    if hook_records is None:
+        hook_records = [data["hook"]]
+    if not isinstance(hook_records, list) or not hook_records:
+        raise ValueError(f"patch must define at least one hook in {manifest_path}")
+    hooks = tuple(
+        PatchHook(
+            hook_offset=_parse_offset(hook["file_offset"], "hook.file_offset"),
+            hook_cpu=str(hook["cpu"]),
+            hook_stock=_parse_hex_bytes(hook["before"], "hook.before"),
+            hook_patch=_parse_hex_bytes(hook["after"], "hook.after"),
+        )
+        for hook in hook_records
+    )
     routine = data["routine"]
     code = _parse_hex_bytes(routine["bytes"], "routine.bytes")
     expected_code_sha256 = str(routine["sha256"]).lower()
@@ -135,13 +158,11 @@ def load_patch_manifest(manifest_path: Path) -> PartyPatch:
     patch = PartyPatch(
         name=str(data["name"]),
         title=str(data["title"]),
+        status=str(data["status"]),
         manifest_path=_relative_repo_path(manifest_path, "manifest"),
         asm_path=asm_path,
         asm_sha256=expected_asm_sha256,
-        hook_offset=_parse_offset(hook["file_offset"], "hook.file_offset"),
-        hook_cpu=str(hook["cpu"]),
-        hook_stock=_parse_hex_bytes(hook["before"], "hook.before"),
-        hook_patch=_parse_hex_bytes(hook["after"], "hook.after"),
+        hooks=hooks,
         code_offset=_parse_offset(routine["file_offset"], "routine.file_offset"),
         code_cpu=str(routine["cpu"]),
         code_free_end=_parse_offset(
@@ -153,8 +174,21 @@ def load_patch_manifest(manifest_path: Path) -> PartyPatch:
     )
     if not patch.name or patch.name != manifest_path.parent.name.replace("_", "-"):
         raise ValueError(f"patch name does not match its folder in {manifest_path}")
-    if len(patch.hook_stock) != len(patch.hook_patch):
-        raise ValueError(f"hook byte lengths differ in {manifest_path}")
+    for hook in patch.hooks:
+        if len(hook.hook_stock) != len(hook.hook_patch):
+            raise ValueError(f"hook byte lengths differ in {manifest_path}")
+        if hook.hook_offset < 0 or (
+            hook.hook_offset + len(hook.hook_patch) > EXPECTED_SIZE
+        ):
+            raise ValueError(f"hook falls outside the target image in {manifest_path}")
+    if patch.code_offset < 0 or patch.code_free_end >= EXPECTED_SIZE:
+        raise ValueError(
+            f"routine placement falls outside the target image in {manifest_path}"
+        )
+    if patch.code_free_end < patch.code_offset:
+        raise ValueError(
+            f"reviewed zero run ends before the routine in {manifest_path}"
+        )
     if patch.code_offset + len(patch.code) - 1 > patch.code_free_end:
         raise ValueError(f"routine exceeds reviewed zero run in {manifest_path}")
     return patch
@@ -195,9 +229,10 @@ def allowed_changed_offsets(names: Iterable[str]) -> set[int]:
     allowed = {CHECKSUM_OFFSET, CHECKSUM_OFFSET + 1}
     for name in selected:
         patch = PATCHES[name]
-        allowed.update(
-            range(patch.hook_offset, patch.hook_offset + len(patch.hook_patch))
-        )
+        for hook in patch.hooks:
+            allowed.update(
+                range(hook.hook_offset, hook.hook_offset + len(hook.hook_patch))
+            )
         allowed.update(range(patch.code_offset, patch.code_offset + len(patch.code)))
     return allowed
 
@@ -235,7 +270,11 @@ def verify_assembled_source(
         assembled = output_path.read_bytes()
 
     if assembled != patch.code:
-        mismatch = changed_offsets(patch.code, assembled) if len(assembled) == len(patch.code) else []
+        mismatch = (
+            changed_offsets(patch.code, assembled)
+            if len(assembled) == len(patch.code)
+            else []
+        )
         preview = ", ".join(f"0x{offset:X}" for offset in mismatch[:16])
         detail = f" at {preview}" if preview else ""
         raise ValueError(
@@ -255,25 +294,70 @@ def verify_assembled_source(
     }
 
 
-def normalize_patch_names(names: Iterable[str]) -> tuple[str, ...]:
+def _ordered_patch_names(names: Iterable[str]) -> tuple[str, ...]:
     selected = tuple(dict.fromkeys(names))
     if not selected:
         raise ValueError("select at least one patch")
     unknown = sorted(set(selected) - PATCHES.keys())
     if unknown:
         raise ValueError(f"unknown patch: {', '.join(unknown)}")
-
     selected_set = set(selected)
+    return tuple(name for name in PATCHES if name in selected_set)
+
+
+def normalize_patch_names(names: Iterable[str]) -> tuple[str, ...]:
+    ordered = _ordered_patch_names(names)
+
+    selected_set = set(ordered)
     conflicts = {
         tuple(sorted((name, conflict)))
-        for name in selected
+        for name in ordered
         for conflict in PATCHES[name].conflicts
         if conflict in selected_set
     }
     if conflicts:
         pairs = ", ".join(f"{left} + {right}" for left, right in sorted(conflicts))
         raise ValueError(f"conflicting patches: {pairs}")
-    return tuple(name for name in PATCHES if name in selected_set)
+    _validate_write_regions(ordered)
+    return ordered
+
+
+def _validate_write_regions(names: Iterable[str]) -> None:
+    """Reject overlapping hooks, routines, and the image checksum field."""
+    regions: list[tuple[str, str, int, int]] = [
+        ("image", "checksum", CHECKSUM_OFFSET, CHECKSUM_OFFSET + 2)
+    ]
+    for name in names:
+        patch = PATCHES[name]
+        for index, hook in enumerate(patch.hooks, start=1):
+            regions.append(
+                (
+                    name,
+                    f"hook {index}",
+                    hook.hook_offset,
+                    hook.hook_offset + len(hook.hook_patch),
+                )
+            )
+        regions.append(
+            (
+                name,
+                "routine",
+                patch.code_offset,
+                patch.code_offset + len(patch.code),
+            )
+        )
+
+    for index, left in enumerate(regions):
+        left_patch, left_label, left_start, left_end = left
+        for right in regions[index + 1 :]:
+            right_patch, right_label, right_start, right_end = right
+            if max(left_start, right_start) < min(left_end, right_end):
+                raise ValueError(
+                    "overlapping write regions: "
+                    f"{left_patch} {left_label} 0x{left_start:05X}-0x{left_end - 1:05X} "
+                    f"and {right_patch} {right_label} "
+                    f"0x{right_start:05X}-0x{right_end - 1:05X}"
+                )
 
 
 def preflight_source(source: bytes, names: Iterable[str]) -> tuple[str, ...]:
@@ -286,20 +370,21 @@ def preflight_source(source: bytes, names: Iterable[str]) -> tuple[str, ...]:
 
     for name in selected:
         patch = PATCHES[name]
-        actual_hook = source[
-            patch.hook_offset : patch.hook_offset + len(patch.hook_stock)
-        ]
-        if actual_hook != patch.hook_stock:
+        for hook in patch.hooks:
+            actual_hook = source[
+                hook.hook_offset : hook.hook_offset + len(hook.hook_stock)
+            ]
+            if actual_hook != hook.hook_stock:
+                raise ValueError(
+                    f"{name} hook mismatch at 0x{hook.hook_offset:05X}: "
+                    f"{hex_bytes(actual_hook)}"
+                )
+        reviewed_zero_run = source[patch.code_offset : patch.code_free_end + 1]
+        expected_zero_length = patch.code_free_end - patch.code_offset + 1
+        if len(reviewed_zero_run) != expected_zero_length or any(reviewed_zero_run):
             raise ValueError(
-                f"{name} hook mismatch at 0x{patch.hook_offset:05X}: "
-                f"{hex_bytes(actual_hook)}"
-            )
-        candidate_space = source[
-            patch.code_offset : patch.code_offset + len(patch.code)
-        ]
-        if len(candidate_space) != len(patch.code) or any(candidate_space):
-            raise ValueError(
-                f"{name} code placement at 0x{patch.code_offset:05X} is not zero"
+                f"{name} reviewed code placement "
+                f"0x{patch.code_offset:05X}-0x{patch.code_free_end:05X} is not zero"
             )
         if patch.code_offset + len(patch.code) - 1 > patch.code_free_end:
             raise AssertionError(f"{name} code exceeds its reviewed zero run")
@@ -315,9 +400,10 @@ def build_candidate(
     for name in selected:
         patch = PATCHES[name]
         candidate[patch.code_offset : patch.code_offset + len(patch.code)] = patch.code
-        candidate[patch.hook_offset : patch.hook_offset + len(patch.hook_patch)] = (
-            patch.hook_patch
-        )
+        for hook in patch.hooks:
+            candidate[hook.hook_offset : hook.hook_offset + len(hook.hook_patch)] = (
+                hook.hook_patch
+            )
 
     write_vxy_checksum(candidate)
     output = bytes(candidate)
@@ -326,24 +412,35 @@ def build_candidate(
     if unexpected:
         preview = ", ".join(f"0x{offset:05X}" for offset in unexpected[:16])
         raise AssertionError(f"build changed bytes outside reviewed regions: {preview}")
+    build_status = (
+        "STATIC_WIP_PROBE_DO_NOT_FLASH"
+        if any(
+            PATCHES[name].status == "STATIC_WIP_PROBE_DO_NOT_FLASH" for name in selected
+        )
+        else "STATIC_CANDIDATE_DO_NOT_FLASH"
+    )
     report: dict[str, object] = {
         "schema": "vy-party-patch-static-candidate-v1",
-        "status": "STATIC_CANDIDATE_DO_NOT_FLASH",
+        "status": build_status,
         "source_sha256": SOURCE_SHA256,
         "output_sha256": sha256_bytes(output),
         "patches": [
             {
                 "name": PATCHES[name].name,
                 "title": PATCHES[name].title,
+                "status": PATCHES[name].status,
                 "manifest": PATCHES[name].manifest_path,
                 "asm": PATCHES[name].asm_path,
                 "asm_sha256": PATCHES[name].asm_sha256,
-                "hook": {
-                    "file_offset": f"0x{PATCHES[name].hook_offset:05X}",
-                    "cpu": PATCHES[name].hook_cpu,
-                    "before": hex_bytes(PATCHES[name].hook_stock),
-                    "after": hex_bytes(PATCHES[name].hook_patch),
-                },
+                "hooks": [
+                    {
+                        "file_offset": f"0x{hook.hook_offset:05X}",
+                        "cpu": hook.hook_cpu,
+                        "before": hex_bytes(hook.hook_stock),
+                        "after": hex_bytes(hook.hook_patch),
+                    }
+                    for hook in PATCHES[name].hooks
+                ],
                 "routine": {
                     "file_offset": f"0x{PATCHES[name].code_offset:05X}",
                     "cpu": PATCHES[name].code_cpu,
@@ -402,7 +499,9 @@ def parse_args() -> argparse.Namespace:
     verify_asm = subparsers.add_parser(
         "verify-asm", help="assemble source with A09 and compare manifest bytes"
     )
-    verify_asm.add_argument("--assembler", required=True, help="A09 executable or command")
+    verify_asm.add_argument(
+        "--assembler", required=True, help="A09 executable or command"
+    )
     add_patch_arguments(verify_asm)
 
     build = subparsers.add_parser("build", help="build an exact-target candidate")
@@ -433,7 +532,7 @@ def catalog_report() -> dict[str, object]:
             "asm_sha256": patch.asm_sha256,
             "routine_sha256": sha256_bytes(patch.code),
             "conflicts": list(patch.conflicts),
-            "status": "STATIC_CANDIDATE_DO_NOT_FLASH",
+            "status": patch.status,
         }
         for name, patch in PATCHES.items()
     }
@@ -446,10 +545,9 @@ def main() -> int:
         return 0
 
     if args.command == "verify-asm":
-        selected = normalize_patch_names(args.patch)
+        selected = _ordered_patch_names(args.patch)
         reports = [
-            verify_assembled_source(PATCHES[name], args.assembler)
-            for name in selected
+            verify_assembled_source(PATCHES[name], args.assembler) for name in selected
         ]
         print(json.dumps(reports, indent=2))
         return 0
@@ -464,9 +562,7 @@ def main() -> int:
         output, report = build_candidate(args.input_bin.read_bytes(), args.patch)
         payloads: list[tuple[Path, bytes | str]] = [(args.output_bin, output)]
         if args.manifest:
-            payloads.append(
-                (args.manifest, json.dumps(report, indent=2) + "\n")
-            )
+            payloads.append((args.manifest, json.dumps(report, indent=2) + "\n"))
         write_outputs_exclusive(payloads)
     else:
         outputs = [args.json_path] if args.json_path else []

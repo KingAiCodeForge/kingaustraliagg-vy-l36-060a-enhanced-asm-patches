@@ -14,11 +14,17 @@
 /asm_wip/*
 !/asm_wip/README.md
 !/asm_wip/ghost_cam/
+!/asm_wip/est_shared_probe/
 
 /asm_wip/ghost_cam/*
 !/asm_wip/ghost_cam/ghost_cam_retarded_idle_selector_v1.asm
 !/asm_wip/ghost_cam/manifest.json
 !/asm_wip/ghost_cam/README.md
+
+/asm_wip/est_shared_probe/*
+!/asm_wip/est_shared_probe/est_shared_dual_store_probe_v52.asm
+!/asm_wip/est_shared_probe/manifest.json
+!/asm_wip/est_shared_probe/README.md
 
 # Public tools required to reproduce the static patch contracts.
 /tools/*

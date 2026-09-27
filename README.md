@@ -28,9 +28,11 @@ target, even when an address appears similar.
 | Patch | What it does | Current proof |
 |---|---|---|
 | [Ghost cam selector v1](asm_wip/ghost_cam/ghost_cam_retarded_idle_selector_v1.asm) | Alternates the stock normal and retarded idle-spark values when the stock retarded-idle path is active | Assembles; real idle-spark hook and RAM producers match |
+| [EST shared-command no-op probe v52](asm_wip/est_shared_probe/est_shared_dual_store_probe_v52.asm) | Routes both direct `$1444` stores through one routine without changing D | Assembles; both original store sites and the full zero placement run match |
 
-This is a static candidate, not a claim that the engine will produce the
-intended effect. Its event cadence and physical behavior remain unproved.
+These are static candidates, not claims about vehicle behavior. The EST entry
+is instrumentation groundwork only: it does not implement a spark cut. Runtime
+cadence, timing margin, stack headroom and physical EST behavior remain unproved.
 
 ## Withdrawn Cut Prototypes
 
@@ -95,6 +97,9 @@ python party_patch_tool.py verify-asm `
   --patch ghost-cam
 ```
 
+Replace `ghost-cam` with `est-shared-probe` to build or verify the no-op probe.
+The two entries intentionally conflict so each behavior is evaluated alone.
+
 Passing verification means only that the output is the deterministic static
 build and its file checksum matches.
 
@@ -119,8 +124,9 @@ belongs here when executable HC11 behavior is the patch.
 4. Log the ghost-cam hook cadence and prove which engine events select each
    idle-spark source.
 5. Scope commanded and physical spark before describing the audible result.
-6. For future cut work, finish the external EST contract for `$019B`, `$1444`,
-   `$149E`, and `$16FA`; do not reuse the invalid v1.1a `JSR $31EF` path.
+6. Bench the no-op EST probe first, then finish the external EST contract for
+   `$019B`, `$1444`, `$149E`, and `$16FA`; do not reuse the invalid v1.1a
+   `JSR $31EF` path.
 7. Add a proven driver input, timeout, load gating, and temperature protection
    before calling any future rolling-cut design anti-lag.
 8. Test without boost first and keep a known-good recovery image.
