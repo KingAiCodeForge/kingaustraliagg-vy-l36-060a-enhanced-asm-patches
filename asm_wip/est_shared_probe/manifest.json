@@ -1,0 +1,44 @@
+{
+  "schema": "kingai.vy-060a-static-patch.v1",
+  "name": "est-shared-probe",
+  "title": "EST shared-command dual-store no-op probe v52",
+  "status": "STATIC_WIP_PROBE_DO_NOT_FLASH",
+  "target": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd"
+  },
+  "source": {
+    "path": "est_shared_dual_store_probe_v52.asm",
+    "normalized_sha256": "1ae5ac048259656e20e0b099d717ca54206320ca291ec3231b8df1998fd64b12"
+  },
+  "hooks": [
+    {
+      "file_offset": "0x10232",
+      "cpu": "bank2 $8232",
+      "before": "FD 14 44",
+      "after": "BD 5D 05"
+    },
+    {
+      "file_offset": "0x106EE",
+      "cpu": "bank2 $86EE",
+      "before": "FD 14 44",
+      "after": "BD 5D 05"
+    }
+  ],
+  "routine": {
+    "file_offset": "0x05D05",
+    "cpu": "common $5D05",
+    "reviewed_zero_end": "0x05EFC",
+    "bytes": "FD 14 44 39",
+    "sha256": "f39d187ea59c3db603feea18112bb9787d2831275f56007f3fd51097ac183b4a"
+  },
+  "conflicts": [
+    "ghost-cam"
+  ],
+  "unproved": [
+    "external EST, B3 and B4 ownership and physical response",
+    "runtime execution cadence, timing margin and stack headroom",
+    "indirect or external writers to shared word $1444",
+    "full-code write, exact readback and interrupted-write recovery on a spare PCM"
+  ]
+}

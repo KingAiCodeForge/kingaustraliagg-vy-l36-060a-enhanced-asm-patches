@@ -8,9 +8,10 @@ engineering notes and not byte patches already supplied by an XDF.
 | Source | Hook | Handler | Status |
 |---|---|---|---|
 | `ghost_cam/ghost_cam_retarded_idle_selector_v1.asm` | File `0x1790F`, bank2 `$F90F` | File `0x17EA2`, bank2 `$FEA2` | Static candidate |
+| `est_shared_probe/est_shared_dual_store_probe_v52.asm` | Files `0x10232` and `0x106EE`, bank2 `$8232/$86EE` | File `0x05D05`, common `$5D05` | Static WIP no-op probe |
 
 The retained source assembles with A09 v1.62 in HC11 mode. Its adjacent
-`manifest.json` binds the normalized source hash, assembled bytes, hook and
+`manifest.json` binds the normalized source hash, assembled bytes, hooks and
 exact target. `tools/party_patch_tool.py` validates that manifest before an
 output can be created and can independently rerun A09 byte-parity verification.
 
@@ -28,8 +29,8 @@ A public `.asm` file needs:
 8. explicit statements about what remains unproved.
 
 Bench and vehicle proof are later evidence levels. Until then, the source must
-say `STATIC CANDIDATE` and must not use words such as safe, working, or verified
-for physical behavior.
+carry a `DO_NOT_FLASH` status and must not use words such as safe, working, or
+verified for physical behavior.
 
 ## Excluded Drafts
 
@@ -49,12 +50,10 @@ the public tree when they rely on:
 
 ## Next Patch Lanes
 
-Local WIP now includes `spark_cut/est_shared_dual_store_probe_v52.asm`, an
-exact-source dual-hook **no-op** at the two direct `$1444` stores. Its builder
-and byte/checksum verifier are in `tools/build_est_shared_probe_v52.py`, with
-output under `bin_patch_test/spark_cut_wip_v52/`. It establishes a candidate
-place to observe the final shared command; it does not implement a spark cut.
-The source remains local/ignored pending external EST and bench evidence.
+The retained `est_shared_probe` lane is an exact-source dual-hook **no-op** at
+the two direct `$1444` stores. It establishes a reproducible candidate place to
+observe the final shared command; it does not implement a spark cut. It remains
+a `STATIC_WIP_PROBE_DO_NOT_FLASH` entry pending external EST and bench evidence.
 
 Launch control, two-step, no-lift shift, and button-controlled rolling anti-lag
 are worth keeping as goals. They do not get public ASM implementations until a
