@@ -4,6 +4,24 @@
 [![Target: VY V6 ECU](https://img.shields.io/badge/Target-Holden%20VY%20V6-green.svg)](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches)
 [![Status: Research/WIP](https://img.shields.io/badge/Status-WIP-yellow.svg)](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches)
 
+
+> ## Current-status correction — 2026-10-06
+>
+> This repository is a **historical/public research corpus**, not the current integration authority for KingAI's VY `$060A` work. Several older filenames and README sections use words such as `VERIFIED`, `RECOMMENDED` or `free space` that were written before later exact-image ownership work.
+>
+> Treat the following as superseded unless re-proved against the exact Enhanced v1.0a image:
+>
+> - `$017B` is **not** a final ignition-off primitive. Later tracing places it inside the command/history calculation before `$019B -> $1444`, with separate minimum/floor state at `$144A` and separate event/state ownership around `$149E/$15EA`.
+> - A filename containing `VERIFIED` means historical software/research status only. It does **not** establish physical no-spark behavior, safe coil charge termination, or vehicle approval.
+> - The old blanket claim that `$C468-$FFBF` is free ROM is not valid. Later exact control-flow work shows replaced/bypassed regions with live entry/return/timing contracts; code-space reclamation requires XREF and ownership closure.
+> - The old MAFless/Alpha-N patches are research concepts. Later exact tracing separates the primary cylinder-air authority through `DISPFLOI $0122` from the transient path through `RAWMAFRD $0130`; changing only one path is not a complete airflow replacement.
+> - Enhanced extended-load spark storage is live, and low-octane tables remain active inputs to adaptive/knock logic. Do not treat them as spare ROM without replacement-consumer proof.
+>
+> **Current development rule:** do not create additional spark-cut variants merely because physical testing is pending. Existing candidate families already cover command/floor, native permission and event-admission approaches. Current software effort is better spent on definition accuracy, ownership closure, compiler/linker/resource tooling and one unified ignition-service contract.
+>
+> The files below are retained because they are useful evidence, counterexamples and historical experiments. Read them as research artifacts, not as a release ladder.
+
+
 > **Holden VY V6 Ecotec L36 (3.8L) - Assembly Patches for Delco $060A 92118883 ECU**
 >
 > Research-based 68HC11 assembly patches based on Chr0m3 Motorsport and The1's Enhanced OS, made by me and a computer robot. Can someone explain where this is wrong with real address and numbers snippets to replace the misinfomation, if you come across anything. feel free to add more concepts or explainations to anywhere with PR or message me to do it and i will fix it asap. looking for someone to upload the 3 split .asm from a ida and ghidra if anyone has actually got this. dont just tell me to do it myself, it gets this project nowhere. the concepts apply to many things not just delco.
