@@ -13,7 +13,7 @@
 >
 > - `$017B` is **not** a final ignition-off primitive. Later tracing places it inside the command/history calculation before `$019B -> $1444`, with separate minimum/floor state at `$144A` and separate event/state ownership around `$149E/$15EA`.
 > - A filename containing `VERIFIED` means historical software/research status only. It does **not** establish physical no-spark behavior, safe coil charge termination, or vehicle approval.
-> - The old blanket claim that `$C468-$FFBF` is free ROM is not valid. Later exact control-flow work shows replaced/bypassed regions with live entry/return/timing contracts; code-space reclamation requires XREF and ownership closure.
+> - **Do not conflate the large Bank-1 zero arena with the separate live NOP corridor.** Physical file `0x0C468-0x0FFBF` / Bank-1 CPU `$C468-$FFBF` remains a strong **bank-dependent free-space candidate**, but it still needs modern bank-state/direct+indirect XREF closure before final `FREE_ROM` promotion. The separate Bank-2 file `0x1441E-0x14681` / CPU `$C41E-$C681` NOP corridor has live entries and is **not free**.
 > - The old MAFless/Alpha-N patches are research concepts. Later exact tracing separates the primary cylinder-air authority through `DISPFLOI $0122` from the transient path through `RAWMAFRD $0130`; changing only one path is not a complete airflow replacement.
 > - Enhanced extended-load spark storage is live, and low-octane tables remain active inputs to adaptive/knock logic. Do not treat them as spare ROM without replacement-consumer proof.
 >
@@ -59,12 +59,12 @@ No patched binaries included. These are reference implementations requiring manu
 
 The hook at file offset `0x101E1` runs in **bank 2** context (CPU $8000–$FFFF = file 0x10000–0x17FFF). Our patch code at file `0x0C500` is in **bank 1**. Banks 1 and 2 share the CPU address range $8000–$FFFF — only one is visible at a time. **`JSR $C500` from bank 2 code will hit file 0x1C500 (bank 3 — transmission code), NOT our patch at 0x0C500.**
 
-**Fix:** Use a trampoline stub in the **common area** ($5D05–$5EFC, 504 bytes, always visible from any bank). The stub at $5D05 is always mapped regardless of bank selection — `JSR $5D05` from bank 2 will always reach it.
+**Historical fix concept:** a common-area trampoline avoids the cross-bank call error, but `$5D05-$5EFC` is no longer generic unallocated space in the wider KingAI project. Later OneROM/RBCP/logger/ignition work competes for that region. Any new use must come from one shared allocator/resource map rather than another standalone patch claiming `$5D05`.
 
 | Fix Option | Location | Size | Notes |
 |-----------|----------|------|-------|
-| **Common area stub** | $5D05–$5EFC | 504 bytes | ✅ Always visible — recommended for small patches |
-| **Bank 2 free space** | $FE87–$FFBF (file 0x17E87) | 313 bytes | Same bank as hook — JSR works directly |
+| **Common area stub** | $5D05–$5EFC | 504 bytes | ⚠️ OEM-unused candidate but **KingAI-reserved/conflicted** by later OneROM/RBCP/logger/ignition work; use only through a shared allocator |
+| **Bank 2 candidate** | $FE87–$FFB1 (file 0x17E87) | 299 bytes | Stronger overlap-safe candidate; modern XREF/bank-state closure still required |
 | **Trampoline** | Common stub → bank switch → bank 1 | N/A | Full 15 KB of bank 1 available |
 
 > **Status:** All `spark_cut/*.asm` files that use `ORG $C468` or `ORG $C500` need updating to use the trampoline pattern. See `ADDRESS_FIX_REPORT_20260209.md` (local) for per-file status.
