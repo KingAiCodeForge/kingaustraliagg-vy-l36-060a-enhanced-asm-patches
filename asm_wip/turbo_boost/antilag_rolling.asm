@@ -1,3 +1,24 @@
+;==============================================================================
+; SUPERSEDED / DO NOT BUILD — status correction 2026-10-06
+;==============================================================================
+; This historical v11 experiment is retained only as a counterexample.
+;
+; Known blockers:
+; - documented cross-bank call bug;
+; - old fake-period / $017B-era ignition assumption is superseded;
+; - foreground cycle toggling is not native ignition-event identity;
+; - later exact VY work binds native event identity to INJCNTR $016D and
+;   ESCPCYL $3584, with EST feedback observed at $14C8;
+; - the old claim of per-cylinder alternating control does not establish a
+;   physical DFI coil-event primitive.
+;
+; Do not repair this file into a new release. The current RAL direction ports
+; MS43X behavior/state semantics above the modern VY ownership model:
+; PWR $0360.6 arm + speed/TPS/RPM gates + dynamic RPM cap + late retard +
+; richer-only fuel request; automatic transmission remains in Drive and no
+; Neutral command is part of RAL.
+;==============================================================================
+
 ; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ; !! CROSS-BANK BUG (2026-02-13): This file places code at ORG $C468+ !!
 ; !! (bank 1 free space). The hook at file 0x101E1 (STD $017B) is in  !!
