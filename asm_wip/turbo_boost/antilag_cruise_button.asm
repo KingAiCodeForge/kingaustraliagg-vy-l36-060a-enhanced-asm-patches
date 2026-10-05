@@ -1,4 +1,22 @@
 ;==============================================================================
+; SUPERSEDED DESIGN SKETCH / DO NOT BUILD — status correction 2026-10-06
+;==============================================================================
+; This file is useful only as an early behavioral sketch of the MS43X RAL idea.
+; Do not use its VY addresses or RAM allocations.
+;
+; Specifically:
+; - $00B8-$00BB are occupied/native states, not free RAL scratch RAM;
+; - $00F0/$00DA/$00E0/$00E1/$00D0/$00D4/$00C0 were placeholder assumptions;
+; - direct AFR/spark/limiter writes here are not ownership-closed VY actuators;
+; - VY now has exact PWR state $0360.6, RPM/25 $00A2, filtered speed $0098,
+;   raw TPS $00B6 and filtered TPS $00C6;
+; - the current port uses MS43X behavior as a donor, never BMW/VY placeholder
+;   addresses or the historical standalone actuator assumptions.
+;
+; Retain this source for provenance only. Current RAL research belongs above a
+; shared/proven VY backend, with the 4L60E left in Drive; no Neutral request.
+;==============================================================================
+;==============================================================================
 ; [ADDRESS FIX 2026-02-09] Binary-verified address corrections applied
 ; Ground truth: 92118883_STOCK.bin (HC11 opcode scan, equivalent to Capstone)
 ; Fixes: 4 issues found and annotated
