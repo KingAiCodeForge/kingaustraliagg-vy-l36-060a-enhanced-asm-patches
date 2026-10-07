@@ -973,3 +973,18 @@ Copyright (c) 2026 Jason King (kingaustraliagg / KingAiCodeForge)
 ---
 
 *This README was written by a human who uses AI tools to work faster. If that bothers you, go make something better.*
+
+## Selective portable-tool sync, 2026-10-07
+The guarded builder, checksum and bank-splitter modules and their tests are imported
+from fabeff7. This selective sync does not apply the older curation commit's mass
+deletion of archived research. Original local edits remain in their original checkout.
+Preferred guarded builder: tools/party_patch_tool.py.
+The ghost-cam and EST shared-command candidates remain static REVIEW work;
+successful tests do not establish electrical behavior, engine safety or flash readiness.
+Historical patch-build claims elsewhere in this repository are not promoted by this sync.
+No new source BIN, hardware capture or generated firmware is included.
+
+Focused local result: 17 passed, 2 skipped, 2 subtests passed.
+The exact-source BIN and A09 assembly-parity checks were optional and skipped;
+their absence is not a pass or runtime/flash proof. Synthetic bank splitting,
+checksum arithmetic, catalog conflicts, output preservation and write bounds passed.

@@ -1,0 +1,33 @@
+{
+  "schema": "kingai.vy-060a-static-patch.v1",
+  "name": "ghost-cam",
+  "title": "Retarded-idle ghost-cam selector v1",
+  "status": "STATIC_CANDIDATE_DO_NOT_FLASH",
+  "target": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd"
+  },
+  "source": {
+    "path": "ghost_cam_retarded_idle_selector_v1.asm",
+    "normalized_sha256": "9531a4a7ef40f21b05bbb13ba573c491223059722af9575c4ce8054dc09f3de5"
+  },
+  "hook": {
+    "file_offset": "0x1790F",
+    "cpu": "bank2 $F90F",
+    "before": "B6 1A 45",
+    "after": "BD FE A2"
+  },
+  "routine": {
+    "file_offset": "0x17EA2",
+    "cpu": "bank2 $FEA2",
+    "reviewed_zero_end": "0x17FBF",
+    "bytes": "B6 19 16 85 08 27 04 B6 1A 45 39 B6 1A 44 39 4A 4B 47 01",
+    "sha256": "10b3ddd4829f848cba59ac0a91ea5625d6f6e1fb6c10e24133984103600ef6a6"
+  },
+  "conflicts": [],
+  "unproved": [
+    "$1916 increment cadence at idle",
+    "audible result and idle stability",
+    "exhaust and catalyst temperature effect"
+  ]
+}
