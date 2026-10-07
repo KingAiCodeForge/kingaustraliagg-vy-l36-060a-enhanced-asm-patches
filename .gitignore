@@ -539,3 +539,12 @@ techedge_decompiled/
 # Working documents (Feb 15, 2026)
 209b_porting_to_262_for_92118883_stock_vy_v6.md
 commieflashtool.md
+
+# Local research, raw firmware and runtime configuration are not public fixtures
+/_ai_work/
+/local/
+.env
+.env.*
+!.env.example
+*.bin
+*.xdl

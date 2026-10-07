@@ -1,59 +1,24 @@
 #!/usr/bin/env python3
-"""
-VY V6 128KB Binary Splitter, Disassembler & Differ
-===================================================
-*** NOTE: This script is now called by godlike_disassemble_all.py which adds
-*** GNU + udis backends and auto-applies XDF labeling to ALL outputs.
-*** Use:  python godlike_disassemble_all.py --target enhanced_v1.0a
-***
-*** This script remains functional standalone for Capstone-only disassembly.
-*** 2026-02-20: Fixed bank2/3 vector table ($FFD6-$FFFF) — now emits
-*** proper .word entries instead of misidentified instructions.
-===================================================
-Splits 128KB Delco HC11 bins into 3 flash banks per OSE Flash Tool mapping,
-disassembles each bank with Capstone M680X (HC11 mode), and diffs STOCK vs Enhanced.
+"""Split, heuristically disassemble, and compare 128 KiB VY Delco images.
 
-Bank layout from OSE Flash Tool decompilation (ALDLFunctions.cs):
-  Bank 1: bin[0x00000:0x10000] → 64 KB → CPU 0x0000-0xFFFF (primary window)
-  Bank 2: bin[0x10000:0x18000] → 32 KB → CPU 0x8000-0xFFFF (paged via PORTC bit 3)
-  Bank 3: bin[0x18000:0x20000] → 32 KB → CPU 0x8000-0xFFFF (paged)
+The three file-bank ranges are derived from the OSE FlashTool read/write
+layout. Capstone's M680X decoder is used for instruction decoding. Code/data
+classification is heuristic: recursive descent is seeded in the mixed common
+region, while the remaining program windows use a linear sweep. Generated
+output is evidence for review, not a complete decompilation or ownership map.
 
-Memory Map (Bank 1):
-  $0000-$01FF  Internal RAM (512 bytes, HC11 E-series) — all 0xFF in EEPROM dump
-  $0200-$0FFF  Extended RAM / EEPROM — mostly 0xFF
-  $1000-$105F  HC11 I/O registers — all 0xFF in dump (not meaningful)
-  $2000-$202F  ISR pseudo-vector jump table (JMP instructions, ALWAYS code)
-  $2030-$2FFF  Calibration data (tables, constants)
-  $3000-$5FFF  Common code (ISR handlers, subroutines) + calibration tables
-  $6000-$BFFF  More code / calibration
-  $C000-$FFBF  Engine bank code (or free space)
-  $FFC0-$FFFF  Interrupt vector trampoline table
-
-CORRECTED 2026-02-10: $2000-$5FFF was previously treated entirely as data.
-  In reality it contains the ISR jump table ($2000-$202F as JMP instructions),
-  plus ALL critical ISR handlers and subroutines ($29D3, $301F, $30BA, $35BD,
-  $35DE, $35FF, $371A, $37A6, etc.). Now uses recursive descent from known
-  entry points to properly separate code from data in this mixed region.
-
-Usage:
-  python split_and_disassemble.py                    # Split & disassemble all
-  python split_and_disassemble.py --diff             # Also diff STOCK vs Enhanced
-  python split_and_disassemble.py --split-only       # Just split, no disassembly
+Examples:
+  python split_and_disassemble.py image.bin
+  python split_and_disassemble.py image.bin --split-only
+  python split_and_disassemble.py enhanced.bin --diff-against stock.bin
 """
 
-import os
-import sys
-import struct
 import argparse
+import re
 from pathlib import Path
 
 # --- Configuration ---
-BINS = {
-    "STOCK": "92118883_STOCK.bin",
-    "Enhanced_v1.0a": "VX-VY_V6_$060A_Enhanced_v1.0a - Copy.bin",
-    "Enhanced_v1.1a": "VX-VY_V6_$060A_Enhanced_v1.1a.bin",
-    "Enhanced": "VY_V6_Enhanced.bin",
-}
+SOURCE_SIZE = 0x20000
 
 # Bank definitions: (name, bin_start, bin_end, cpu_base_address)
 BANKS = [
@@ -102,14 +67,14 @@ KNOWN_LABELS = {
     0x7FF0: "CalID",
     0x8000: "ProgROM_Start",
     0xFF80: "ProgID",
-    # HC11 I/O registers — $1000-$100D are VARIANT-DEPENDENT.
+    # HC11 I/O registers - $1000-$100D are variant-dependent.
     # See HC11_VARIANT_REGISTERS below for all possibilities.
     # Only the label used in KNOWN_LABELS is the "safe" common name.
     0x1000: "PORTA",    # All variants
     0x1004: "PORTB",    # All variants
     0x1008: "PORTD",    # All variants
     0x1009: "DDRD",
-    # $100E+: Timer subsystem — SAME across all HC11 variants
+    # $100E+: timer subsystem shared by the reviewed variants.
     0x100E: "TCNT_H",
     0x100F: "TCNT_L",
     0x1020: "TCTL1",    # Timer Control 1 (EST output mode)
@@ -120,19 +85,19 @@ KNOWN_LABELS = {
     0x1025: "TFLG2",
     0x1026: "PACTL",
     0x1027: "PACNT",
-    # SPI — same across variants
+    # SPI - same across the reviewed variants.
     0x1028: "SPCR",
     0x1029: "SPSR",
     0x102A: "SPDR",
-    # SCI — same across variants
+    # SCI - same across the reviewed variants.
     0x102B: "BAUD",
     0x102C: "SCCR1",
     0x102D: "SCCR2",
     0x102E: "SCSR",
     0x102F: "SCDR",
-    # ADC — HC11E=$1030, HC11F=$1030, same across variants
+    # ADC - HC11E and HC11F both place it at $1030.
     0x1030: "ADCTL",
-    # System registers — same across variants
+    # System registers - same across the reviewed variants.
     0x1039: "OPTION",
     0x103A: "COPRST",
     0x103D: "INIT",
@@ -175,7 +140,7 @@ EXTRA_CODE_SEEDS = [
 # HC11 VARIANT-DEPENDENT REGISTER MAP ($1000-$100D)
 # ============================================================================
 # The exact HC11 derivative in the VY V6 Delco P04 is UNCONFIRMED.
-# DARC disassembly (VT V6 SC — a DIFFERENT ECU) claims HC11FC0.
+# A local DARC VT V6 SC disassembly, from a different ECU, names HC11FC0.
 # We can't assume that applies to the VY V6.
 #
 # This table shows what each address means under each variant so the
@@ -201,7 +166,7 @@ HC11_VARIANT_REGISTERS = {
     },
     0x1002: {
         "HC11E": ("PIOC",   "Parallel I/O Control (STAF,STAI,CWOM,HNDS,OIN,PLS,EGA,INVB)"),
-        "HC11F": ("PORTG",  "Port G data (bank switching — bit 6 = A16)"),
+        "HC11F": ("PORTG",  "Port G data (candidate bank select: bit 6 = A16)"),
         "HC11G": ("PIOC",   "Parallel I/O Control"),
         "HC11K": ("PORTG",  "Port G data"),
     },
@@ -281,14 +246,14 @@ HC11_COMMON_REGISTERS = {
     0x1011: ("TIC1_L",  "Input Capture 1 (low)"),
     0x1012: ("TIC2_H",  "Input Capture 2 (high)"),
     0x1013: ("TIC2_L",  "Input Capture 2 (low)"),
-    0x1014: ("TIC3_H",  "Input Capture 3 — 24X Crank (high)"),
-    0x1015: ("TIC3_L",  "Input Capture 3 — 24X Crank (low)"),
+    0x1014: ("TIC3_H",  "Input Capture 3 - candidate 24X crank input (high)"),
+    0x1015: ("TIC3_L",  "Input Capture 3 - candidate 24X crank input (low)"),
     0x1016: ("TOC1_H",  "Output Compare 1 (high)"),
     0x1017: ("TOC1_L",  "Output Compare 1 (low)"),
     0x1018: ("TOC2_H",  "Output Compare 2 (high)"),
     0x1019: ("TOC2_L",  "Output Compare 2 (low)"),
-    0x101A: ("TOC3_H",  "Output Compare 3 — EST (high)"),
-    0x101B: ("TOC3_L",  "Output Compare 3 — EST (low)"),
+    0x101A: ("TOC3_H",  "Output Compare 3 - candidate EST output (high)"),
+    0x101B: ("TOC3_L",  "Output Compare 3 - candidate EST output (low)"),
     0x101C: ("TOC4_H",  "Output Compare 4 (high)"),
     0x101D: ("TOC4_L",  "Output Compare 4 (low)"),
     0x101E: ("TOC5_H",  "Output Compare 5 (high)"),
@@ -338,7 +303,7 @@ def get_register_comment(addr):
         if len(names) == 1:
             name = names.pop()
             desc = next(v[1] for v in variants.values() if v[0] != "---")
-            return f" ; [HW] {name} — {desc}"
+            return f" ; [HW] {name} - {desc}"
         else:
             parts = []
             for var in ["HC11E", "HC11F", "HC11G", "HC11K"]:
@@ -348,21 +313,25 @@ def get_register_comment(addr):
     
     if addr in HC11_COMMON_REGISTERS:
         name, desc = HC11_COMMON_REGISTERS[addr]
-        return f" ; [HW] {name} — {desc}"
+        return f" ; [HW] {name} - {desc}"
     
     return ""
 
 
-OUTPUT_DIR = Path("bank_split_output")
-
-
 def read_bin(filepath):
-    """Read a binary file and validate it's 128KB."""
-    with open(filepath, "rb") as f:
-        data = f.read()
-    if len(data) != 131072:
-        print(f"  WARNING: {filepath} is {len(data)} bytes, expected 131072 (128KB)")
+    """Read an exact 128 KiB source image."""
+    data = Path(filepath).read_bytes()
+    if len(data) != SOURCE_SIZE:
+        raise ValueError(
+            f"{filepath} is 0x{len(data):X} bytes; expected exactly 0x{SOURCE_SIZE:X}"
+        )
     return data
+
+
+def artifact_name(path):
+    """Return a stable filesystem-safe label derived from an input filename."""
+    name = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(path).stem).strip("._")
+    return name or "image"
 
 
 def split_bin(data, name, output_dir):
@@ -391,6 +360,21 @@ def extract_vectors(bank1_data):
             label = VECTORS[addr]
             lines.append(f"; ${addr:04X}: {label:20s} -> ${vec_target:04X}")
     return "\n".join(lines)
+
+
+def format_vector_entry(bank_data, cpu_base, address):
+    """Format one HC11 vector as a big-endian 16-bit handler address."""
+    offset = address - cpu_base
+    if offset < 0 or offset + 1 >= len(bank_data):
+        raise ValueError(f"vector ${address:04X} is outside the supplied bank")
+    hi = bank_data[offset]
+    lo = bank_data[offset + 1]
+    target = (hi << 8) | lo
+    raw = f"{hi:02X} {lo:02X}"
+    return (
+        f"L{address:04X}:  {raw:15s}  .word    "
+        f"${target:04X}            ; -> {VECTORS[address]} handler\n"
+    )
 
 
 def _extract_operand_addr(op_str):
@@ -428,8 +412,6 @@ def disassemble_bank(bank_data, cpu_base, bank_name, name, output_dir):
 
     # Phase 1: Recursive descent for bank1 mixed region
     insn_map = {}       # addr -> (mnemonic, op_str, raw_hex, size)
-    code_bytes = set()  # all byte offsets that are code
-
     if bank_name == "bank1":
         seed_addrs = set()
 
@@ -528,9 +510,6 @@ def disassemble_bank(bank_data, cpu_base, bank_name, name, output_dir):
                 insn_map[insn.address] = (
                     insn.mnemonic, insn.op_str, raw, insn.size
                 )
-                for b in range(insn.size):
-                    code_bytes.add(insn.address + b)
-
                 mn = insn.mnemonic.lower()
                 if mn in branch_ops:
                     op = insn.op_str.strip()
@@ -574,6 +553,7 @@ def disassemble_bank(bank_data, cpu_base, bank_name, name, output_dir):
 
         insn_count = 0
         data_bytes = 0
+        vector_count = 0
 
         def emit_data_line(f, addr, chunk):
             hs = ", ".join(f"${b:02X}" for b in chunk)
@@ -630,15 +610,11 @@ def disassemble_bank(bank_data, cpu_base, bank_name, name, output_dir):
         else:
             code_start = 0
 
-        # Linear sweep for remaining code
-        # For bank2/3: stop at $FFD6 (vector table) and emit vectors as .word
+        # Linear sweep for remaining code. Stop at $FFD6 so vector words are
+        # never decoded as ordinary instructions.
         vector_start = 0xFFD6  # First vector address
-        if bank_name in ("bank2", "bank3"):
-            # Only disassemble code up to the vector table
-            code_end_offset = vector_start - cpu_base
-            code_data = bank_data[code_start:code_end_offset]
-        else:
-            code_data = bank_data[code_start:]
+        code_end_offset = vector_start - cpu_base
+        code_data = bank_data[code_start:code_end_offset]
         code_base = cpu_base + code_start
 
         f.write(f"\n\n; === Code region ${code_base:04X}-${cpu_base + bank_size - 1:04X} ===\n\n")
@@ -658,53 +634,37 @@ def disassemble_bank(bank_data, cpu_base, bank_name, name, output_dir):
             f.write(f"L{insn.address:04X}:  {raw_bytes:15s}  {insn.mnemonic:8s} {insn.op_str}{reg_comment}\n")
             insn_count += 1
 
-        # For bank2/3: emit vector table as .word address entries
-        if bank_name in ("bank2", "bank3"):
-            f.write(f"\n; === Interrupt Vector Table ${vector_start:04X}-$FFFF ===\n")
-            f.write(f"; NOTE: These are 16-bit address pointers, not instructions.\n")
-            f.write(f"; Bank {bank_name[-1]} may use BRA trampolines ($20 xx) or direct\n")
-            f.write(f"; address pointers ($C0 xx, etc.) depending on ROM variant.\n\n")
-            for vec_addr in sorted(VECTORS.keys()):
-                if vec_addr < vector_start:
-                    continue
-                offset = vec_addr - cpu_base
-                if offset + 1 < bank_size:
-                    hi = bank_data[offset]
-                    lo = bank_data[offset + 1]
-                    target = (hi << 8) | lo
-                    vec_name = VECTORS[vec_addr]
-                    raw = f"{hi:02X} {lo:02X}"
-                    # Detect if it's a BRA trampoline or a direct pointer
-                    if hi == 0x20:  # BRA opcode
-                        # Calculate BRA target: PC + 2 + signed offset
-                        signed_lo = lo if lo < 128 else lo - 256
-                        bra_target = vec_addr + 2 + signed_lo
-                        f.write(f"\n; --- Vector: {vec_name} ---\n")
-                        f.write(f"L{vec_addr:04X}:  {raw:15s}  bra      ${bra_target:04X}            ; BRA trampoline -> ${bra_target:04X}\n")
-                    else:
-                        f.write(f"\n; --- Vector: {vec_name} ---\n")
-                        f.write(f"L{vec_addr:04X}:  {raw:15s}  .word    ${target:04X}            ; -> {vec_name} handler at ${target:04X}\n")
-                    insn_count += 1
+        f.write(f"\n; === Interrupt Vector Table ${vector_start:04X}-$FFFF ===\n")
+        f.write("; These are 16-bit handler addresses, not instructions.\n\n")
+        for vec_addr in sorted(VECTORS.keys()):
+            if vec_addr < vector_start:
+                continue
+            offset = vec_addr - cpu_base
+            if offset + 1 < bank_size:
+                vec_name = VECTORS[vec_addr]
+                f.write(f"\n; --- Vector: {vec_name} ---\n")
+                f.write(format_vector_entry(bank_data, cpu_base, vec_addr))
+                vector_count += 1
 
         # === Register Variant Analysis Summary ===
         f.write(f"\n; {'=' * 72}\n")
-        f.write(f"; HC11 VARIANT-DEPENDENT REGISTER ACCESS SUMMARY\n")
+        f.write("; HC11 VARIANT-DEPENDENT REGISTER ACCESS SUMMARY\n")
         f.write(f"; {'=' * 72}\n")
-        f.write(f"; Addresses $1000-$100D differ between HC11E/F/G/K variants.\n")
-        f.write(f"; Below are ALL accesses to variant-dependent registers found\n")
-        f.write(f"; in this bank. Use the access patterns (read/write, bit-test\n")
-        f.write(f"; masks, direction-register writes) to determine the actual chip.\n")
-        f.write(f";\n")
+        f.write("; Addresses $1000-$100D differ between HC11E/F/G/K variants.\n")
+        f.write("; Below are ALL accesses to variant-dependent registers found\n")
+        f.write("; in this bank. Use the access patterns (read/write, bit-test\n")
+        f.write("; masks, direction-register writes) to determine the actual chip.\n")
+        f.write(";\n")
         if not reg_hits:
-            f.write(f"; (no variant-dependent register accesses found in this bank)\n")
+            f.write("; (no variant-dependent register accesses found in this bank)\n")
         else:
             for reg_addr in sorted(reg_hits.keys()):
                 variants = HC11_VARIANT_REGISTERS[reg_addr]
-                f.write(f";\n")
+                f.write(";\n")
                 f.write(f"; --- ${reg_addr:04X} ---\n")
                 for var in ["HC11E", "HC11F", "HC11G", "HC11K"]:
                     vname, vdesc = variants[var]
-                    f.write(f";   {var}: {vname:8s} — {vdesc}\n")
+                    f.write(f";   {var}: {vname:8s} - {vdesc}\n")
                 f.write(f";   Accesses ({len(reg_hits[reg_addr])}):\n")
                 for cpu_addr, mn, op in reg_hits[reg_addr][:20]:
                     f.write(f";     ${cpu_addr:04X}: {mn:8s} {op}\n")
@@ -712,14 +672,15 @@ def disassemble_bank(bank_data, cpu_base, bank_name, name, output_dir):
                     f.write(f";     ... and {len(reg_hits[reg_addr]) - 20} more\n")
         f.write(f"; {'=' * 72}\n")
 
-        f.write(f"\n; === Summary ===\n")
+        f.write("\n; === Summary ===\n")
         f.write(f"; Instructions disassembled: {insn_count}\n")
+        f.write(f"; Vectors emitted: {vector_count}\n")
         f.write(f"; Data bytes emitted: {data_bytes}\n")
         if bank_name == "bank1":
             f.write(f"; Code instructions in $2000-$5FFF: {len(insn_map)}\n")
         f.write(f"; Bank size: {bank_size} bytes\n")
 
-    print(f"    → {out_path.name}: {insn_count} instructions, {data_bytes} data bytes")
+    print(f"    -> {out_path.name}: {insn_count} instructions, {data_bytes} data bytes")
     return out_path
 
 
@@ -752,7 +713,7 @@ def diff_banks(stock_data, enhanced_data, bank_name, cpu_base, output_dir, stock
 
     out_path = output_dir / f"diff_{stock_name}_vs_{enh_name}_{bank_name}.txt"
     with open(out_path, "w", encoding="utf-8") as f:
-        f.write(f"Binary Diff: {stock_name} vs {enh_name} — {bank_name}\n")
+        f.write(f"Binary Diff: {stock_name} vs {enh_name} - {bank_name}\n")
         f.write(f"{'=' * 70}\n")
         f.write(f"Bank CPU base: ${cpu_base:04X}\n")
         f.write(f"Total differences: {len(diffs)} regions, {sum(len(s) for _, s, _ in diffs)} bytes changed\n\n")
@@ -805,90 +766,124 @@ def diff_banks(stock_data, enhanced_data, bank_name, cpu_base, output_dir, stock
         f.write(f"  Total changed regions: {len(diffs)}\n")
         f.write(f"  Total changed bytes:   {sum(len(s) for _, s, _ in diffs)}\n")
 
-    print(f"    → {out_path.name}: {len(diffs)} regions, {sum(len(s) for _, s, _ in diffs)} bytes changed")
+    print(
+        f"    -> {out_path.name}: {len(diffs)} regions, "
+        f"{sum(len(s) for _, s, _ in diffs)} bytes changed"
+    )
     if bank_name == "bank1":
         print(f"       CAL: {cal_changes}B, EEPROM: {eeprom_changes}B, CODE: {code_changes}B")
     return out_path
 
 
 def main():
-    parser = argparse.ArgumentParser(description="VY V6 128KB Binary Splitter & Disassembler")
-    parser.add_argument("--split-only", action="store_true", help="Only split, skip disassembly")
-    parser.add_argument("--diff", action="store_true", help="Diff STOCK vs all Enhanced variants")
-    parser.add_argument("--bins", nargs="+", choices=list(BINS.keys()), default=None,
-                        help="Which bins to process (default: all)")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "bins",
+        nargs="+",
+        type=Path,
+        help="one or more exact 128 KiB VY images",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("bank_split_output"),
+        help="generated-output directory (default: bank_split_output)",
+    )
+    parser.add_argument(
+        "--split-only",
+        action="store_true",
+        help="split banks without running the heuristic disassembler",
+    )
+    parser.add_argument(
+        "--diff-against",
+        type=Path,
+        metavar="BASE.bin",
+        help="compare every input image with this exact 128 KiB base image",
+    )
     args = parser.parse_args()
 
-    base_dir = Path(__file__).parent.parent  # VY_V6_Assembly_Modding/
-    os.chdir(base_dir)
+    output_dir = args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    labels = [artifact_name(path) for path in args.bins]
+    if len(labels) != len(set(labels)):
+        parser.error("input filenames collapse to duplicate output labels")
 
-    # Filter bins
-    bins_to_process = args.bins or list(BINS.keys())
+    try:
+        inputs = [
+            (label, path, read_bin(path))
+            for label, path in zip(labels, args.bins)
+        ]
+        base = read_bin(args.diff_against) if args.diff_against else None
+    except (OSError, ValueError) as exc:
+        parser.error(str(exc))
+
+    generated = []
 
     # Phase 1: Split
     print("=" * 60)
     print("PHASE 1: Split 128KB binaries into banks")
     print("=" * 60)
 
-    all_banks = {}  # name → [(bank_name, path, data, cpu_base), ...]
-
-    for name in bins_to_process:
-        filename = BINS[name]
-        filepath = base_dir / filename
-        if not filepath.exists():
-            print(f"\n  SKIP {name}: {filename} not found")
-            continue
-
-        print(f"\n  {name}: {filename}")
-        data = read_bin(filepath)
-        bank_files = split_bin(data, name, OUTPUT_DIR)
+    all_banks = {}
+    for name, path, data in inputs:
+        print(f"\n  {name}: {path}")
+        bank_files = split_bin(data, name, output_dir)
         all_banks[name] = bank_files
+        generated.extend(item[1] for item in bank_files)
 
     # Phase 2: Disassemble
     if not args.split_only:
         print(f"\n{'=' * 60}")
-        print("PHASE 2: Disassemble each bank (Capstone HC11)")
+        print("PHASE 2: Heuristically disassemble each bank (Capstone HC11)")
         print("=" * 60)
 
         for name, bank_files in all_banks.items():
             print(f"\n  {name}:")
-            for bank_name, path, bank_data, cpu_base in bank_files:
-                disassemble_bank(bank_data, cpu_base, bank_name, name, OUTPUT_DIR)
+            for bank_name, _path, bank_data, cpu_base in bank_files:
+                generated.append(
+                    disassemble_bank(
+                        bank_data,
+                        cpu_base,
+                        bank_name,
+                        name,
+                        output_dir,
+                    )
+                )
 
     # Phase 3: Diff
-    if args.diff and "STOCK" in all_banks:
+    if base is not None:
         print(f"\n{'=' * 60}")
-        print("PHASE 3: Diff STOCK vs Enhanced")
+        print(f"PHASE 3: Diff {args.diff_against} vs input images")
         print("=" * 60)
 
-        stock_banks = {b[0]: b for b in all_banks["STOCK"]}
-
-        for name in bins_to_process:
-            if name == "STOCK":
-                continue
-            if name not in all_banks:
-                continue
-
-            print(f"\n  STOCK vs {name}:")
-            enh_banks = {b[0]: b for b in all_banks[name]}
-
-            for bank_name in ["bank1", "bank2", "bank3"]:
-                if bank_name in stock_banks and bank_name in enh_banks:
-                    _, _, stock_data, cpu_base = stock_banks[bank_name]
-                    _, _, enh_data, _ = enh_banks[bank_name]
-                    diff_banks(stock_data, enh_data, bank_name, cpu_base,
-                               OUTPUT_DIR, "STOCK", name)
+        base_name = artifact_name(args.diff_against)
+        base_banks = {
+            bank_name: base[start:end]
+            for bank_name, start, end, _cpu_base in BANKS
+        }
+        for name, bank_files in all_banks.items():
+            print(f"\n  {base_name} vs {name}:")
+            for bank_name, _path, image_data, cpu_base in bank_files:
+                generated.append(
+                    diff_banks(
+                        base_banks[bank_name],
+                        image_data,
+                        bank_name,
+                        cpu_base,
+                        output_dir,
+                        base_name,
+                        name,
+                    )
+                )
 
     # Summary
     print(f"\n{'=' * 60}")
-    print(f"Output directory: {OUTPUT_DIR.resolve()}")
-    out_files = sorted(OUTPUT_DIR.iterdir())
-    print(f"Files generated: {len(out_files)}")
-    for f in out_files:
-        size_kb = f.stat().st_size / 1024
-        print(f"  {f.name} ({size_kb:.1f} KB)")
+    print(f"Output directory: {output_dir.resolve()}")
+    print(f"Files generated: {len(generated)}")
+    for path in sorted(generated):
+        size_kb = path.stat().st_size / 1024
+        print(f"  {path.name} ({size_kb:.1f} KB)")
     print("=" * 60)
 
 
