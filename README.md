@@ -1,5 +1,11 @@
 # VY L36 $060A Enhanced Binary - Assembly Patches (WIP)
 
+
+> [!IMPORTANT]
+> **2026-09-21 evidence update:** newer VX-source + exact-$060A BIN/XDF analysis supersedes older README claims that v38/v44/v45 are a *verified spark cut*. The $017B hook is inside the dwell/reference-history chain, not yet a proved final ignition-output primitive. The v1.1a/$31EF foreground port is rejected because it reaches an IRQ-tail/RTI return path. Current launch work is centered on the factory limiter/FUELCTOF R08 path while the true TIO/EST ignition-output path is traced.
+>
+> Read **[CURRENT_STATUS_2026-09-21.md](CURRENT_STATUS_2026-09-21.md)** and **[asm_wip/REPAIR_MATRIX_2026-09-21.md](asm_wip/REPAIR_MATRIX_2026-09-21.md)** before using anything under `asm_wip`. New public-safe evidence is under **[evidence/2026-09-21/](evidence/2026-09-21/)**.
+
 [![Platform: 68HC11](https://img.shields.io/badge/Platform-68HC11-blue.svg)](https://en.wikipedia.org/wiki/Motorola_68HC11)
 [![Target: VY V6 ECU](https://img.shields.io/badge/Target-Holden%20VY%20V6-green.svg)](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches)
 [![Status: Research/WIP](https://img.shields.io/badge/Status-WIP-yellow.svg)](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches)
@@ -27,8 +33,8 @@ No patched binaries included. These are reference implementations requiring manu
 | `$017B` = 24X crank period | **`$017B` = Intermediate dwell calculation** (NOT crank!) |
 | Unknown actual crank storage | **`$194C` = 24X crank period** (STD @ $3618 in TIC3 ISR) |
 
-**Both hooks are VALID for spark cut:**
-- **$017B hook** (@ 0x101E1) - In bank 2 paged code, manipulates dwell intermediate — **RECOMMENDED**
+**Historical hook locations (do not treat either as current proof of a final spark-cut primitive):**
+- **$017B hook** (@ 0x101E1) - In bank 2 paged code; now retained as a dwell/reference-history research hook, **not a proved final ignition-cut output**
 - **$194C hook** (@ 0x13618) - In TIC3 ISR, cold-start init path ONLY — not suitable for runtime limiter
 
 **See:** [`BANK_SWITCHING_AND_ISR_ANALYSIS.md`](BANK_SWITCHING_AND_ISR_ANALYSIS.md) for full TIC3 ISR disassembly
@@ -95,7 +101,7 @@ The hook at file offset `0x101E1` runs in **bank 2** context (CPU $8000–$FFFF 
 
 We study OSE 11P/12P **concepts** (spark cut via dwell, timer control) and **port the techniques** to VY V6:
 
-- **11P dwell spark cut method** → Ported to `spark_cut_chr0m3_method_VERIFIED_v38.asm`
+- **11P dwell/period perturbation research** → historical port in `spark_cut_chr0m3_method_VERIFIED_v38.asm`; current status is SUPERSEDED/REFERENCE_ONLY pending true TIO/EST output proof
 - **12P TCTL1 timer control** → Research in `NEEDS_VALIDATION_v16_tctl1_bennvenn_ose12p_port.asm`
 - **VE table structure** → Inspiration for `speed_density_ve_table.asm`
 
@@ -108,8 +114,8 @@ We study OSE 11P/12P **concepts** (spark cut via dwell, timer control) and **por
 ```text
 asm_wip/
 ├── spark_cut/                      # 🔥 Ignition cut limiters (Chr0m3 method)
-│   ├── spark_cut_chr0m3_method_VERIFIED_v38.asm  # ⭐⭐ BEST - Chr0m3 verified method
-│   ├── spark_cut_3x_period_VERIFIED.asm    # ⭐ VERIFIED - 16-bit test template
+│   ├── spark_cut_chr0m3_method_VERIFIED_v38.asm  # HISTORICAL filename; current status SUPERSEDED/REFERENCE_ONLY
+│   ├── spark_cut_3x_period_VERIFIED.asm    # HISTORICAL filename; period/dwell perturbation reference only
 │   ├── PATCH_BYTES_v38.asm                 # Raw hex bytes for v38 patch
 │   ├── spark_cut_3000rpm_TEST_v38t.asm     # Low RPM test version
 │   ├── spark_cut_the1_method_port_v39.asm  # 🔬 The1's CPD comparison port (research)
@@ -251,7 +257,7 @@ bank_split_output/            # Only Enhanced v1.0a splits on GitHub (plus 11p_t
 
 > **Note:** Enhanced v1.1a (v2.04c package, Topic 8852) includes The1's spark cut implementation — **SHELVED** by The1 (DTC 41/42 bypass issues, Post #64). We are currently reverse-engineering that code to understand exactly what changed from v1.0a → v1.1a before documenting it publicly. Our v38 ASM patches are independent work based on Chr0m3's dwell intermediate method.
 
-Primary implementation based on **Dwell Intermediate Injection** (Chr0m3 validated method, originally called "crank period"):
+Historical implementation research used **Dwell Intermediate Injection / period perturbation**. Newer evidence no longer treats this as a proved final spark-cut primitive:
 
 | Step | Description |
 |------|-------------|

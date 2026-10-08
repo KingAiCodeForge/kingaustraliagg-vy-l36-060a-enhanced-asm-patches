@@ -1,3 +1,9 @@
+;==============================================================================
+; STATUS OVERRIDE — 2026-09-21
+; SUPERSEDED / REFERENCE_ONLY. The historical filename says VERIFIED, but the
+; test proves period/dwell perturbation behavior only, not a reliable final
+; ignition-output cut. See ../REPAIR_MATRIX_2026-09-21.md.
+;==============================================================================
 ; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ; !! CROSS-BANK BUG (2026-02-13): This file places code at ORG $C468+ !!
 ; !! (bank 1 free space). The hook at file 0x101E1 (STD $017B) is in  !!

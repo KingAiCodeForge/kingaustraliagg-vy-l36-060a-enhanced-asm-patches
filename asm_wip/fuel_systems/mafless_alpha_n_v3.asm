@@ -1,3 +1,11 @@
+;==============================================================================
+; STATUS OVERRIDE — 2026-09-21
+; HOLD / REDESIGN. Do not treat DTC/action masks as runtime MAF-failure state,
+; do not full-byte-write guessed flags, and do not reuse foreign-ECU airflow
+; units. Rebuild around the exact-$060A factory default-airflow producer and
+; its consumers, using VX source only as a semantic oracle.
+; See ../REPAIR_MATRIX_2026-09-21.md.
+;==============================================================================
 ; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ; !! CROSS-BANK BUG (2026-02-13): This file places code at ORG $C468+ !!
 ; !! (bank 1 free space). The hook at file 0x101E1 (STD $017B) is in  !!

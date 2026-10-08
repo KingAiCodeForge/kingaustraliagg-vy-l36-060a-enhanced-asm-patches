@@ -1,3 +1,11 @@
+;==============================================================================
+; STATUS OVERRIDE — 2026-09-21
+; SUPERSEDED / REFERENCE_ONLY as a spark-cut implementation.
+; The historical filename contains VERIFIED, but newer VX-source + exact-$060A
+; analysis shows $017B is in the dwell/reference-history chain, not a proved
+; final ignition-output primitive. Retain only as dwell/banking research.
+; See ../REPAIR_MATRIX_2026-09-21.md before reuse.
+;==============================================================================
 ; !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ; !! CROSS-BANK BUG (2026-02-13): This file places code at ORG $C468+ !!
 ; !! (bank 1 free space). The hook at file 0x101E1 (STD $017B) is in  !!

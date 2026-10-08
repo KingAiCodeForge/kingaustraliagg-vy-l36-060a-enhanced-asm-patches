@@ -1,0 +1,12 @@
+{
+  "source_sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+  "output_sha256": "f4138afe02c2a8bcb7fea41294220908ea1ea78e2a3fbd0cc564be5d87dc9b73",
+  "low_speed_cases": 24576,
+  "moving_cases": 57344,
+  "off_cases": 8192,
+  "byte_changes": 72,
+  "XDF_install_on_off_roundtrip": "PASS",
+  "edited_settings_survive_off_on": "PASS",
+  "invalid_input_rejections": 4,
+  "limitations": "Bounded custom instruction interpreter; no hardware, IRQ, upstream bypass or TunerPro GUI validation. No manual-car testing."
+}

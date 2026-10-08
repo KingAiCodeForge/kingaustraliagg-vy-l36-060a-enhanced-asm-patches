@@ -1,4 +1,12 @@
 ;==============================================================================
+; STATUS OVERRIDE — 2026-09-21
+; STATIC_CANDIDATE_DO_NOT_FLASH / REDESIGN REQUIRED.
+; $1916 is diagnostic-associated M49CTR (cam/crank DTC49 path), not a proven
+; periodic engine-event clock. Keep the normal/retarded-idle selector concept,
+; replace the phase source with an independently proved scheduler/event source.
+; See ../REPAIR_MATRIX_2026-09-21.md and evidence/2026-09-21/ghostcam/.
+;==============================================================================
+;==============================================================================
 ; VY V6 GHOST CAM — ROTATING IDLE CONCEPTS & THEORY
 ;==============================================================================
 ; Author:   Jason King (kingaustraliagg / KingAI)

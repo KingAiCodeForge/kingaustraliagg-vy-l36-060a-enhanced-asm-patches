@@ -1,0 +1,20 @@
+--- prior_final_drive_REVIEW_ONLY.xdf
++++ final_drive_plus_six_word_widths_REVIEW_ONLY.xdf
+@@ -2176,7 +2176,7 @@
+-        <EMBEDDEDDATA mmedaddress="0x4D5E" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
++        <EMBEDDEDDATA mmedaddress="0x4D5E" mmedelementsizebits="16" mmedmajorstridebits="0" mmedminorstridebits="0" />
+@@ -9249,7 +9249,7 @@
+-        <EMBEDDEDDATA mmedaddress="0x705D" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
++        <EMBEDDEDDATA mmedaddress="0x705D" mmedelementsizebits="16" mmedmajorstridebits="0" mmedminorstridebits="0" />
+@@ -19107,7 +19107,7 @@
+-        <EMBEDDEDDATA mmedaddress="0x7A29" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
++        <EMBEDDEDDATA mmedaddress="0x7A29" mmedelementsizebits="16" mmedmajorstridebits="0" mmedminorstridebits="0" />
+@@ -23201,7 +23201,7 @@
+-        <EMBEDDEDDATA mmedaddress="0x74F6" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
++        <EMBEDDEDDATA mmedaddress="0x74F6" mmedelementsizebits="16" mmedmajorstridebits="0" mmedminorstridebits="0" />
+@@ -23477,7 +23477,7 @@
+-        <EMBEDDEDDATA mmedaddress="0x7526" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
++        <EMBEDDEDDATA mmedaddress="0x7526" mmedelementsizebits="16" mmedmajorstridebits="0" mmedminorstridebits="0" />
+@@ -26311,7 +26311,7 @@
+-        <EMBEDDEDDATA mmedaddress="0x7097" mmedelementsizebits="8" mmedmajorstridebits="0" mmedminorstridebits="0" />
++        <EMBEDDEDDATA mmedaddress="0x7097" mmedelementsizebits="16" mmedmajorstridebits="0" mmedminorstridebits="0" />

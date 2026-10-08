@@ -1,0 +1,17 @@
+{
+  "patch": "ghost_cam_retarded_idle_selector_v1",
+  "source_sha256": "c76def1f2e6fa7af38e28f4331c561c840371b5cc201afc9c038b28c8769f017",
+  "status": "HOLD_CADENCE_SOURCE_MISIDENTIFIED",
+  "reason": "The read-only $1916 byte has a conditional increment and a DTC49 consumer. It is not established as a periodic engine-event counter.",
+  "not_a_claim": [
+    "The selector corrupts the counter (it only reads it).",
+    "All ghost-cam or idle modulation concepts are impossible.",
+    "Physical output has been tested."
+  ],
+  "next_design_requirements": [
+    "Use an independently proven periodic/time/event source with known reset/overflow behaviour.",
+    "Do not increment or repurpose $1916.",
+    "Separate phase scheduling from the retarded-idle ramp and stock protective gates.",
+    "Test with two unequal synthetic values, plus the equal-reference control."
+  ]
+}
