@@ -57,9 +57,9 @@ The published splitter treats the 128 KiB image as these ranges:
 
 | File region (half-open) | CPU address context | Notes |
 | --- | --- | --- |
-| `0x00000–0x0FFFF` | Base/common 64 KiB view | Mixed memory and code; apparent zeros are not automatically free patch space |
-| `0x10000–0x17FFF` | Paged `$8000–$FFFF` bank 2 | Contains the dwell-path hook at file `0x101E1` |
-| `0x18000–0x1FFFF` | Alternative paged `$8000–$FFFF` bank 3 | Transmission and related code in this research image |
+| `[0x00000,0x10000)` | Base/common 64 KiB view | Mixed memory and code; apparent zeros are not automatically free patch space |
+| `[0x10000,0x18000)` | Paged `$8000–$FFFF` bank 2 | Contains the dwell-path hook at file `0x101E1` |
+| `[0x18000,0x20000)` | Alternative paged `$8000–$FFFF` bank 3 | Transmission and related code in this research image |
 
 **Known cross-bank error:** file offset `0x101E1` maps to **CPU `$81E1`** in bank 2, *not* `$A1E1`. A historic v38 ASM declares `HOOK_DWELL_CPU EQU $A1E1`, and later emits `HOOK_PATCHED EQU $BDC500` (`JSR $C500`). The proposed payload is placed at **bank 1** file `0x0C500`. Calling CPU `$C500` from the bank-2 hook context does **not** establish a call to that bank-1 payload; it may dispatch into the wrong overlay. This is a known design defect, not a qualified limiter.
 
@@ -135,6 +135,19 @@ The older “all Enhanced XDFs contain the same 68 DTC flags,” “VX is just B
 | [VL V8 limiter research](VL_V8_WALKINSHAW_TWO_STAGE_LIMITER_ANALYSIS.md) | Related concept, not a VY implementation |
 
 These resources do **not** include a public, validated universal `$060A` spark-cut release. Third-party XDFs and newer private VY definitions are not implied to be present. Historic code counts and “latest all-platform XDF” tables are not maintained as a current inventory.
+
+## How an AI agent should work with this repository
+
+This is Python-source and ASM research intended to be **operated and inspected by an AI coding agent** as well as human reverse engineers. The person explains a goal; a terminal-enabled **Codex** or **Claude Code** session can discover source files, run the guard scripts and tests, compare exact program bytes and prepare an evidence-backed review. **The conversation is the human interface; the scripts are the agent interface.** Merely attaching a ZIP to a chat does not guarantee code-execution access.
+
+Examples of appropriate natural-language requests:
+
+- **“Show why the v38 spark-cut script is held.”** The agent compares the hook and payload addresses with the bank-map evidence, cites exact source lines and reports the unsafe cross-bank path. It does **not** publish a replacement BIN.
+- **“Does this file match the supported v1.0a source?”** The agent computes full SHA-256 and size; a mismatch is a hard refusal, not a cue to try another offset.
+- **“What does the guarded builder actually support?”** The agent lists exact catalog entries and manifest preconditions, runs static tests, and separates byte-level proof from hardware evidence.
+- **“Can we build a hard fuel-cut limiter?”** The agent first researches the actual control path and unproven interrupt/EST interactions. A working patch or safe tune is **not inferred** from an ASM filename, a few matching opcodes, or an idle/limiter table name.
+
+The public VY patchlist is **not the public CLI Map Editor**, and neither it nor an AI agent guarantees that a calibration changes the intended ECU behaviour. For XDF/BIN read/diff operations, use the separately published [KingAI CLI Map Editor](https://github.com/KingAiCodeForge/tunerpro-xdf-bin-cli-map-editor) only with its supported release commands and exact source evidence. Private reverse-engineering improvements are not automatically on this repository's `master` branch.
 
 ## Before proposing any actual patch
 
