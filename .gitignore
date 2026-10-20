@@ -1,4 +1,4 @@
-# Test Binaries (patched BINs - copyrighted ECU code, DO NOT PUSH)
+# Unreviewed test binaries stay local; reviewed owner-approved bundles use bench_wip/
 bin_patch_test/
 
 # 11P test disassembly output (local only)
@@ -548,3 +548,26 @@ commieflashtool.md
 !.env.example
 *.bin
 *.xdl
+
+# Reviewed public tooling and WIP intake policy, 20 October 2026
+!tools/audit_patch_inventory.py
+!tools/test_audit_patch_inventory.py
+!asm_wip/README.md
+!PUBLIC_WIP_POLICY.md
+!PATCH_STATUS.md
+!archive/rejected/v38/README.md
+# Deliberate bundle allowlist; not a blanket permission for arbitrary BINs.
+/bench_wip/**
+!/bench_wip/
+!/bench_wip/README.md
+!/bench_wip/*/
+!/bench_wip/*/README.md
+!/bench_wip/*/manifest.json
+!/bench_wip/*/*_WIP_BENCH_FLASH_ONLY.bin
+!/bench_wip/*/*_WIP_BENCH_FLASH_ONLY.asm
+**/vx_.asm
+**/vx_source*.asm
+*.eml
+*.msg
+*.pst
+*.ost

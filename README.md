@@ -2,13 +2,19 @@
 
 **Research repository: Motorola 68HC11/Delco Enhanced code, assembly experiments, disassembly evidence and static patch verification.**
 
-**Documented branch:** public `master` (last code sync 7 October 2026). **README reviewed:** 16 October 2026.
+**Documented branch:** public `master` (last code sync 7 October 2026). **README reviewed:** 20 October 2026.
 
 > **STATUS: RESEARCH / STATIC REVIEW ONLY. NO PATCH IN THIS REPOSITORY IS APPROVED FOR FLASHING OR VEHICLE USE.**
 >
 > Some legacy ASM files are known to have incorrect bank calls or inactive hook points, even when their filenames contain `VERIFIED` or `PRODUCTION`. Passing a Python test, source hash check, deterministic byte build or file checksum is **not** proof of physical spark behaviour, ECU recovery or engine safety.
 
 This README describes what the **currently published `master` branch** actually contains. Detailed historical notes remain accessible in the [previous README revision](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches/blob/e9d56d524e8b27506adf98ebcb64e71ca85e81ef/README.md), but it includes obsolete conclusions and **unsafe patch instructions**. Use the current evidence and source review instead.
+
+## Public WIP intake and current status
+
+Improved scripts will be added after review, portability fixes and regression tests. Jason now authorizes his reviewed patched BINs, including SC01/SC02/SC03 and other families, with matching patch ASM as **WIP_BENCH_FLASH_ONLY** bundles. This is publication permission, not blanket flash approval or a claim of defect-free code. Existing DO_NOT_FLASH candidates remain held.
+
+See [publication requirements and contribution contacts](PUBLIC_WIP_POLICY.md), [per-family/per-file status](PATCH_STATUS.md), and the [ASM WIP front door](asm_wip/README.md). Send sanitized evidence to jasonking282@gmail.com or jason.king@kingai.com.au. Private VX source and conversations are not uploaded.
 
 ## What is implemented and what remains unproved
 
@@ -69,8 +75,8 @@ Read [bank and ISR research](BANK_SWITCHING_AND_ISR_ANALYSIS.md), [TIC3 analysis
 
 ## Important: do not follow the legacy v38 instructions
 
-- [`asm_wip/spark_cut/spark_cut_chr0m3_method_VERIFIED_v38.asm`](asm_wip/spark_cut/spark_cut_chr0m3_method_VERIFIED_v38.asm) has **a misleading filename**: the file explicitly documents both a bad historical initialization-path hook and the cross-bank `JSR $C500` problem. It must **not** be used as a preferred starting point for a working patch.
-- [`tools/apply_spark_cut_v38.py`](tools/apply_spark_cut_v38.py) still writes `BD C5 00` at file `0x101E1` and stores payload code at `0x0C500`. **Do not run it to produce a BIN intended for an ECU.**
+- The retired [`spark_cut_chr0m3_method_VERIFIED_v38.asm`](archive/rejected/v38/README.md) was removed from the active layout after preservation. Its **misleading filename** and historical comments did not justify either the initialization-path hook or the cross-bank `JSR $C500` placement. It must **not** be used as a preferred starting point for a working patch.
+- [`tools/apply_spark_cut_v38.py`](tools/apply_spark_cut_v38.py) is now a retired compatibility entry that always refuses without reading or writing a BIN. Its old implementation and the import-time writer test were preserved before replacement. See the [retirement record](archive/rejected/v38/README.md).
 - Other files named `VERIFIED`, `BANKFIX` or `PRODUCTION` are historical snapshots; none is promoted by this README.
 
 The known v38 error does not prove that all dwell-intervention techniques are impossible. It means *this implementation* cannot be treated as correct until independently repaired and tested against exact source, bank, caller and hardware evidence.
