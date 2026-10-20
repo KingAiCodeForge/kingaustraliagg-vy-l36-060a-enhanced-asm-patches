@@ -1,0 +1,31 @@
+# SC01 3000-2900-active - experimental bench WIP
+
+**WIP_BENCH_FLASH_ONLY. No vehicle or measured ignition qualification.**
+
+Phase-qualified event-hold experiment with real IRQ continuations; disabled and active are separate complete images.
+
+BIN SHA-256: `6e63865810f452c310b83a368a0f2ee9ab942f6a53d3e38af8d2215c302a662a`.
+Exact source SHA-256: `5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd`. Logical size: 131,072 bytes.
+
+The BIN bytes are unchanged from the recovered v3.1 peer pack. The matching ASM is a comment-cleaned, per-profile source assembled independently with A09 V1.62. The manifest supplies hook replacements and checksum changes separately from addressed source sections. Never apply assembler gap padding as firmware.
+
+The manifest records every changed byte and its original preimage. The read-only verifier checks hashes, checksum and reversal to the exact parent; it does not authorize a flash.
+
+Run from the repository root:
+
+`python tools/verify_bench_bundle.py bench_wip/sc01-3000-2900-active/manifest.json`
+
+Limits:
+
+- No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.
+- Full logical 128 KiB program image. An initial CAL-only write does not install program changes.
+- Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.
+- ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.
+- This is a logical PCM image, not a transformed OneROM carrier file.
+- Reserves shared 0x0066 bits6/7. Whole-program indirect, bulk and IRQ ownership is unproved.
+- Requires unproved TIO DATAL channel 14/4 mapping and polarity; its 16-iteration settle window does not establish hardware completion.
+- Pauses expected missing-edge observation while its hold state is acquired, and releases through the next native 3X path.
+- Native scheduler and diagnostic calls retain caller bank assumptions. Live bank-latch, stack, IRQ and asynchronous behavior remain unproved.
+- The authored builder exported the matching ASM; the export was independently assembled, not reconstructed from guessed opcodes.
+
+Independent host review: 43 bounded source-package tests passed; exact queue rebuild and independent A09 parity. No physical hardware test was performed by this intake.

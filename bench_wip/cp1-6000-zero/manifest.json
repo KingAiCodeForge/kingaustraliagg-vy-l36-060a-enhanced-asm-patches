@@ -1,0 +1,111 @@
+{
+  "schema": "kingai.vy.bench-bundle.v1",
+  "status": "WIP_BENCH_FLASH_ONLY",
+  "family": "CP1",
+  "profile": "6000-zero",
+  "purpose": "Contract-preserving command-clamp experiment: nominal gate 6000 RPM, raw unsigned ceiling 0x0000.",
+  "source": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+    "firmware": "VX/VY L36 $060A Enhanced v1.0a"
+  },
+  "binary": {
+    "path": "CP1_6000_ZERO_WIP_BENCH_FLASH_ONLY.bin",
+    "size": 131072,
+    "sha256": "a6f0674c6a4e1c2a57657aefa21a3a44a271bc6475a8a0c0ebe7ab0cd1a3ddc7"
+  },
+  "asm": {
+    "path": "CP1_6000_ZERO_WIP_BENCH_FLASH_ONLY.asm",
+    "sha256": "652025ef0bd11c74b397b66831df2b74ed79a203fa7f19a3f0de19632e9aa9fa"
+  },
+  "assembly": {
+    "tool": "A09 V1.62",
+    "tool_sha256": "54f6bf52dbe23dde06811ff727d8db16acaeba224c056b69dfbffae28c1ae85a",
+    "regions": [
+      {
+        "file_offset": 23813,
+        "size": 40,
+        "sha256": "2fdfc2c1acc6d8c6dd81dfe5a906789e550b5817893be6c1d6fde05e352d4a1f"
+      },
+      {
+        "file_offset": 23856,
+        "size": 1,
+        "sha256": "fde502858306c235a3121e42326b53228b7ef4690eeed92a2b2eafe73c03a3ef"
+      },
+      {
+        "file_offset": 23858,
+        "size": 2,
+        "sha256": "96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7"
+      }
+    ],
+    "addressed_bytes_matched": 43
+  },
+  "hooks": [
+    {
+      "file_offset": 66098,
+      "cpu_address": 33330,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d05",
+      "role": "main command store"
+    }
+  ],
+  "changes": [
+    {
+      "offset": 16390,
+      "before": "8e6f",
+      "after": "aba0"
+    },
+    {
+      "offset": 23813,
+      "before": "0000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "3c373607363096a2b15d30250dec011ab35d322307fc5d322002ec01fd1444320630ec"
+    },
+    {
+      "offset": 23849,
+      "before": "00000000",
+      "after": "31313839"
+    },
+    {
+      "offset": 23856,
+      "before": "00",
+      "after": "f0"
+    },
+    {
+      "offset": 66098,
+      "before": "fd1444",
+      "after": "bd5d05"
+    }
+  ],
+  "checksum": {
+    "mode": "ADDITIVE_CORRECTED",
+    "offset": 16390,
+    "stored": 43936,
+    "calculated": 43936
+  },
+  "qualification": {
+    "independent_assembly": true,
+    "hardware_execution": false,
+    "bench_readback": false,
+    "interrupted_recovery": false,
+    "measured_ignition": false,
+    "vehicle": false
+  },
+  "known_limits": [
+    "No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.",
+    "Full logical 128 KiB program image. An initial CAL-only write does not install program changes.",
+    "Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.",
+    "ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.",
+    "This is a logical PCM image, not a transformed OneROM carrier file.",
+    "Clamps the unsigned software command only; raw ceiling units and physical ignition suppression are unproved.",
+    "The control profile passes through the incoming command but adds call/stack/timing overhead.",
+    "The fallback writer and factory fuel cut remain unchanged; the 6000 RPM profile retains the lower factory fuel-cut thresholds."
+  ],
+  "host_review": {
+    "date": "2026-10-20",
+    "tests": "15 source-package unit tests passed; per-profile exact rebuild and A09 parity",
+    "source_rebuild_byte_exact": true,
+    "email_pack_member_manifest_checks": 384,
+    "firmware_modified_during_intake": false
+  }
+}

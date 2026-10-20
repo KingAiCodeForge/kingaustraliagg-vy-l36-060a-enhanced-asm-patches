@@ -1,0 +1,106 @@
+{
+  "schema": "kingai.vy.bench-bundle.v1",
+  "status": "WIP_BENCH_FLASH_ONLY",
+  "family": "V52",
+  "profile": "reviewed-diagnostic",
+  "purpose": "Displaced-store no-op timing/stack diagnostic control.",
+  "source": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+    "firmware": "VX/VY L36 $060A Enhanced v1.0a"
+  },
+  "binary": {
+    "path": "V52_REVIEWED_DIAGNOSTIC_WIP_BENCH_FLASH_ONLY.bin",
+    "size": 131072,
+    "sha256": "13bdab5efece18c04d7eb1d66d52644d2dfe5d757da6879e3c57e21c999542cc"
+  },
+  "asm": {
+    "path": "V52_REVIEWED_DIAGNOSTIC_WIP_BENCH_FLASH_ONLY.asm",
+    "sha256": "6e2a72724442618bc57eae7e08e8c7743c0c9650590649860efe287d44116cad"
+  },
+  "assembly": {
+    "tool": "A09 V1.62",
+    "tool_sha256": "54f6bf52dbe23dde06811ff727d8db16acaeba224c056b69dfbffae28c1ae85a",
+    "regions": [
+      {
+        "file_offset": 23813,
+        "size": 4,
+        "sha256": "f39d187ea59c3db603feea18112bb9787d2831275f56007f3fd51097ac183b4a"
+      }
+    ],
+    "addressed_bytes_matched": 4
+  },
+  "hooks": [
+    {
+      "file_offset": 66098,
+      "cpu_address": 33330,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d05",
+      "role": "hook"
+    },
+    {
+      "file_offset": 67310,
+      "cpu_address": 34542,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d05",
+      "role": "hook"
+    }
+  ],
+  "changes": [
+    {
+      "offset": 16390,
+      "before": "8e6f",
+      "after": "9fc1"
+    },
+    {
+      "offset": 23813,
+      "before": "00000000",
+      "after": "fd144439"
+    },
+    {
+      "offset": 66098,
+      "before": "fd1444",
+      "after": "bd5d05"
+    },
+    {
+      "offset": 67310,
+      "before": "fd1444",
+      "after": "bd5d05"
+    }
+  ],
+  "checksum": {
+    "mode": "ADDITIVE_CORRECTED",
+    "offset": 16390,
+    "stored": 40897,
+    "calculated": 40897
+  },
+  "qualification": {
+    "independent_assembly": true,
+    "hardware_execution": false,
+    "bench_readback": false,
+    "interrupted_recovery": false,
+    "measured_ignition": false,
+    "vehicle": false
+  },
+  "known_limits": [
+    "No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.",
+    "Full logical 128 KiB program image. An initial CAL-only write does not install program changes.",
+    "Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.",
+    "ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.",
+    "This is a logical PCM image, not a transformed OneROM carrier file.",
+    "Both command-store hooks call common 0x5D05. Later normal writers can overwrite the software command; physical output authority is unproved.",
+    "Factory injector fuel cut is retained. Raw command zero/0x0208 is not a calibrated dwell value or a demonstrated spark-off mechanism.",
+    "Selected synchronous caller paths were checked; this does not establish IRQ observation, whole-program timing, stack margin or peripheral effects.",
+    "Stores the original D value and preserves its original STD flags, but adds a call frame and latency.",
+    "This separately named reviewed diagnostic copy does not alter legacy source/catalog DO_NOT_FLASH status or qualify other builds from those sources."
+  ],
+  "host_review": {
+    "date": "2026-10-20",
+    "tests": "138240 instruction-subset cases passed for this profile; exact independent A09 reconstruction and bounded actual-byte caller review",
+    "source_rebuild_byte_exact": true,
+    "email_pack_member_manifest_checks": 384,
+    "firmware_modified_during_intake": false
+  }
+}

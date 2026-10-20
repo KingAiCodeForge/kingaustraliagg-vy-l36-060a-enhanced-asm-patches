@@ -1,0 +1,411 @@
+{
+  "schema": "kingai.vy.peer-intake.v1",
+  "date": "2026-10-20",
+  "recovered_zip_parts": 9,
+  "verified_manifest_members": 384,
+  "indexed_rows": 57,
+  "public_unique_images": 29,
+  "covered_index_rows": 32,
+  "hardware_qualified_images": 0,
+  "entries": [
+    {
+      "family": "CHECKSUM_FIXED_REFERENCE",
+      "sha256": "34dfc79a76cde89ca960d3d542ba5ecb572b91b10ff6b1c2a6c2836f16f58ffb",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "reference-checksum-control/manifest.json"
+    },
+    {
+      "family": "R61",
+      "sha256": "deecab3523e205081a28bfae46e65cb8eb2fedb3e0cb07784032523ff0a8dd8a",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "r61-3000-2900-control/manifest.json"
+    },
+    {
+      "family": "R61",
+      "sha256": "fac5646f58a261f67d0820e0ac021675195547e1a8ed0767c96dad2b1d1ab6ab",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "r61-3000-2900-active/manifest.json"
+    },
+    {
+      "family": "SC61_SC62",
+      "sha256": "976596faef70b4d533a9d4197e18bce777325f92086ebac00490518eada6c434",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "sc61-sc62-3000-2800-control/manifest.json"
+    },
+    {
+      "family": "SC61_SC62",
+      "sha256": "a462ade7f0e3461febb8d41bac436325dcbb8df105da230f74c1ebfe867eb4ed",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "sc61-sc62-3000-2800-short6/manifest.json"
+    },
+    {
+      "family": "SC61_SC62",
+      "sha256": "244680e84aaf15423d7391675f4a9f6bcc810c91fc9a8032f6b522f7022c7d01",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "sc61-sc62-3000-2800-zero/manifest.json"
+    },
+    {
+      "family": "FDC1",
+      "sha256": "37f8d6c602c437cbd699cd252d9f032d2b8cd4594e231456cb6b886acb491d46",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "fdc1-3000-2900-control/manifest.json"
+    },
+    {
+      "family": "FDC1",
+      "sha256": "9d786090d007d4aa2202a1101a3b3b5fb1573c2df5e7108f6d83b222bc82e90e",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "fdc1-3000-2900-short-raw000a/manifest.json"
+    },
+    {
+      "family": "FDC1",
+      "sha256": "1ec32677ff42a390f9b222fcd785c03bee1a4492566b1800eb9f20dd6d1b3258",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "fdc1-3000-2900-combined-raw000a/manifest.json"
+    },
+    {
+      "family": "FDC1",
+      "sha256": "4c65989f79c0f32ef1c462ba4632ed3e37717b4b6c02f28d598b4ebee2f01ff0",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "fdc1-3000-2900-zero/manifest.json"
+    },
+    {
+      "family": "FDC1",
+      "sha256": "34dfc79a76cde89ca960d3d542ba5ecb572b91b10ff6b1c2a6c2836f16f58ffb",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "reference-checksum-control/manifest.json"
+    },
+    {
+      "family": "SCZ2",
+      "sha256": "34dfc79a76cde89ca960d3d542ba5ecb572b91b10ff6b1c2a6c2836f16f58ffb",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "reference-checksum-control/manifest.json"
+    },
+    {
+      "family": "SCZ2",
+      "sha256": "ba722670406269e8d669d02d5de121e6a6d7801bbd8ebefc318443ee74af81a2",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "scz2-combined-3000rpm/manifest.json"
+    },
+    {
+      "family": "SCZ2",
+      "sha256": "4c37bc2a476320dc2f4c48e9cb282e39badfa617892cbe39b6419e1340066710",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "scz2-disabled-installed/manifest.json"
+    },
+    {
+      "family": "SCZ2",
+      "sha256": "9794e5fb062d1cc03b44c4a90e3729468f495328845ffc27656ffb60ad884193",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "scz2-ignition-only-3000rpm/manifest.json"
+    },
+    {
+      "family": "SC01",
+      "sha256": "6e63865810f452c310b83a368a0f2ee9ab942f6a53d3e38af8d2215c302a662a",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "sc01-3000-2900-active/manifest.json"
+    },
+    {
+      "family": "SC01",
+      "sha256": "7670fcc475f7273f8a2e924466a10eb369499209e2ac90c8b098ba2dd41241a3",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "sc01-3000-2900-control/manifest.json"
+    },
+    {
+      "family": "EG1p1",
+      "sha256": "282bfa022c5fbb9e6a1a40fa7ef0bffbf531c55e05527769cf8fab1ee1765295",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "eg1p1-active/manifest.json"
+    },
+    {
+      "family": "EG1p1",
+      "sha256": "34dfc79a76cde89ca960d3d542ba5ecb572b91b10ff6b1c2a6c2836f16f58ffb",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "reference-checksum-control/manifest.json"
+    },
+    {
+      "family": "EG1p1",
+      "sha256": "ba91fbb9f49091571556c327eb7f0e7322812ac502b8cfedabace858ee5ccb77",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "eg1p1-control/manifest.json"
+    },
+    {
+      "family": "V52_V53_V54",
+      "sha256": "13bdab5efece18c04d7eb1d66d52644d2dfe5d757da6879e3c57e21c999542cc",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "v52-reviewed-diagnostic/manifest.json"
+    },
+    {
+      "family": "V52_V53_V54",
+      "sha256": "9c3134b17fcfe54ca2ff85b9ea03e82a5f10ddbcb16c0381a131bb0606251962",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "v53-reviewed-diagnostic/manifest.json"
+    },
+    {
+      "family": "V52_V53_V54",
+      "sha256": "b4cabc198a8bdb3f023901e9544320d8bb111470a824b63813e7093dc035a9dd",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "v54-reviewed-diagnostic/manifest.json"
+    },
+    {
+      "family": "V58",
+      "sha256": "d152318d9c7db4e2b369f8f2bbe13886053b31a7a2f8a8dd92367aabad9a6da7",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "v58-reviewed-diagnostic/manifest.json"
+    },
+    {
+      "family": "V60",
+      "sha256": "4df9165b39f4e2aaf4a28106a5d4f42be3ab312ba32653f0e8503af2280354e5",
+      "decision": "HOLD_DO_NOT_FLASH",
+      "reason": "D reload from shared 0x019B has an unresolved asynchronous preservation dependency; superseded by CP1.",
+      "bundle": null
+    },
+    {
+      "family": "V60",
+      "sha256": "e0d1234553debd0318c910e26346a0154b67a17523adddb974e670a3a9a37481",
+      "decision": "HOLD_DO_NOT_FLASH",
+      "reason": "D reload from shared 0x019B has an unresolved asynchronous preservation dependency; superseded by CP1.",
+      "bundle": null
+    },
+    {
+      "family": "CP1",
+      "sha256": "72c216eb492e22bcad4dea8d79111cc63ebab02b528533d780f119bc0e48afea",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "cp1-3000-control/manifest.json"
+    },
+    {
+      "family": "CP1",
+      "sha256": "ce4fb80233a08acba9c771b0c63e51e1a5775e6ab57cce5d6f9507e1311c37e8",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "cp1-3000-ose-value-0019/manifest.json"
+    },
+    {
+      "family": "CP1",
+      "sha256": "5351e040771c793a4b9889be79a75e87fd61eb8865caf379b278a93a52dd43f7",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "cp1-3000-raw-0208/manifest.json"
+    },
+    {
+      "family": "CP1",
+      "sha256": "8a971e77abb43c76c2b3f902d607a395fd14463df12ed86d5f6941f8ff02a435",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "cp1-3000-zero/manifest.json"
+    },
+    {
+      "family": "CP1",
+      "sha256": "87532f0753c58c1fcca13dc3fca17900fd3ea1effe8db3ed9f77e205180e35eb",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "cp1-6000-control/manifest.json"
+    },
+    {
+      "family": "CP1",
+      "sha256": "8866d88771d9ca9bf2d78884d344eef8b7af20a98e236fd8855b8c848196da22",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "cp1-6000-ose-value-0019/manifest.json"
+    },
+    {
+      "family": "CP1",
+      "sha256": "40dd3c80504b0a57ce7cf1a1c0a3f0ce2d8990477d629edc9ee0b165f4671dce",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "cp1-6000-raw-0208/manifest.json"
+    },
+    {
+      "family": "CP1",
+      "sha256": "a6f0674c6a4e1c2a57657aefa21a3a44a271bc6475a8a0c0ebe7ab0cd1a3ddc7",
+      "decision": "PUBLISHED_BENCH_WIP",
+      "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
+      "bundle": "cp1-6000-zero/manifest.json"
+    },
+    {
+      "family": "R08",
+      "sha256": "f4138afe02c2a8bcb7fea41294220908ea1ea78e2a3fbd0cc564be5d87dc9b73",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "R09",
+      "sha256": "b17c6abdc995dbbe43bdc72382abdc020b1c13dba4b23833fd36ef0ca203cc73",
+      "decision": "HOLD_SOURCE_PROVENANCE",
+      "reason": "Original matching source/rebuild provenance not yet recovered; do not substitute R08.",
+      "bundle": null
+    },
+    {
+      "family": "ORIGINAL_SELECTOR",
+      "sha256": "390cef3926bf92b3abbe79c4f1bec34fc28505439f900726f03d7fc92e7df5ed",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "CAL_ONLY",
+      "sha256": "9e80dadc93cd0f5386cf885bf4e1492fe2cee78f0e61461868b12b5d96c66295",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "SELECTOR_PLUS_CAL",
+      "sha256": "2272efccbf8d6e89cd8eefec151107fa0ad040e6b544613ec1ff08b0d97ea929",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "ORIGINAL_RAMP46",
+      "sha256": "7b3089a2efed896efb838ceffe0ba0f835f7ca527cd536aaf1f876eb17e58f71",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "ORIGINAL_RAMP91",
+      "sha256": "c6f5a356f4409391c33e53beae8c4c2fca14da65943d653778428fca4e22913d",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "PERFORMANCE_ASM",
+      "sha256": "fb55fcdce91b9cd6550561062d9fb3fa23363f32aa273119ff9a3afa9d74138e",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "PERFORMANCE_RAW46",
+      "sha256": "dc41d7969e3a1c58857ed3eee06dabfd37e97bd3338bd6697187e51da36075f0",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "PERFORMANCE_RAW91",
+      "sha256": "7917367303c62d9c2de00334d4eb059496c47225051c9dcd513c370365af928d",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "MUNCIE_R04_COMPARATOR",
+      "sha256": "8551051646522ce7c15d0815532da5b3f4c3ecb7ca4a66894d9d2bff6915f56f",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D2A",
+      "sha256": "90fa6fec990dedb45cdaf496387525df2aca8312db1ba263228ee198a931bd6c",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D2B",
+      "sha256": "8a9569e4cb11cf32a5b307f7e0b00207dab3a603ba30890d5897760401ecc865",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D2C",
+      "sha256": "63a94e68f4449abca4ab0c50e136126cbef4aa48fb432b6e3940188c83abf020",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D3A",
+      "sha256": "3b50755f93b408ea34d096e88117e8729508fa5507179ad7e78def16f860e6b5",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D3B",
+      "sha256": "30b63269974a22ab2d74d663dd9f1d0027cfe7a4f6a544983edeb65f54d24c5f",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D3C",
+      "sha256": "f6107686fb6292dd49e963cb885947f38c344ff1ef53786b55a5e5faf52555d4",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D4A",
+      "sha256": "ed91175a4fe2974c85c0fd4a949a9529236a66bd8b671401f3d0f168f640efbb",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D4B",
+      "sha256": "660b126ee7ed21dd0bae2aa34da64a520ed245cc7f07e4dfdb0482c6d079d208",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "D4C",
+      "sha256": "508b534a84b4443774a0919a2717526a9925e04c6d80df7a51e7502d0ba9d354",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "COAST_TCC",
+      "sha256": "1b37db627eb7ac210da9d52367f6b07717c34c6f719fac765104ac174a88b63b",
+      "decision": "HOLD_SEPARATE_REVIEW",
+      "reason": "Recovered and retained outside the public executable set; matching source, exact lineage and control-flow/intake review still required.",
+      "bundle": null
+    },
+    {
+      "family": "V56_REJECTED",
+      "sha256": "fc62d1f32de3fd611e9a0910f88d585b158df063f027455e6f0bad3b948a99ef",
+      "decision": "REJECTED_DO_NOT_FLASH",
+      "reason": "Retired profile excluded from the corrected physical queue.",
+      "bundle": null
+    },
+    {
+      "family": "V57_REJECTED",
+      "sha256": "2fdcb4203b5ffea91d5a0c994f10a2fca99b1d21f61276f663737e6d38c03049",
+      "decision": "REJECTED_DO_NOT_FLASH",
+      "reason": "Retired profile excluded from the corrected physical queue.",
+      "bundle": null
+    }
+  ]
+}

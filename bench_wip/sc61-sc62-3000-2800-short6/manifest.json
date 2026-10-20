@@ -1,0 +1,188 @@
+{
+  "schema": "kingai.vy.bench-bundle.v1",
+  "status": "WIP_BENCH_FLASH_ONLY",
+  "family": "SC61_SC62",
+  "profile": "3000-2800-short6",
+  "purpose": "Shared EST-permission hysteresis plus final command/floor experiments. Keep control, short6 and zero separate.",
+  "source": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+    "firmware": "VX/VY L36 $060A Enhanced v1.0a"
+  },
+  "binary": {
+    "path": "SC61_SC62_3000_2800_SHORT6_WIP_BENCH_FLASH_ONLY.bin",
+    "size": 131072,
+    "sha256": "a462ade7f0e3461febb8d41bac436325dcbb8df105da230f74c1ebfe867eb4ed"
+  },
+  "asm": {
+    "path": "SC61_SC62_3000_2800_SHORT6_WIP_BENCH_FLASH_ONLY.asm",
+    "sha256": "3622556dc4df913c4761115a681cecee9aa15ed22d55fd8a3c42c622de66b69e"
+  },
+  "assembly": {
+    "tool": "A09 V1.62",
+    "tool_sha256": "54f6bf52dbe23dde06811ff727d8db16acaeba224c056b69dfbffae28c1ae85a",
+    "regions": [
+      {
+        "file_offset": 23813,
+        "size": 232,
+        "sha256": "a262b138a8dab27300096235e7998f0606900a6308993a31dfc307d815338dd1"
+      },
+      {
+        "file_offset": 24288,
+        "size": 12,
+        "sha256": "c71f3d29de4ae0f24300ec8215311453b4092fdb835a0b7c449c84ab956f79c9"
+      }
+    ],
+    "addressed_bytes_matched": 244
+  },
+  "hooks": [
+    {
+      "file_offset": 65536,
+      "cpu_address": 32768,
+      "bank": 2,
+      "before": "1329801d",
+      "after": "7e5d0501",
+      "role": "hook"
+    },
+    {
+      "file_offset": 66098,
+      "cpu_address": 33330,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d6c",
+      "role": "hook"
+    },
+    {
+      "file_offset": 67310,
+      "cpu_address": 34542,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d6c",
+      "role": "hook"
+    },
+    {
+      "file_offset": 84028,
+      "cpu_address": 51260,
+      "bank": 2,
+      "before": "fd144a",
+      "after": "bd5db1",
+      "role": "hook"
+    },
+    {
+      "file_offset": 98425,
+      "cpu_address": 32889,
+      "bank": 3,
+      "before": "fd144a",
+      "after": "bd5db1",
+      "role": "hook"
+    }
+  ],
+  "changes": [
+    {
+      "offset": 16390,
+      "before": "8e6f",
+      "after": "ec01"
+    },
+    {
+      "offset": 23813,
+      "before": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "1229805d1351805c363707360fb65ee081012646961985602640fc5ee21a8301f425371a8313882231fc5ee41a83019025281ab35ee22422fc5ee61a83"
+    },
+    {
+      "offset": 23875,
+      "before": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "102219dc9d1ab35ee2240a1266080d1ab35ee42307320633327e801c320633327e80217e80047e80213c373630ec"
+    },
+    {
+      "offset": 23922,
+      "before": "000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "07360f12298026135180221266081eb65ee081012617961985602611fc5ee61a83"
+    },
+    {
+      "offset": 23956,
+      "before": "000000000000000000000000",
+      "after": "102208fd144afd1444200ccc"
+    },
+    {
+      "offset": 23969,
+      "before": "000000000000000000000000000000000000000000",
+      "after": "a4fd144a30ec01fd14443206323338393c373630ec"
+    },
+    {
+      "offset": 23991,
+      "before": "000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "07360f122980231351801f1266081bb65ee08101261496198560260efc5ee61a83"
+    },
+    {
+      "offset": 24025,
+      "before": "0000000000000000000000000000000000000000",
+      "after": "102205fd144a200630ec01fd144a320632333839"
+    },
+    {
+      "offset": 24288,
+      "before": "000000000000",
+      "after": "01010bb80af0"
+    },
+    {
+      "offset": 24295,
+      "before": "0000000000",
+      "after": "0653433631"
+    },
+    {
+      "offset": 65536,
+      "before": "1329801d",
+      "after": "7e5d0501"
+    },
+    {
+      "offset": 66098,
+      "before": "fd1444",
+      "after": "bd5d6c"
+    },
+    {
+      "offset": 67310,
+      "before": "fd1444",
+      "after": "bd5d6c"
+    },
+    {
+      "offset": 84028,
+      "before": "fd144a",
+      "after": "bd5db1"
+    },
+    {
+      "offset": 98425,
+      "before": "fd144a",
+      "after": "bd5db1"
+    }
+  ],
+  "checksum": {
+    "mode": "ADDITIVE_CORRECTED",
+    "offset": 16390,
+    "stored": 60417,
+    "calculated": 60417
+  },
+  "qualification": {
+    "independent_assembly": true,
+    "hardware_execution": false,
+    "bench_readback": false,
+    "interrupted_recovery": false,
+    "measured_ignition": false,
+    "vehicle": false
+  },
+  "known_limits": [
+    "No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.",
+    "Full logical 128 KiB program image. An initial CAL-only write does not install program changes.",
+    "Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.",
+    "ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.",
+    "This is a logical PCM image, not a transformed OneROM carrier file.",
+    "Normal dwell writes additionally refresh MINDWELL to 0x00A4, including the disabled installed control; this is not an exact side-effect OEM control.",
+    "Short6 and zero are raw command experiments; scope evidence is required for their physical effect.",
+    "Uses an existing shared permission bit. The instruction-subset model does not establish whole-program state ownership."
+  ],
+  "host_review": {
+    "date": "2026-10-20",
+    "tests": "63 SC61/62 unit tests passed; source rebuild and independent handler/parameter A09 parity",
+    "source_rebuild_byte_exact": true,
+    "email_pack_member_manifest_checks": 384,
+    "firmware_modified_during_intake": false
+  }
+}

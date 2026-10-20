@@ -1,0 +1,168 @@
+{
+  "schema": "kingai.vy.bench-bundle.v1",
+  "status": "WIP_BENCH_FLASH_ONLY",
+  "family": "FDC1",
+  "profile": "3000-2900-short-raw000a",
+  "purpose": "Floor-aware main/fallback software-command experiment with independent disabled, short, zero and combined profiles.",
+  "source": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+    "firmware": "VX/VY L36 $060A Enhanced v1.0a"
+  },
+  "binary": {
+    "path": "FDC1_3000_2900_SHORT_RAW000A_WIP_BENCH_FLASH_ONLY.bin",
+    "size": 131072,
+    "sha256": "9d786090d007d4aa2202a1101a3b3b5fb1573c2df5e7108f6d83b222bc82e90e"
+  },
+  "asm": {
+    "path": "FDC1_3000_2900_SHORT_RAW000A_WIP_BENCH_FLASH_ONLY.asm",
+    "sha256": "4fe92e8c7ba643e3b9a8cecc7b516f7c62ad04e84336e11671043f6b9c7bd187"
+  },
+  "assembly": {
+    "tool": "A09 V1.62",
+    "tool_sha256": "54f6bf52dbe23dde06811ff727d8db16acaeba224c056b69dfbffae28c1ae85a",
+    "regions": [
+      {
+        "file_offset": 23813,
+        "size": 187,
+        "sha256": "5a6bdf2b505ebcbbf08aed2c4dee7f0f12eceed9b08d5642418266bfc049d691"
+      },
+      {
+        "file_offset": 24288,
+        "size": 10,
+        "sha256": "efb45a8a584e1d094321ab0889ac71e2121458dd1781c9368dc218a0a5deb6b3"
+      }
+    ],
+    "addressed_bytes_matched": 197
+  },
+  "hooks": [
+    {
+      "file_offset": 66098,
+      "cpu_address": 33330,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d05",
+      "role": "hook"
+    },
+    {
+      "file_offset": 67310,
+      "cpu_address": 34542,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d05",
+      "role": "hook"
+    },
+    {
+      "file_offset": 84028,
+      "cpu_address": 51260,
+      "bank": 2,
+      "before": "fd144a",
+      "after": "bd5d3b",
+      "role": "hook"
+    },
+    {
+      "file_offset": 98425,
+      "cpu_address": 32889,
+      "bank": 3,
+      "before": "fd144a",
+      "after": "bd5d60",
+      "role": "hook"
+    }
+  ],
+  "changes": [
+    {
+      "offset": 16390,
+      "before": "8e6f",
+      "after": "e19e"
+    },
+    {
+      "offset": 23813,
+      "before": "00000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "3c3736073630bd5d7013664014ec011ab35ee42303fc5ee4fd144a01fd1444200ccc"
+    },
+    {
+      "offset": 23848,
+      "before": "0000000000000000000000000000",
+      "after": "a4fd144a01ec01fd1444320630ec"
+    },
+    {
+      "offset": 23863,
+      "before": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "313138393c3736073630b65ee08101260e1351800a12298006126640de2003156640ec01fd144a20d23c3736073630156640ec01fd144a20c2b65ee081012645135180411229803dfc5ee81a83fdc12634fc5ee41a83"
+    },
+    {
+      "offset": 23950,
+      "before": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "27222bb65ee18128252481e82220f65ee2c114251911231696a213664007b15ee2230b2005b15ee125041466403915664039"
+    },
+    {
+      "offset": 24288,
+      "before": "00000000",
+      "after": "01787401"
+    },
+    {
+      "offset": 24293,
+      "before": "00",
+      "after": "0a"
+    },
+    {
+      "offset": 24296,
+      "before": "0000",
+      "after": "fdc1"
+    },
+    {
+      "offset": 66098,
+      "before": "fd1444",
+      "after": "bd5d05"
+    },
+    {
+      "offset": 67310,
+      "before": "fd1444",
+      "after": "bd5d05"
+    },
+    {
+      "offset": 84028,
+      "before": "fd144a",
+      "after": "bd5d3b"
+    },
+    {
+      "offset": 98425,
+      "before": "fd144a",
+      "after": "bd5d60"
+    }
+  ],
+  "checksum": {
+    "mode": "ADDITIVE_CORRECTED",
+    "offset": 16390,
+    "stored": 57758,
+    "calculated": 57758
+  },
+  "qualification": {
+    "independent_assembly": true,
+    "hardware_execution": false,
+    "bench_readback": false,
+    "interrupted_recovery": false,
+    "measured_ignition": false,
+    "vehicle": false
+  },
+  "known_limits": [
+    "No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.",
+    "Full logical 128 KiB program image. An initial CAL-only write does not install program changes.",
+    "Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.",
+    "ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.",
+    "This is a logical PCM image, not a transformed OneROM carrier file.",
+    "Uses sampled RPM byte 0x00A2 in nominal 25-RPM units, not an event-synchronous speed measurement.",
+    "Reserves shared flag 0x0066 bit6; complete indirect/bulk/IRQ ownership is unproved.",
+    "Normal and disabled paths also refresh minimum dwell to 0x00A4. These are installed comparisons, not exact OEM side-effect controls.",
+    "Adds up to nine stack bytes without masking real interrupts; the bounded checks do not execute actual PCM interrupts.",
+    "The short profile uses raw command 0x000A. The historical nominal time name is not a measured conversion.",
+    "The combined profile separately changes native fuel-cut threshold bytes to 777477747774; disabling the spark flag does not undo those calibration edits."
+  ],
+  "host_review": {
+    "date": "2026-10-20",
+    "tests": "17920 independent actual-candidate-byte execution cases passed; exact queue rebuild and independent A09 parity. The historical FDC1 suite was unavailable and is not counted as rerun",
+    "source_rebuild_byte_exact": true,
+    "email_pack_member_manifest_checks": 384,
+    "firmware_modified_during_intake": false
+  }
+}

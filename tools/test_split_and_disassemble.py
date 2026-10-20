@@ -3,6 +3,7 @@
 
 import tempfile
 import unittest
+import importlib.util
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -56,6 +57,43 @@ class SplitAndDisassembleTests(unittest.TestCase):
         line = format_vector_entry(bank, 0, 0xFFEA)
         self.assertIn(".word    $200F", line)
         self.assertNotIn("bra", line.lower())
+
+
+@unittest.skipUnless(importlib.util.find_spec("capstone"), "install Capstone for HC11 decoder fixtures")
+class HC11PrebyteFixtures(unittest.TestCase):
+    """Literal bytes independently assembled with A09 V1.62, 20 October 2026.
+
+    These prove selected instruction decoding, not mixed-ROM code ownership.
+    """
+
+    def test_prefixes_and_operand_boundaries(self):
+        from capstone import Cs, CS_ARCH_M680X, CS_MODE_M680X_6811
+
+        decoder = Cs(CS_ARCH_M680X, CS_MODE_M680X_6811)
+        fixtures = (
+            ("1a831234", "cpd"),  # CPD #$1234
+            ("1a939d", "cpd"),    # CPD <$9D
+            ("1ab35d32", "cpd"),  # CPD >$5D32
+            ("cda310", "cpd"),    # CPD $10,Y
+            ("18ce1234", "ldy"),
+            ("18ff1234", "sty"),
+            ("188c1234", "cpy"),
+            ("183a", "aby"),
+            ("8118", "cmpa"),     # $18 here is an operand, not another prefix.
+        )
+        joined = b"".join(bytes.fromhex(encoded) for encoded, _ in fixtures)
+        decoded = list(decoder.disasm(joined, 0x2000))
+        self.assertEqual(len(decoded), len(fixtures))
+        offset = 0
+        for instruction, (encoded, mnemonic) in zip(decoded, fixtures):
+            with self.subTest(encoded=encoded):
+                expected = bytes.fromhex(encoded)
+                self.assertEqual(instruction.address, 0x2000 + offset)
+                self.assertEqual(bytes(instruction.bytes), expected)
+                self.assertEqual(instruction.size, len(expected))
+                self.assertEqual(instruction.mnemonic, mnemonic)
+                offset += len(expected)
+        self.assertEqual(offset, len(joined))
 
 
 if __name__ == "__main__":

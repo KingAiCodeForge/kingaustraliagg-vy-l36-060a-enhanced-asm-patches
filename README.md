@@ -2,9 +2,9 @@
 
 **Research repository: Motorola 68HC11/Delco Enhanced code, assembly experiments, disassembly evidence and static patch verification.**
 
-**Documented branch:** public `master` (last code sync 7 October 2026). **README reviewed:** 20 October 2026.
+**Documented branch:** public `master`. **Reviewed tooling and bundle intake:** 20 October 2026.
 
-> **STATUS: RESEARCH / STATIC REVIEW ONLY. NO PATCH IN THIS REPOSITORY IS APPROVED FOR FLASHING OR VEHICLE USE.**
+> **STATUS: EXPERIMENTAL RESEARCH. Reviewed `bench_wip/` bundles are isolated-bench WIP with unqualified hardware behavior/recovery. No patch is vehicle-qualified. Legacy DO_NOT_FLASH and HOLD entries retain their restrictions.**
 >
 > Some legacy ASM files are known to have incorrect bank calls or inactive hook points, even when their filenames contain `VERIFIED` or `PRODUCTION`. Passing a Python test, source hash check, deterministic byte build or file checksum is **not** proof of physical spark behaviour, ECU recovery or engine safety.
 
@@ -16,12 +16,16 @@ Improved scripts will be added after review, portability fixes and regression te
 
 See [publication requirements and contribution contacts](PUBLIC_WIP_POLICY.md), [per-family/per-file status](PATCH_STATUS.md), and the [ASM WIP front door](asm_wip/README.md). Send sanitized evidence to jasonking282@gmail.com or jason.king@kingai.com.au. Private VX source and conversations are not uploaded.
 
+The [reviewed BIN/ASM bundle index](bench_wip/README.md) contains per-profile images recovered from the sent v3.1 peer pack, with unchanged BIN hashes, independently assembled matching patch source, full preimage/change manifests and explicit remaining limits. The [read-only bundle verifier](tools/verify_bench_bundle.py) reverses each candidate in memory to the pinned parent and checks its checksum and declared source regions. The [intake ledger](bench_wip/intake_status.json) accounts for all 57 indexed rows, including duplicate references and entries still held outside the public executable set.
+
 ## What is implemented and what remains unproved
 
 | Area | Available on public `master` | Evidence boundary |
 | --- | --- | --- |
 | Bank splitting / disassembly | [`tools/split_and_disassemble.py`](tools/split_and_disassemble.py), [bank reports](bank_split_output/README.md) | Uses Capstone M680X/HC11 and heuristic code/data classification; **not** complete decompilation or exclusive memory ownership proof |
 | Exact-source patch catalog | [`tools/party_patch_tool.py`](tools/party_patch_tool.py) and two source manifests | Bounded, hash-checked static candidates only |
+| Reviewed experimental BIN bundles | [`bench_wip/`](bench_wip/README.md), [`tools/verify_bench_bundle.py`](tools/verify_bench_bundle.py) | Per-profile static reproduction and exact parent reversal; no measured ignition/readback/recovery or vehicle qualification |
+| Bounded branch/bank analysis | [`tools/hc11_static_review.py`](tools/hc11_static_review.py) | Explicit supported-opcode subset; unsupported/truncated decoding fails closed; no whole-program or hardware proof |
 | Additive checksum | [`tools/vy_flash_checksum.py`](tools/vy_flash_checksum.py) | Validates the known 128 KiB **file checksum** only; cannot authorise a flash |
 | Historical ASM | `asm_wip/` experiments including spark-cut, EST, ghost-cam and MAFless concepts | Some programs are known-broken, incomplete or untested |
 | XDF/vehicle results | Historical community comparison notes and private research exist separately | No target-wide native TunerPro, bench, physical EST, recovery or road qualification is established by this repository |
@@ -76,7 +80,7 @@ Read [bank and ISR research](BANK_SWITCHING_AND_ISR_ANALYSIS.md), [TIC3 analysis
 ## Important: do not follow the legacy v38 instructions
 
 - The retired [`spark_cut_chr0m3_method_VERIFIED_v38.asm`](archive/rejected/v38/README.md) and `PATCH_BYTES_v38.asm` remain at their original tracked paths solely to preserve rejected research history. Their **misleading filenames** and historical comments do not justify the initialization-path hook or cross-bank `JSR $C500` placement. Neither is in the supported build catalog, and neither may be used as a preferred starting point for a working patch. The retirement record overrides their old comments and claimed endorsements.
-- [`tools/apply_spark_cut_v38.py`](tools/apply_spark_cut_v38.py) is now a retired compatibility entry that always refuses without reading or writing a BIN. Its old implementation and the import-time writer test were preserved before replacement. See the [retirement record](archive/rejected/v38/README.md).
+- [`tools/apply_spark_cut_v38.py`](tools/apply_spark_cut_v38.py) is a retired compatibility entry that always refuses without firmware file I/O. The two old analysis entry points also refuse: their embedded byte arrays disagreed and their printed branch checks could pass after displacement corruption. Their history remains preserved. Use the bounded analyzer for new explicit byte inputs; see the [retirement record](archive/rejected/v38/README.md).
 - Other files named `VERIFIED`, `BANKFIX` or `PRODUCTION` are historical snapshots; none is promoted by this README.
 
 The known v38 error does not prove that all dwell-intervention techniques are impossible. It means *this implementation* cannot be treated as correct until independently repaired and tested against exact source, bank, caller and hardware evidence.
