@@ -1,0 +1,160 @@
+{
+  "schema": "kingai.vy.bench-bundle.v1",
+  "status": "WIP_BENCH_FLASH_ONLY",
+  "family": "SC01",
+  "profile": "3000-2900-control",
+  "purpose": "Phase-qualified event-hold experiment with real IRQ continuations; disabled and active are separate complete images.",
+  "source": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+    "firmware": "VX/VY L36 $060A Enhanced v1.0a"
+  },
+  "binary": {
+    "path": "SC01_3000_2900_CONTROL_WIP_BENCH_FLASH_ONLY.bin",
+    "size": 131072,
+    "sha256": "7670fcc475f7273f8a2e924466a10eb369499209e2ac90c8b098ba2dd41241a3"
+  },
+  "asm": {
+    "path": "SC01_3000_2900_CONTROL_WIP_BENCH_FLASH_ONLY.asm",
+    "sha256": "1edc857361e797d8218fa783964f80bca4843403e23f94f802dfd70d2ec334ba"
+  },
+  "assembly": {
+    "tool": "A09 V1.62",
+    "tool_sha256": "54f6bf52dbe23dde06811ff727d8db16acaeba224c056b69dfbffae28c1ae85a",
+    "regions": [
+      {
+        "file_offset": 23813,
+        "size": 333,
+        "sha256": "fc3458436308a140f3fd6a0cecc50267ce2d003f6d9ab33e134fb4fcf3d0c935"
+      },
+      {
+        "file_offset": 24304,
+        "size": 5,
+        "sha256": "15a098a5abd19947708fd28f78529805992427ecf3692b097514f4aad7a343bc"
+      }
+    ],
+    "addressed_bytes_matched": 338
+  },
+  "hooks": [
+    {
+      "file_offset": 11972,
+      "cpu_address": 11972,
+      "bank": 0,
+      "before": "156607",
+      "after": "1566c7",
+      "role": "hook"
+    },
+    {
+      "file_offset": 12770,
+      "cpu_address": 12770,
+      "bank": 0,
+      "before": "b61b8c7f1b8c",
+      "after": "7e5dda010101",
+      "role": "hook"
+    },
+    {
+      "file_offset": 13834,
+      "cpu_address": 13834,
+      "bank": 0,
+      "before": "1346010e",
+      "after": "7e5e0d01",
+      "role": "hook"
+    },
+    {
+      "file_offset": 14468,
+      "cpu_address": 14468,
+      "bank": 0,
+      "before": "bdfd84",
+      "after": "bd5d05",
+      "role": "hook"
+    },
+    {
+      "file_offset": 97683,
+      "cpu_address": 64915,
+      "bank": 2,
+      "before": "bdfe32",
+      "after": "bd5e21",
+      "role": "hook"
+    }
+  ],
+  "changes": [
+    {
+      "offset": 11974,
+      "before": "07",
+      "after": "c7"
+    },
+    {
+      "offset": 12770,
+      "before": "b61b8c7f1b8c",
+      "after": "7e5dda010101"
+    },
+    {
+      "offset": 13834,
+      "before": "1346010e",
+      "after": "7e5e0d01"
+    },
+    {
+      "offset": 14469,
+      "before": "fd84",
+      "after": "5d05"
+    },
+    {
+      "offset": 16390,
+      "before": "8e6f",
+      "after": "1074"
+    },
+    {
+      "offset": 23813,
+      "before": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "bd5d0cbdfd843936373c07360fb65ef481a5265e1229805a13518056135140521346014e961985602648964885912642fc5ef01a8305dc25391a8316a82233fc5ef21a8303e8252a1ab35ef02424b616fa01fc16fac50427191266400ddc9d1ab35ef02510146640200bdc9d1ab35ef22203156640320638333239136640551266805136373c07360fb614d601fc14d68540263ac5102636b6149e01fc149ec501272bc4fefd149ece"
+    },
+    {
+      "offset": 23983,
+      "before": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "100926fdb614d601fc14d685402609c5102605146680200cb6149e01fc149eca01fd149e32063833323939b61b8c810424031566401266400c136680181566801544102010bd5d8013668009b61b8c7f1b8c7e3328b61b8c7f1b8c7e31e8bd5d80136680037e3719134601037e360e7e361c1366802a36373c07360f9619856026199648859026137f1912b614c801fc14c8fd01b532063833323932063833327efe32"
+    },
+    {
+      "offset": 24304,
+      "before": "00000000",
+      "after": "0bb80b54"
+    },
+    {
+      "offset": 97684,
+      "before": "fe32",
+      "after": "5e21"
+    }
+  ],
+  "checksum": {
+    "mode": "ADDITIVE_CORRECTED",
+    "offset": 16390,
+    "stored": 4212,
+    "calculated": 4212
+  },
+  "qualification": {
+    "independent_assembly": true,
+    "hardware_execution": false,
+    "bench_readback": false,
+    "interrupted_recovery": false,
+    "measured_ignition": false,
+    "vehicle": false
+  },
+  "known_limits": [
+    "No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.",
+    "Full logical 128 KiB program image. An initial CAL-only write does not install program changes.",
+    "Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.",
+    "ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.",
+    "This is a logical PCM image, not a transformed OneROM carrier file.",
+    "Reserves shared 0x0066 bits6/7. Whole-program indirect, bulk and IRQ ownership is unproved.",
+    "Requires unproved TIO DATAL channel 14/4 mapping and polarity; its 16-iteration settle window does not establish hardware completion.",
+    "Pauses expected missing-edge observation while its hold state is acquired, and releases through the next native 3X path.",
+    "Native scheduler and diagnostic calls retain caller bank assumptions. Live bank-latch, stack, IRQ and asynchronous behavior remain unproved.",
+    "The authored builder exported the matching ASM; the export was independently assembled, not reconstructed from guessed opcodes."
+  ],
+  "host_review": {
+    "date": "2026-10-20",
+    "tests": "43 bounded source-package tests passed; exact queue rebuild and independent A09 parity",
+    "source_rebuild_byte_exact": true,
+    "email_pack_member_manifest_checks": 384,
+    "firmware_modified_during_intake": false
+  }
+}

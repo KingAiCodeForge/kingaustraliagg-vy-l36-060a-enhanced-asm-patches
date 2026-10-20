@@ -1,0 +1,71 @@
+{
+  "schema": "kingai.vy.bench-bundle.v1",
+  "status": "WIP_BENCH_FLASH_ONLY",
+  "family": "REFERENCE",
+  "profile": "checksum-control",
+  "purpose": "Checksum-only comparison control shared across the reviewed families.",
+  "source": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+    "firmware": "VX/VY L36 $060A Enhanced v1.0a"
+  },
+  "binary": {
+    "path": "REFERENCE_CHECKSUM_CONTROL_WIP_BENCH_FLASH_ONLY.bin",
+    "size": 131072,
+    "sha256": "34dfc79a76cde89ca960d3d542ba5ecb572b91b10ff6b1c2a6c2836f16f58ffb"
+  },
+  "asm": {
+    "path": "REFERENCE_CHECKSUM_CONTROL_WIP_BENCH_FLASH_ONLY.asm",
+    "sha256": "840f8e6c46bb83418f3597988b78cca53ed2dce5439d894e40073454a3d7ee76"
+  },
+  "assembly": {
+    "tool": "A09 V1.62",
+    "tool_sha256": "54f6bf52dbe23dde06811ff727d8db16acaeba224c056b69dfbffae28c1ae85a",
+    "regions": [
+      {
+        "file_offset": 16390,
+        "size": 2,
+        "sha256": "dd0ed1a21723fd4315044cfcdbee87adc2af86867773672d0bd1e9c46e743d27"
+      }
+    ],
+    "addressed_bytes_matched": 2
+  },
+  "hooks": [],
+  "changes": [
+    {
+      "offset": 16390,
+      "before": "8e6f",
+      "after": "9e9f"
+    }
+  ],
+  "checksum": {
+    "mode": "ADDITIVE_CORRECTED",
+    "offset": 16390,
+    "stored": 40607,
+    "calculated": 40607
+  },
+  "qualification": {
+    "independent_assembly": true,
+    "hardware_execution": false,
+    "bench_readback": false,
+    "interrupted_recovery": false,
+    "measured_ignition": false,
+    "vehicle": false
+  },
+  "known_limits": [
+    "No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.",
+    "Full logical 128 KiB program image. An initial CAL-only write does not install program changes.",
+    "Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.",
+    "ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.",
+    "This is a logical PCM image, not a transformed OneROM carrier file.",
+    "Only the stored checksum word changes from the downloaded parent. This does not install a new feature.",
+    "The original parent stores 0x8E6F; the documented additive calculation is 0x9E9F. Record actual tool-written/readback bytes."
+  ],
+  "host_review": {
+    "date": "2026-10-20",
+    "tests": "Independent additive calculation, whole-parent reversal and A09 two-byte parity",
+    "source_rebuild_byte_exact": true,
+    "email_pack_member_manifest_checks": 384,
+    "firmware_modified_during_intake": false
+  }
+}

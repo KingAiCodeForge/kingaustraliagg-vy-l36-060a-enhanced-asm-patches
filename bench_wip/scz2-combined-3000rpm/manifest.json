@@ -1,0 +1,269 @@
+{
+  "schema": "kingai.vy.bench-bundle.v1",
+  "status": "WIP_BENCH_FLASH_ONLY",
+  "family": "SCZ2",
+  "profile": "combined-3000rpm",
+  "purpose": "Zero-dwell/event-path experiment with disabled, ignition-only and combined variants.",
+  "source": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+    "firmware": "VX/VY L36 $060A Enhanced v1.0a"
+  },
+  "binary": {
+    "path": "SCZ2_COMBINED_3000RPM_WIP_BENCH_FLASH_ONLY.bin",
+    "size": 131072,
+    "sha256": "ba722670406269e8d669d02d5de121e6a6d7801bbd8ebefc318443ee74af81a2"
+  },
+  "asm": {
+    "path": "SCZ2_COMBINED_3000RPM_WIP_BENCH_FLASH_ONLY.asm",
+    "sha256": "f3a5042a5058cab052d1ad0ad401927ec6c30a99179af73d74711c76b60fbb8f"
+  },
+  "assembly": {
+    "tool": "A09 V1.62",
+    "tool_sha256": "54f6bf52dbe23dde06811ff727d8db16acaeba224c056b69dfbffae28c1ae85a",
+    "regions": [
+      {
+        "file_offset": 23813,
+        "size": 45,
+        "sha256": "76e598368de4b789c3709c7db919bade0095b9678cae24a19612e51987d36794"
+      },
+      {
+        "file_offset": 23888,
+        "size": 34,
+        "sha256": "d5d898b79d0e66fbd764240079b7cea43d565bcf73e2ef6a2c17c20d0d484fb6"
+      },
+      {
+        "file_offset": 23952,
+        "size": 29,
+        "sha256": "7bb8a099f46faf5470c89062ad25081c6f003c537ab6499f4c2631e35d5f95fd"
+      },
+      {
+        "file_offset": 24000,
+        "size": 47,
+        "sha256": "a87ec5b6785fae1d6d6d78a1873ae3432bbed688b6de189d045b92cdf9d53bee"
+      },
+      {
+        "file_offset": 24080,
+        "size": 88,
+        "sha256": "ab4f6aaae377acc0ca8132d2edf97486c571e5098a237b8f04d7f6c5de50ebd4"
+      },
+      {
+        "file_offset": 24224,
+        "size": 5,
+        "sha256": "f1b500134b0edaa395eef2d749700556201f913ae8a3f9b098505e597865d44c"
+      },
+      {
+        "file_offset": 24240,
+        "size": 37,
+        "sha256": "bc15c4d01567b0ed3b6caef5c172c9d1a54650dd12f77ddce10afac6a4ca3eb9"
+      }
+    ],
+    "addressed_bytes_matched": 285
+  },
+  "hooks": [
+    {
+      "file_offset": 66098,
+      "cpu_address": 33330,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d05",
+      "role": "main TIODWELL store"
+    },
+    {
+      "file_offset": 67310,
+      "cpu_address": 34542,
+      "bank": 2,
+      "before": "fd1444",
+      "after": "bd5d05",
+      "role": "cranking/fallback TIODWELL store"
+    },
+    {
+      "file_offset": 84028,
+      "cpu_address": 51260,
+      "bank": 2,
+      "before": "fd144a",
+      "after": "bd5d50",
+      "role": "periodic MINDWELL refresh"
+    },
+    {
+      "file_offset": 98425,
+      "cpu_address": 32889,
+      "bank": 3,
+      "before": "fd144a",
+      "after": "bd5d50",
+      "role": "MINDWELL setup path"
+    },
+    {
+      "file_offset": 12816,
+      "cpu_address": 12816,
+      "bank": 0,
+      "before": "ff15ea",
+      "after": "bd5d90",
+      "role": "normal 3X manual EST rise"
+    },
+    {
+      "file_offset": 97876,
+      "cpu_address": 65108,
+      "bank": 2,
+      "before": "b619124c",
+      "after": "bd5dc001",
+      "role": "no-EST-edge timer increment"
+    },
+    {
+      "file_offset": 75221,
+      "cpu_address": 42453,
+      "bank": 2,
+      "before": "155f40",
+      "after": "7e5eb0",
+      "role": "factory no-cut continuation / optional combined action"
+    }
+  ],
+  "changes": [
+    {
+      "offset": 12816,
+      "before": "ff15ea",
+      "after": "bd5d90"
+    },
+    {
+      "offset": 16390,
+      "before": "8e6f",
+      "after": "f4c2"
+    },
+    {
+      "offset": 23813,
+      "before": "00000000000000000000000000",
+      "after": "3c373607360f30bd5e10270dcc"
+    },
+    {
+      "offset": 23828,
+      "before": "0000000000000000000000",
+      "after": "fd144a0101fd1444200bcc"
+    },
+    {
+      "offset": 23840,
+      "before": "00000000000000000000000000",
+      "after": "a4fd144aec01fd1444320630ec"
+    },
+    {
+      "offset": 23854,
+      "before": "00000000",
+      "after": "31313839"
+    },
+    {
+      "offset": 23888,
+      "before": "00000000000000000000000000",
+      "after": "3c373607360f30bd5e102708cc"
+    },
+    {
+      "offset": 23903,
+      "before": "0000000000000000000000000000",
+      "after": "fd144a2005ec01fd144a320630ec"
+    },
+    {
+      "offset": 23918,
+      "before": "00000000",
+      "after": "31313839"
+    },
+    {
+      "offset": 23952,
+      "before": "00000000000000000000000000000000000000000000000000",
+      "after": "3c373607360f30bd5e102605ee03ff15ea32063233383c30ee"
+    },
+    {
+      "offset": 23978,
+      "before": "000000",
+      "after": "313139"
+    },
+    {
+      "offset": 24000,
+      "before": "0000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "3c373607360fbd5e10271ab6144401fc14442611b6144a01fc144a2608320632333886"
+    },
+    {
+      "offset": 24036,
+      "before": "0000000000000000000000",
+      "after": "393206323338b619124c39"
+    },
+    {
+      "offset": 24080,
+      "before": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "b65ea081a5264eb65ea1815a2647b65ea381022640b65ea481012239b65ea28128253281e8222e96a2b15ea22527134601231344101f1353081b96488591261596198560260fb61bf981012608b61bfa260386013986"
+    },
+    {
+      "offset": 24167,
+      "before": "00",
+      "after": "39"
+    },
+    {
+      "offset": 24224,
+      "before": "0000000000",
+      "after": "a55a780201"
+    },
+    {
+      "offset": 24240,
+      "before": "00000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "3c373607360fbd5e10270fb65ea48101260832063233387ea5c03206323338155f407ea5d8"
+    },
+    {
+      "offset": 66098,
+      "before": "fd1444",
+      "after": "bd5d05"
+    },
+    {
+      "offset": 67310,
+      "before": "fd1444",
+      "after": "bd5d05"
+    },
+    {
+      "offset": 75221,
+      "before": "155f40",
+      "after": "7e5eb0"
+    },
+    {
+      "offset": 84028,
+      "before": "fd144a",
+      "after": "bd5d50"
+    },
+    {
+      "offset": 97876,
+      "before": "b619124c",
+      "after": "bd5dc001"
+    },
+    {
+      "offset": 98425,
+      "before": "fd144a",
+      "after": "bd5d50"
+    }
+  ],
+  "checksum": {
+    "mode": "ADDITIVE_CORRECTED",
+    "offset": 16390,
+    "stored": 62658,
+    "calculated": 62658
+  },
+  "qualification": {
+    "independent_assembly": true,
+    "hardware_execution": false,
+    "bench_readback": false,
+    "interrupted_recovery": false,
+    "measured_ignition": false,
+    "vehicle": false
+  },
+  "known_limits": [
+    "No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.",
+    "Full logical 128 KiB program image. An initial CAL-only write does not install program changes.",
+    "Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.",
+    "ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.",
+    "This is a logical PCM image, not a transformed OneROM carrier file.",
+    "The disabled installed profile still refreshes MINDWELL to 0x00A4 on pass-through dwell calls; it is not an exact side-effect OEM control.",
+    "The combined profile additionally requests factory fuel cut; it can conceal a failed ignition mechanism and is a later comparison.",
+    "Shared-state/IRQ/timing ownership, zero-command electrical behavior and first event after release remain unproved."
+  ],
+  "host_review": {
+    "date": "2026-10-20",
+    "tests": "21 unit tests and 196608 model cases passed; per-profile exact rebuild and A09 addressed-byte parity",
+    "source_rebuild_byte_exact": true,
+    "email_pack_member_manifest_checks": 384,
+    "firmware_modified_during_intake": false
+  }
+}

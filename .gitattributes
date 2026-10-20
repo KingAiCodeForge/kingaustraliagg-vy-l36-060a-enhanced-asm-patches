@@ -1,0 +1,7 @@
+# Bundle hashes identify these exact bytes on Windows, Linux and macOS.
+bench_wip/**/*.bin binary
+bench_wip/**/*.asm text eol=lf
+bench_wip/**/manifest.json text eol=lf
+bench_wip/intake_status.json text eol=lf
+bench_wip/**/*.md text eol=lf
+tools/*.py text eol=lf

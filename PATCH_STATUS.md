@@ -1,6 +1,6 @@
 # VY patch status - 20 October 2026
 
-Owner-approved BIN publication is permitted under PUBLIC_WIP_POLICY.md. Permission is not qualification. This update publishes no new executable BIN and changes no firmware behavior.
+Owner-approved BIN publication is permitted under PUBLIC_WIP_POLICY.md. Permission is not qualification. The reviewed BIN/ASM bundles in [bench_wip/](bench_wip/README.md) retain the exact emailed v3.1 image bytes; this intake changes no firmware behavior.
 
 | Family | Current evidence/state | Next required job |
 | --- | --- | --- |
@@ -8,9 +8,10 @@ Owner-approved BIN publication is permitted under PUBLIC_WIP_POLICY.md. Permissi
 | v60 raw0208/rawzero | HOLD / diagnostic history: D may be reloaded from $019B rather than preserved | Re-derive caller-visible register/CCR and asynchronous-writer contract before a separately versioned replacement |
 | ghost-cam | Public hash-bound STATIC_CANDIDATE_DO_NOT_FLASH; A09 byte parity passed | Cadence, consumer/output and bench/recovery evidence |
 | est-shared-probe / v52 | Public hash-bound STATIC_WIP_PROBE_DO_NOT_FLASH | Qualify shared-command ownership, caller contracts, timing and measured response |
-| SC01 / FDC1 | Private peer-pack notes report complete images; independent bank/control-flow review is still required | Reconcile exact recipes, matching ASM and current offline receipts before public binary intake |
+| Named V52/V53/V54/V58 diagnostic bundles | Fresh exact-image rebuild, independent A09 assembly and bounded caller/entry-model review support separate experimental bench-WIP copies | Old catalog/source classifications are unchanged; IRQ/timing/peripheral and physical output behavior remain unproved |
+| SC01 / FDC1 | Reviewed rebuilt images and matching per-profile ASM are in bench_wip; queue hashes, caller/bank contracts, reversal and independent A09 parity checked | Shared-state/IRQ/stack ownership, physical suppression, safe re-arm and recovery remain unproved |
 | SC02 / SC03 | No executable implementation qualified by this public intake | Recover actual implementation evidence or retain analysis-only status; do not manufacture a binary from a family label |
-| R61 / SC61 / SC62 / SCZ2 | Separate private peer-pack controls/experiments, not promoted by export counts | Exact-image/rebuild review, intended test-order and independent physical evidence |
+| CP1 / R61 / SC61 / SC62 / SCZ2 / EG1p1 | Reviewed experimental bundles include disabled/reference controls; exact source rebuild, independent A09 addressed-byte parity and bounded model checks | Whole-ECU asynchronous ownership, physical efficacy and recovery remain unproved; control side effects are documented individually |
 | Other patched BINs | Eligible for review under owner permission, not automatically approved | Inventory, deduplicate by hash and assess source/ASM/control-flow/integrity individually |
 
 The October 5 peer-pack correction distinguishes 57 matching XDF/BIN export/rebuild checks from code/hardware proof and moves v60 to diagnostic history. Private messages are not reproduced or used as endorsements. The v60 code suffix includes FD 14 44 FC 01 9B 39: writing $1444 followed by loading D from $019B requires a caller/asynchronous-state proof, not a checksum-only test.
@@ -22,11 +23,17 @@ The October 5 peer-pack correction distinguishes 57 matching XDF/BIN export/rebu
 
 ## Offline verification - 20 October 2026
 
+The sent-pack intake recovered all nine ZIP parts and matched all **384** listed member hashes. The reviewed public set has **29 distinct BINs** with matching per-profile patch ASM, covering **32/57 indexed rows** after shared-reference deduplication. The remaining **25 rows** retain explicit HOLD/rejection decisions in [the intake ledger](bench_wip/intake_status.json). No private full-source dump, correspondence or donor-source excerpt was copied into these bundles.
+
+All 29 images independently matched A09 V1.62 addressed source bytes and reverse exactly to the declared parent. Source-package/model checks and their limits are listed in [the bundle index](bench_wip/README.md). Fresh selected-caller checks did not reproduce the previously assumed synchronous V53/V54 return-register failure: changed A/B/N/Z are overwritten before use on the reviewed main/fallback paths. That bounded result does not establish interrupt or hardware behavior.
+
+The integrated public checkout passed **82 tests with zero skips**, using the optional exact reference and A09 fixtures. Published-bundle verification itself requires no private reference; it reconstructs the pinned parent in memory. The nine A09-backed Capstone 5.0.6 prefix fixtures replace the contradictory blanket prebyte claims in the bank README. No physical qualification was performed.
+
 - `python -m unittest discover -s tools -p "test_*.py" -v`: **31 passed, zero skipped**, with `VY_V1_0A_BIN` set to the exact private reference and `A09_ASSEMBLER` set to the local assembler. Without these optional fixtures, the corresponding checks may skip; a skipped check is not a pass.
 - Both curated patch sources assembled with A09 to their manifest bytes. Exact-source candidate build/verify, conflicting-patch rejection and output-path protections passed. These are static checks, not ECU execution or measured ignition behavior.
 - The supported 131,072-byte Enhanced v1.0a reference SHA-256 is `5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd`. Its stored file checksum is `0x8E6F`, while this repository's calculation is `0x9E9F`; retain that observed discrepancy rather than calling the parent checksum validated.
 - The bounded local `bin_patch_test` inventory observed **73 BIN paths**: 55 full-size paths hashed to **34 distinct payloads**, including 21 duplicate paths; 18 wrong-size files were not read or padded. Of the full-size paths, 49 have matching file checksums but still require code/ASM/native review, three have checksum holds, one is the exact reference, and two are the known v60 holds.
-- Inventory coverage completed within its declared limits (512 BIN paths, 30,000 directory entries, depth 6), with no reported traversal/read errors. This covers the named local candidate directory only, not every disk, branch or archive. **Zero new executable uploads approved.** Full machine output stays local.
+- That earlier inventory completed within its declared limits (512 BIN paths, 30,000 directory entries, depth 6), with no reported traversal/read errors. It covered the named local candidate directory only and approved no uploads. The later sent-pack intake is separately accounted for in [the bundle index](bench_wip/README.md); full private machine output remains local.
 - New regression tests cover the retired writer's refusal, known-bad hash recognition after renaming, duplicates, wrong source/size, unchanged input and partial-inventory reporting. Public/private ignore rules were checked using path arguments without creating sample firmware.
 
 Read-only inventory usage:

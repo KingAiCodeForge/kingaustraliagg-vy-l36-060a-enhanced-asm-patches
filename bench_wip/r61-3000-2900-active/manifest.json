@@ -1,0 +1,114 @@
+{
+  "schema": "kingai.vy.bench-bundle.v1",
+  "status": "WIP_BENCH_FLASH_ONLY",
+  "family": "R61",
+  "profile": "3000-2900-active",
+  "purpose": "OEM EST-request hysteresis experiment. Disabled and active controls are separate complete images.",
+  "source": {
+    "size": 131072,
+    "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+    "firmware": "VX/VY L36 $060A Enhanced v1.0a"
+  },
+  "binary": {
+    "path": "R61_3000_2900_ACTIVE_WIP_BENCH_FLASH_ONLY.bin",
+    "size": 131072,
+    "sha256": "fac5646f58a261f67d0820e0ac021675195547e1a8ed0767c96dad2b1d1ab6ab"
+  },
+  "asm": {
+    "path": "R61_3000_2900_ACTIVE_WIP_BENCH_FLASH_ONLY.asm",
+    "sha256": "1033be595b5d6d74e6ae76e7f74e2ad82ce6124806d42385966fab7f88215e05"
+  },
+  "assembly": {
+    "tool": "A09 V1.62",
+    "tool_sha256": "54f6bf52dbe23dde06811ff727d8db16acaeba224c056b69dfbffae28c1ae85a",
+    "regions": [
+      {
+        "file_offset": 97927,
+        "size": 188,
+        "sha256": "35027f7bf882cfee467f3534da6e3fe3b3ae4e69071384a4d996114cd7c2b699"
+      },
+      {
+        "file_offset": 98224,
+        "size": 16,
+        "sha256": "4f7cf6752af77118b9b9ede44183dec76e2cb24cbd7b53cd1f8569faff08c427"
+      }
+    ],
+    "addressed_bytes_matched": 204
+  },
+  "hooks": [
+    {
+      "file_offset": 65569,
+      "cpu_address": 32801,
+      "bank": 2,
+      "before": "146608",
+      "after": "bdfe87",
+      "role": "hook"
+    },
+    {
+      "file_offset": 97683,
+      "cpu_address": 64915,
+      "bank": 2,
+      "before": "bdfe32",
+      "after": "bdfeb3",
+      "role": "hook"
+    }
+  ],
+  "changes": [
+    {
+      "offset": 16390,
+      "before": "8e6f",
+      "after": "e40d"
+    },
+    {
+      "offset": 65569,
+      "before": "146608",
+      "after": "bdfe87"
+    },
+    {
+      "offset": 97685,
+      "before": "32",
+      "after": "b3"
+    },
+    {
+      "offset": 97927,
+      "before": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "after": "37360736bdfef12512dc9d1ab3ffb2240f1ab3ffb42304136608051466082003156608320696668a083233393c37360736b6ffb18101262abdfef1252512660821dc9d1ab3ffb42319fc019b26140fb614c801fe14c8ff01b57f191232063233383932063233387efe32b6ffb081012649fcffb41a8303e825401ab3ffb2243afcffb21a8316a822311229802d1351802913530825134601211344101d12050819123d801596488590260f961985602609b61bf9810126020c390d39"
+    },
+    {
+      "offset": 98224,
+      "before": "00000000000000000000000000",
+      "after": "01010bb80b544b41492d523631"
+    }
+  ],
+  "checksum": {
+    "mode": "ADDITIVE_CORRECTED",
+    "offset": 16390,
+    "stored": 58381,
+    "calculated": 58381
+  },
+  "qualification": {
+    "independent_assembly": true,
+    "hardware_execution": false,
+    "bench_readback": false,
+    "interrupted_recovery": false,
+    "measured_ignition": false,
+    "vehicle": false
+  },
+  "known_limits": [
+    "No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.",
+    "Full logical 128 KiB program image. An initial CAL-only write does not install program changes.",
+    "Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.",
+    "ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.",
+    "This is a logical PCM image, not a transformed OneROM carrier file.",
+    "Uses existing OEM EST-request state and a bounded M42 qualification path; latched faults and masks remain inherited.",
+    "The active supplied profile enables M42 qualification intentionally; a default-off builder invocation is a different image.",
+    "Asynchronous timer/feedback behavior, safe event re-arm and whole-program state ownership remain unproved."
+  ],
+  "host_review": {
+    "date": "2026-10-20",
+    "tests": "40 R61 unit tests passed; source rebuild and independent handler/parameter A09 parity",
+    "source_rebuild_byte_exact": true,
+    "email_pack_member_manifest_checks": 384,
+    "firmware_modified_during_intake": false
+  }
+}
