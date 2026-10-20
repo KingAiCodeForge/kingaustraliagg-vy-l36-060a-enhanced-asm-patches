@@ -1,6 +1,9 @@
 """Bounded custom HC11 path interpreter: only instructions required by this test.
 No IRQ, timing, upstream bypass, bank switching or physical output simulation.
 """
+def require(condition, message):
+ if not condition:raise ValueError(message)
+
 def run(image,speed,rpm,state,gear,rangebit):
  m=bytearray(65536);m[:0x8000]=image[:0x8000];m[0x8000:]=image[0x10000:0x18000]
  m[0x98]=speed;m[0xa2]=rpm;m[0x5f]=state*64;m[0x41]=gear;m[0xdc]=rangebit
@@ -47,7 +50,7 @@ def run(image,speed,rpm,state,gear,rangebit):
    a=word();m[a]=X>>8;m[a+1]=X&255
   elif op==0x7e:pc=word()
   else:raise RuntimeError(f'unsupported {op:02x} at {addr:04x}')
- assert sp==0x1fff and B==0xa5 or (sp==0x1fff and B==rpm) # stock speed-protection branch loads B
+ require(sp==0x1fff and B in (0xa5,rpm),'Stack/register contract failed') # stock speed-protection branch loads B
  return {'cut':bool(m[0x5f]&64),'pc':pc,'selected':selected,'sp':sp,'X':X,'A':A,'B':B,'words':[m[a:a+2].hex() for a in (0x143,0x145,0x13f,0x141)]}
 
 if __name__=='__main__':
@@ -56,7 +59,7 @@ if __name__=='__main__':
  from build_launch_patch import build,HOOK,OFF
  if len(sys.argv)!=3:raise SystemExit('Usage: python verify_launch.py original.bin patched.bin')
  base=Path(sys.argv[1]).read_bytes();b=Path(sys.argv[2]).read_bytes()
- assert b==build(base),'Output is not the default builder result for this base'
+ require(b==build(base),'Output is not the default builder result for this base')
  disabled=bytearray(b);disabled[HOOK:HOOK+3]=OFF
  counts={'low_speed_cases':0,'moving_cases':0,'off_cases':0}
  for rpm in range(256):
@@ -64,8 +67,8 @@ if __name__=='__main__':
    for gear in (0,1,8,9,12,13,14,15):
     for rb in (0,32):
      for speed in (0,1,2):
-      assert run(b,speed,rpm,state,gear,rb)['cut']==(rpm>80);counts['low_speed_cases']+=1
+      require(run(b,speed,rpm,state,gear,rb)['cut']==(rpm>80),'Low-speed cut mismatch');counts['low_speed_cases']+=1
      for speed in (3,10,11,127,253,254,255):
-      assert run(b,speed,rpm,state,gear,rb)==run(base,speed,rpm,state,gear,rb);counts['moving_cases']+=1
-     assert run(disabled,0,rpm,state,gear,rb)==run(base,0,rpm,state,gear,rb);counts['off_cases']+=1
+      require(run(b,speed,rpm,state,gear,rb)==run(base,speed,rpm,state,gear,rb),'Moving-path mismatch');counts['moving_cases']+=1
+     require(run(disabled,0,rpm,state,gear,rb)==run(base,0,rpm,state,gear,rb),'Disabled-path mismatch');counts['off_cases']+=1
  print(json.dumps(counts,indent=2));print('PASS: bounded path only; not a full PCM emulator or hardware validation')

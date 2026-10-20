@@ -10,9 +10,11 @@ OFF=bytes.fromhex('CE77DE'); ON=bytes.fromhex('BDFEC0')
 CODE=bytes.fromhex('36969881022205CEFF002003CE77DE3239')
 START=0x12540
 SIGNATURE=bytes.fromhex('12298003BDECD7135280601359041196A2B170A222079683B170A122631559041267805C125F025B133D8016B61AE08504270FF61AE1135F4002C008D1A225402053CE77DE135F4001089698134108020808A1062507D6A2F177DD242313410819090913DC20060808200D2028134101099698B177DC2202080896A2A1002315145F40CE0000FF0143FF0145FF013FFF01417EA647155F40')
+SOURCE_SHA256='5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd'
 def sha(b):return hashlib.sha256(b).hexdigest()
 def validate_base(b):
  if len(b)!=0x20000:raise ValueError('Requires a full 131072-byte BIN')
+ if sha(b)!=SOURCE_SHA256:raise ValueError('Source SHA-256 mismatch: only the exact documented parent is supported')
  if b[START:START+len(SIGNATURE)]!=SIGNATURE:raise ValueError('Limiter code mismatch: incompatible or already patched; do not force')
  if any(b[ROUTINE:SHADOW+64]):raise ValueError('Patch space is occupied; do not overwrite another modification')
  if b[0x4008]!=0xAA:raise ValueError('Checksum bypass is not already present. This builder does not disable or recalculate checksums; independent checksum support required')

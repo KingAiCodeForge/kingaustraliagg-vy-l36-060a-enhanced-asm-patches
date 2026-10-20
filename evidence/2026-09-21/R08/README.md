@@ -2,6 +2,22 @@
 
 Status: **STATIC_CANDIDATE_DO_NOT_FLASH** with **BOUNDED_EXECUTION_PASS**.
 
+## Intake correction - 20 October 2026
+
+The original PR revision accepted a synthetic parent with the wrong SHA-256
+when its local preimages matched, and its verifier printed PASS for two empty
+inputs under `python -O` because assertions were removed. The builder now
+checks the complete documented parent hash, and verifier requirements remain
+active with optimized Python. Focused regressions are in `test_r08_preflight.py`.
+The older `validation.json` is a historical receipt, not a rerun of this repair.
+
+This fixes those two software defects only. Installed-image on/off validation,
+exclusive multi-output publication/rollback, exact bank/caller contracts and
+independent native/bench/recovery evidence still require review. Keep this PR
+draft and do not promote its builder or firmware to public master/release merely
+because these focused checks pass. The existing checksum-bypass byte is retained,
+not established as a generally valid checksum policy.
+
 Target:
 - `VX-VY_V6_$060A_Enhanced_v1.0a.bin`
 - SHA-256 `5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd`
