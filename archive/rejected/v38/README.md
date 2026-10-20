@@ -1,6 +1,6 @@
 # v38 retired: preserved, not a runnable patch
 
-The old applier, import-time writer test and two misleading v38 ASM files were removed from the active implementation after their exact bytes were preserved and the archive copies SHA-256 checked. The prior committed versions remain in Git history; the dirty primary checkout was not edited.
+The old applier, import-time writer test and two misleading v38 ASM files were removed from the active implementation after their exact bytes were preserved and the archive copies SHA-256 checked. The prior committed versions remain in Git history; the dirty primary checkout was not edited. The preservation hashes below identify the original Windows checkout bytes, including their line endings; they are not Git-blob hashes.
 
 The documented defect is a bank-2 hook at file 0x101E1 calling CPU $C500 while the intended payload was stored at bank-1 file 0x0C500. Reusing an apparent zero run or changing the CPU constant is not a proved repair.
 

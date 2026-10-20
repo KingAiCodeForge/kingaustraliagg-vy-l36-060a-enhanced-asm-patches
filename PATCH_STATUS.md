@@ -39,71 +39,73 @@ The output directory must be new and outside the candidate directories. The tool
 
 ## Per-file public ASM inventory
 
+Hashes below identify the source bytes stored in Git, not a Windows CRLF checkout. Normalize checkout line endings to the Git form before comparing; the two curated manifests also pin normalized source identity.
+
 The table below is a source inventory, not a claim that each file has been fully reviewed. MANIFEST_BOUND_STATIC_HOLD refers only to the two public curated source manifests. All other retained implementations require individual review; a VERIFIED or PRODUCTION filename cannot override this status.
 
-| Public ASM path | SHA-256 | State |
+| Public ASM path | SHA-256 of Git-stored bytes | State |
 | --- | --- | --- |
-| asm_wip/turbo_boost/antilag_cruise_button.asm | 84a994f1a8e4d73036655869bb1a966ec34bda67072955a25cb0ee1130c412e2 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/turbo_boost/antilag_rolling.asm | b6c6ea7ca339e8e686b486fe1dda0e7aeae1722784c4f846e74c4a7026eaa6ab | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/turbo_boost/antilag_turbo.asm | 98d2ffc4fa209019b970c936e7a07893c9a70d2cea580de032f8ee72890c68e9 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/turbo_boost/boost_controller_pid.asm | 48e17e6b5f11de8fb09754eb4e063a12e20203d167a5138dae5fa5e804eccb6f | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/turbo_boost/hybrid_fuel_spark_limiter.asm | df93164103605b749e8d56011e2de08a827931ab0e263fca353a11f514fc2f12 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/turbo_boost/overboost_protection.asm | 0de352eef03470a096d9538fef6e051ddf680508e09a7ce146e721280a18535d | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/turbo_boost/turbo_limiter_v1.asm | 30298bd1fa1e42f730414272a945a69771ad061b218aa1ab5c8e562c87d2c05b | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_11p_style_v44_BANKFIX.asm | 6326f8ee9c6076b42e9be1c48043b3113ee7363bc4e8277feb05ed50816ee542 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_11p_style_v45_engineBANK.asm | 240012a3b09d28ee4c67adbc7428d6faf60daa204a74241cb41a9399136ee8d5 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/Spark_cut_3000rpm_test_11p_style_v43.asm | db302a14214145e46e5fa3ebb4989f931e3c1b851489265c7353a6add56f61f4 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_3000rpm_TEST_v38t.asm | 126109bc780fc3e539b468c42cafda5d0857cd39348fdfe4a98c0c36288ef216 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_3x_period_VERIFIED.asm | 8704870aef6a0a049a53b27610170630e269d31c81c68c2415f1fcce74d3d47b | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_6000rpm_v32.asm | 7599ea31f545a56d8c97b0c2cd855c0134473c5c120888008613530d1b283698 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_6375_safe_mode_v18.asm | af1781443c4178a6349e44b999819a27db08eeeb8c83dc43c8a4fc6a2fa4f967 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_bmw_inspired_v40.asm | b7a0605b5bc0860b5943a42a9b8ab0f7fcccb2d1520c67f253ab114deb07028e | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_chrome_method_v33.asm | c7345f91dcf17f03823a955f1217f73caad979fac284da0848e47efb44da29a0 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_combined_fuel_v35.asm | ca93ec3b63936e2dcc6aa2d40d323ee3aa66ea5bd8b90f0bfe50c06b41083f03 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_delco_optimized_v41.asm | 4df1e448caa7194fe68160cf719019bc72f1a2d1b6e740a01a6b1e57d892f76c | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_dwell_patch_v37.asm | 1ff61e9a9d9a57ca8fc278621a4641a8c012174ac4545756a49820e6c52b347c | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_original.asm | 64a790d3d8a5fbc41e74ea57085a9ed412bc1dbc9290e9173c0b4f76fef6c172 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_progressive_soft_v9.asm | 15e41c4fcfaad6fdc7c1326f0928caef9232428e00b402c40d13cd11df7afa51 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_rolling_v34.asm | 958cdb274aaa9b71db8f39790edd2b1e6af2440d5ff8996471a4672f07b27549 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_soft_timing_v36.asm | 52e01814c005ea4f590980e3df2e25b364c94009a081c8a9bbc4b26adc6522b9 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_the1_method_port_v39.asm | 29a0e42f785f9300ce276d92d1fb2d9d92a4dfaca62fe3dead040bdf3cd33acc | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/spark_cut/spark_cut_two_stage_hysteresis_v23.asm | 7e93ba0d7b22fd937c0da932b832a767c85214a0b183ec3487878c0e013323c4 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/shift_control/flat_shift_no_lift.asm | dc4cbf8fc26fdffca27675bb6f18e0ad465ab26ddbb59d5b65edc597f7a1b3ce | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/shift_control/launch_control_two_step.asm | c3dcee2de89b51f2066c4ccc20b6a25ca42b00d4dd7fdcd6b880b28eed92de08 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/shift_control/no_lift_shift.asm | 81da3b490f1890cca3d40943373f14749684d39dbb971fe77e9a29d952d20fee | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/shift_control/shift_bang_auto.asm | af222bb4ed9e64612349eb97a23224069bac42a50410ef48e6014e72bbf18cdc | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/shift_control/shift_bang_manual.asm | a6b21e47a0759fef197531f290495aed796e04d5114efdf5869944754374cc60 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/shift_control/shift_launch_v1.asm | 89843b3035fc31c3bc5c609c495e16cf23e43e7d2dca4a3955c705a57fc9df29 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/shift_control/shift_retard.asm | 8babb52fb81d0601b882efad9e6183b855ae102e4e7036dd43052d8c7ee2a5fd | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/shift_control/timing_retard_soft.asm | 00914744944b72e500cdf63f755ac52a90f46da7a1d5ab50bd295cc37d5383f6 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/rejected/REJECTED_methodB_dwell_override.asm | 8757a1fd911ac0b8d51b4ae548ea381ae602f8d2220f17d18a7c896067d34fd5 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/old_versions/spark_cut_methodv2.asm | e617f51b23f41bdf9acd56ae74456090bf30be75c8f8516d0c2cc0d9002d0aa1 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/old_versions/spark_cut_methodv3.asm | d26847647c5f3109083d75b947de61877cbcb453fa5868df6600a991612d6494 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/old_versions/spark_cut_methodv4.asm | 7e8a2013248dfac2019980539566df0ec91ace84044aa8aac854082fac098d7a | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/old_versions/spark_cut_original.asm | 787c570e6c9f151c863482b37e0c2fa55ee10e2f7f2a19e6dc5c38db0c856dd9 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/needs_validation/NEEDS_VALIDATION_methodC_output_compare.asm | 43fc22fe7c88fc81882b43d8a8940626f1de6e9d76c7bbdcf67e93fadbfc46cb | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/needs_validation/NEEDS_VALIDATION_v14_hardware_timer_control.asm | d5be73566412aa65344f20cc17d870f5fa2a1628eb77170a5176da9868b0ba9c | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/needs_validation/NEEDS_VALIDATION_v16_tctl1_bennvenn_ose12p_port.asm | 78912e979aff91fa2c8b48dc0f255c7d336921169c3c38ab4650c8626b895392 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/needs_validation/NEEDS_VALIDATION_v17_oc1d_forced_output.asm | 4fa55d1773b56b2e9101712afcfe3b07ac289ea6e3db2c508ef213e57fafa6cb | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/needs_validation/NEEDS_VALIDATION_v19_pulse_accumulator_isr.asm | 33f779ac79959221cd68d80cc78e137e5e57d32d5e721acf564f8671e307a55a | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/needs_more_work/NEEDS_WORK_hardware_est_disable_v13.asm | 74f46c07727de09ddada6d550863fb14dcd64b0afc918b5e4de8d3f012561256 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/lumpy_idle_XDF_ONLY/lumpy_idle_xdf_parameters_v2.asm | 872c07ba6d7406223ce67fd2bed6de18443921f6f183f541e9c54d0f218c08ef | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/ghost_cam_ASM_PATCH/ghost_cam_rpm_delta_spark_v1.asm | 7aef4439ef37c84cdd9ab040a350bd62f592f4ec6c2e657b26bcdec8e2338879 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/ghost_cam_ASM_PATCH/ghost_cam_rpm_rotating_idle.asm | 96c2ab36896fc02de40a9fbb859d96efdab3e5351412ba9a0dd04ea8c84c11bd | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/ghost_cam/ghost_cam_retarded_idle_selector_v1.asm | be4a7b2d44dcddfe2d1c8320bab5c9bdc1214f15f8a24ba745299c0bf0ac8faf | MANIFEST_BOUND_STATIC_HOLD |
-| asm_wip/fuel_systems/alpha_n_tps_fallback.asm | 10006a647f1da51456adee70da9cac7d8045b4a852286838482889c39cac3f73 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/fuel_systems/e85_dual_map_toggle.asm | 7c8f9fdf064428de0cfec7ede3bb4512768d3fa1062cdc8d9371482219086282 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/fuel_systems/fuel_cut_enhanced.asm | 85eb77c5c3c7129bf271e551ac07b0b9ecfe9217e6e30f9cdd63f7b90d4557ec | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/fuel_systems/mafless_alpha_n_v1.asm | 6ad3ec5a4d373aeb7ae6a95fab841d4beeb753f72898850884fe2bf341b6c27b | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/fuel_systems/mafless_alpha_n_v2.asm | a033c59d09fb9eeae5660413db799cb471c8fe7df3f842ee9687f9834b686185 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/fuel_systems/mafless_alpha_n_v3.asm | fdf5e2cd9793955e05967414e350c31c8ece7c7d70ca794b305f41c7565f3ed8 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/fuel_systems/mafless_tpi_method.asm | dd1aa4564e8bfdc6df89aee9a3bac19bbe565980f2c8afd48241887136519231 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/fuel_systems/speed_density_fallback_v1.asm | 9e736e083cc2cfa1f7016069dcc0b77afe3bbc41a66a3b97761ee00d04a89e74 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/fuel_systems/speed_density_ve_table.asm | db51a0cfe1c60f7f22210b7ca3aa67bf42e3476c1d3053040de5893960f1e55a | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/est_shared_probe/est_shared_dual_store_probe_v52.asm | 15e398d20688b717a5a9993dda718ae6ad5c3421819d14d3f27d989fb65fdfe4 | MANIFEST_BOUND_STATIC_HOLD |
-| asm_wip/cold_maps_only_for_tuning_patch/alpina_mafless_fallback_v1.asm | ec2c5453d0e6046ef6e6abe31da87243e13993ee5d3e6d553dd95bd46ed93399 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/cold_maps_only_for_tuning_patch/cold_maps_force_cold_spark_v1.asm | fdc1c56672290e83d4e1f72f99f7798b344f8e483a249c48482c174529b9fcd5 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
-| asm_wip/cold_maps_only_for_tuning_patch/cold_maps_tuning_alpina_method_v1.asm | f84bf193f96593bfc0ef0517ee80863b2d17976e89400e5e8826a02c47c8c1a0 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/turbo_boost/antilag_cruise_button.asm | 6e933781add4e3bf7c212c98fc57334722c3568df7447681461135ed10aa220f | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/turbo_boost/antilag_rolling.asm | a2caac27257579d4d6097631c13dc3e1f4b16596b61e22f4d64b12ffc1101728 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/turbo_boost/antilag_turbo.asm | 67da5e510b0c3dbc7611fb8593ca0c92e0cff03ff39477b031cdb4ef75c0bc55 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/turbo_boost/boost_controller_pid.asm | c41752327532027d6390b77cfc6a01a4385ad438569c1925fdccd6f9e9db9a75 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/turbo_boost/hybrid_fuel_spark_limiter.asm | 97196f042d593344d6a814049ac6c1bf24cfa15bc5c1c21643eabe805b207eab | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/turbo_boost/overboost_protection.asm | e60ed1b400048759a21c798b12b9298eee30ca1e739748f87c57182ac7442c93 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/turbo_boost/turbo_limiter_v1.asm | 5a24683eaea308abfb6315f0ec53a441ccc7e023f52456bc58bd0d837b5385b7 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_11p_style_v44_BANKFIX.asm | 5865d136c8fecd39a927d17baa80faaa7ce478540def78de29f8cad5f432fde5 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_11p_style_v45_engineBANK.asm | fe6e7fdfba252738bdc9cdd37e7efa4423c3fb9b751a2fe6047375edb15a5377 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/Spark_cut_3000rpm_test_11p_style_v43.asm | b5b02165f58dd685be310c3be1fa667168c242f1c41159bab1fcbe826142eaef | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_3000rpm_TEST_v38t.asm | 8523a7ae0beafd23229108a62ef94c7399641c604c141026947fdfcab8d9eb48 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_3x_period_VERIFIED.asm | 781b452c6e0fea7a5e12c5ed835b08e51789ab35b60abd76e5a0ccb5fda806ef | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_6000rpm_v32.asm | 694fbb9c10442844ecb9a7d7a628e4c74038b18efb6c56d3429b9364617638c7 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_6375_safe_mode_v18.asm | 9e5a702c8a35eeb6a21f991a0c030e0feaf1686a5ec5cc0e7402739480c394de | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_bmw_inspired_v40.asm | 6b7f6280584270d4a580855b961893c12a1dd1626363f145632948ca66fef869 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_chrome_method_v33.asm | 8d89bd8d6802d45878bb9b11ac51a038664c0d5ac05cb1ad647356951dcb6f8b | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_combined_fuel_v35.asm | ca77f32de690725be680f5aa9608ea2c31e06dfdea3d47b698bb0d06976832a5 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_delco_optimized_v41.asm | d8339591c5a0026140bea0c221fd1bda394d66cf07f50dd0e07ea7e0d6e9f372 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_dwell_patch_v37.asm | 863c3bc9c03be7f8849a36ac869c58d3777b1b5b751267abd53f8f078009c3aa | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_original.asm | e8d45c20174716531ceda4caffe02e8e53f97da9f1b0a0cf9c4673f8f09fe539 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_progressive_soft_v9.asm | 4daf1dc3c001e80b1216711d0b617ae12ab7173698b5bcf1e7db076cfd7f52d2 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_rolling_v34.asm | 436236f2e32f4e0133212ea74bb489099d887d800b31f85d0f871ccfed8343ae | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_soft_timing_v36.asm | f367233fd16c65425e6750e2fea563657d762183fe34478cef340ae9bfe43394 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_the1_method_port_v39.asm | ffe863259f887c9a4d7c637674e9ad6ed3dd2e7c998bce8cde8d9fd07b06eb04 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/spark_cut/spark_cut_two_stage_hysteresis_v23.asm | 23f00003b47c972a05bf2422b486a3b6bed5a5dc009a06d3eecdf00a898e98ec | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/shift_control/flat_shift_no_lift.asm | f3a1cb688e0d2ea2fa6b0437c030c2dd0bb0eb8a6515f3a91518daaf5826dee7 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/shift_control/launch_control_two_step.asm | 31f7eb7547791b7509dd33cc6d610e9c88d77bec4753e47b06bb78ccec2eea7b | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/shift_control/no_lift_shift.asm | 70d7c3770c7c5da50161e1705420312d95bab37746951d45453aed284d9d5f0e | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/shift_control/shift_bang_auto.asm | a523b2d0d5bd4ee3b357609cdc24ebebcf0b3ad49775f8fc80df6c09b4bf6d2c | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/shift_control/shift_bang_manual.asm | 3ebb5b4d0b512d7eac00289ba0063e85f473f8c9e26efbcdaa3aab6fad1c7114 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/shift_control/shift_launch_v1.asm | 947e8748d45e39be33030c8eb66cfbef07d0ece50eb45272f22d44cd4298f881 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/shift_control/shift_retard.asm | aa8d76653ede8f62a3b8c9fc965353e9ba1f38c3243c78333b9e240e377305fc | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/shift_control/timing_retard_soft.asm | 53c70ffa2d535dc97562d0212ce78b7359e48691c9dca195c38cf6a18090d6a0 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/rejected/REJECTED_methodB_dwell_override.asm | 05fb8b0bf4d3ce1ffbebab7cea00d9aad84829c9c077a937a0fcf537adb58445 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/old_versions/spark_cut_methodv2.asm | 99114351512273014ebcb70874786a1725ad7cb97de13fbaa3736400d7f11361 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/old_versions/spark_cut_methodv3.asm | 5df1d8c9174af505255d1c91f454fdf043f9e90332511fe74b5fca9927ade2b4 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/old_versions/spark_cut_methodv4.asm | 55af37a7f95b1ead0e2e9cf68e4b33b359ff812dc79b8e6be4dc35edf447478f | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/old_versions/spark_cut_original.asm | 15695338b654c70134edf04915fec44aa6c209a7d7d197b50b240e29170122a4 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/needs_validation/NEEDS_VALIDATION_methodC_output_compare.asm | 212b26121561fb3498dc00d6f800b03988cc855f40b54deae752535923fb2acc | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/needs_validation/NEEDS_VALIDATION_v14_hardware_timer_control.asm | 917afc3c45675309851e4f59553a0157f015349d576725488887b5ce449d07e6 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/needs_validation/NEEDS_VALIDATION_v16_tctl1_bennvenn_ose12p_port.asm | 9cb4d3b75baa66f9ad191770e1306829f73a84e175a0f5f9516c7be9d4adbf83 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/needs_validation/NEEDS_VALIDATION_v17_oc1d_forced_output.asm | b4b9e3f8128930da1410590cd92bd7b70a060213c24bac95f419a866af8b00e4 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/needs_validation/NEEDS_VALIDATION_v19_pulse_accumulator_isr.asm | efb4ab56426f67146f8c4b094112b21b969164f9fd947fe7c460cba441860859 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/needs_more_work/NEEDS_WORK_hardware_est_disable_v13.asm | ae4e0a7eb294ad7b98d38cab654f33d48916109285d5eacd7179212d463402ad | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/lumpy_idle_XDF_ONLY/lumpy_idle_xdf_parameters_v2.asm | 58249ac138a504cffa5dc5f70c7222917074ab70fe401b748744ab14272c486d | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/ghost_cam_ASM_PATCH/ghost_cam_rpm_delta_spark_v1.asm | fcff833060db32976fbbb14774714f0d29fc1a08baf7b196534ce7e99ad9c630 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/ghost_cam_ASM_PATCH/ghost_cam_rpm_rotating_idle.asm | 9bf12b3ce477fd85deee9a85562f31ad5e8ee1c07553efee1362bdadcc327e16 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/ghost_cam/ghost_cam_retarded_idle_selector_v1.asm | 9531a4a7ef40f21b05bbb13ba573c491223059722af9575c4ce8054dc09f3de5 | MANIFEST_BOUND_STATIC_HOLD |
+| asm_wip/fuel_systems/alpha_n_tps_fallback.asm | a35a2b4e5a5d9e9071ee5dd886ca5390854d314406ac183cd293b7ae13d1c460 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/fuel_systems/e85_dual_map_toggle.asm | c77431863844f09354c1841b3cd0d503b1b5a2cdb2b52726e3fca31fdf42085a | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/fuel_systems/fuel_cut_enhanced.asm | 8261e70a20861cf628b00b8649c5b2f1c17bad02980aafc076b54129d68278c6 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/fuel_systems/mafless_alpha_n_v1.asm | 08fc4e9d7e9da6dccd072d8bf0675ddfe08e80ee2611e8ef2cbd98d4a332e2aa | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/fuel_systems/mafless_alpha_n_v2.asm | b13ad8b829ca076b8486101bca89d59027cf54c3d945ef2bb495e701b6ae69dd | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/fuel_systems/mafless_alpha_n_v3.asm | 3409cd6c97960f87f04a0b64902e6a23b8cb62c51c7e94a3399dae731be05c8c | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/fuel_systems/mafless_tpi_method.asm | 001a5421649f6a2b2c80e446d71869c54171b9ff228dbb60b0821e0f58baa3af | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/fuel_systems/speed_density_fallback_v1.asm | e1d5b5e559159fe794b7cf52ec8681a45f928ce2985cf3927b8619f12e15cc5e | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/fuel_systems/speed_density_ve_table.asm | 35ce7ab78680fb7c49791d83ffe31d7b78f915b5d2cee81c16a332d83099e669 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/est_shared_probe/est_shared_dual_store_probe_v52.asm | 1ae5ac048259656e20e0b099d717ca54206320ca291ec3231b8df1998fd64b12 | MANIFEST_BOUND_STATIC_HOLD |
+| asm_wip/cold_maps_only_for_tuning_patch/alpina_mafless_fallback_v1.asm | 45e76539f360d67b6ccb506b2b612493bf2cb69cc535098ebe01280e4f00a50d | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/cold_maps_only_for_tuning_patch/cold_maps_force_cold_spark_v1.asm | 5fa7a3add104202641bbbdd3d18aab6a01b8db7592d5cedfc5a79df4c795be31 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
+| asm_wip/cold_maps_only_for_tuning_patch/cold_maps_tuning_alpina_method_v1.asm | ecc9c261a4cfb9c3df9e783c110aa7c005ebb5bacb76b5533dfaa0d4f091ce30 | LEGACY_UNREVIEWED_DO_NOT_FLASH |
 
 ## Archive V2 sources reviewed
 
