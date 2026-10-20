@@ -12,9 +12,50 @@ Owner-approved BIN publication is permitted under PUBLIC_WIP_POLICY.md. Permissi
 | SC01 / FDC1 | Reviewed rebuilt images and matching per-profile ASM are in bench_wip; queue hashes, caller/bank contracts, reversal and independent A09 parity checked | Shared-state/IRQ/stack ownership, physical suppression, safe re-arm and recovery remain unproved |
 | SC02 / SC03 | No executable implementation qualified by this public intake | Recover actual implementation evidence or retain analysis-only status; do not manufacture a binary from a family label |
 | CP1 / R61 / SC61 / SC62 / SCZ2 / EG1p1 | Reviewed experimental bundles include disabled/reference controls; exact source rebuild, independent A09 addressed-byte parity and bounded model checks | Whole-ECU asynchronous ownership, physical efficacy and recovery remain unproved; control side effects are documented individually |
+| R08 / draft PR #3 | Exact-parent gate and optimization-safe verifier repaired in the draft; eight focused host tests passed | Installed-image provenance, exclusive multi-output handling, dependency closure and bank/caller/native/bench/recovery review remain; not in the default build catalog |
 | Other patched BINs | Eligible for review under owner permission, not automatically approved | Inventory, deduplicate by hash and assess source/ASM/control-flow/integrity individually |
 
 The October 5 peer-pack correction distinguishes 57 matching XDF/BIN export/rebuild checks from code/hardware proof and moves v60 to diagnostic history. Private messages are not reproduced or used as endorsements. The v60 code suffix includes FD 14 44 FC 01 9B 39: writing $1444 followed by loading D from $019B requires a caller/asynchronous-state proof, not a checksum-only test.
+
+## PR intake and preservation - 20 October 2026
+
+These dispositions distinguish selective source integration from merging an
+entire historical branch. No original/prototype variant or donor branch is
+deleted. The three donor heads and the public starting point were preserved
+together in a complete-history Git bundle and the bundle verified locally.
+
+| PR | Reviewed donor identity | Disposition and remaining scope |
+| --- | --- | --- |
+| [#4: ghost-cam curation](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches/pull/4) | `190a30879451b63f42a8ee7a4831ebd5040decd8` | Superseded core-source intake: all three ghost-cam files match public `ac269647` byte-for-byte in Git. Do not merge the broad deletion, old root-document rewrite or unadopted licensing/ignore-policy changes. Branch retained. |
+| [#5: EST shared-command probe](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches/pull/5) | `fabeff7a027081c5f76ec369805091fdead22120` | Superseded core-source intake: the six curated ghost/probe files and `party_patch_tool.py` / its tests match public `ac269647` exactly. Source integration already landed through [#6](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches/pull/6); later public policy remains controlling. Branch retained, not blindly merged. |
+| [#3: older audit and R08](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches/pull/3) | Original `731b407456c889c0e600f76e720bccca833476d9`; repaired draft `36dcd78420ec30763c2ad51fc54fe8c4ff2b758f` | Still draft/HOLD. Two reproduced code defects repaired on its own branch; this is not adoption of its entire audit or a firmware release. |
+
+The original R08 preflight accepted an invented 128 KiB image with a matching
+local signature/empty placement and bypass byte despite its wrong full-image
+hash. Its old verifier also returned exit zero and printed PASS for two empty
+files under `python -O`: removing assertions removed the checks and even the
+interpreter calls inside them. These negative controls used no real firmware.
+The first isolated invocation stopped on a sibling-import setup error; that
+attempt is retained, not counted as an assertion result. The corrected isolated
+invocation reproduced the false PASS and its normal-Python rejection control.
+
+The draft repair now requires the documented full parent SHA-256 and uses
+runtime requirements rather than removable verification assertions. Eight
+focused tests passed with zero skips, including the exact locally owned parent,
+unchanged recorded output SHA-256/72-byte delta, selected bounded model controls,
+and rejection under normal/optimized Python. No real firmware file was written;
+the old large campaign receipt was not rerun or replaced. These eight tests are
+a separate scope from the public 31-test tool suite, not a combined ECU grade.
+
+Before R08 may enter a default-branch build catalog, independently address its
+installed-image on/off provenance, exclusive multi-file output/rollback,
+dependency closure, bank/caller/output contracts and actual recovery evidence.
+The older audit's phase-counter, airflow, XDF and compiler assertions need their
+own exact-source reconciliation; they are not promoted by fixing two scripts.
+In particular its ghost-cam source hash differs from the current manifest-bound
+source, so a historical verdict cannot silently become current source proof.
+That PR-reconciliation change published no new BIN, private VX source or private
+correspondence. The later reviewed bench-bundle intake is accounted for below.
 
 ## Exact v60 HOLD identities
 
