@@ -75,7 +75,7 @@ Read [bank and ISR research](BANK_SWITCHING_AND_ISR_ANALYSIS.md), [TIC3 analysis
 
 ## Important: do not follow the legacy v38 instructions
 
-- The retired [`spark_cut_chr0m3_method_VERIFIED_v38.asm`](archive/rejected/v38/README.md) was removed from the active layout after preservation. Its **misleading filename** and historical comments did not justify either the initialization-path hook or the cross-bank `JSR $C500` placement. It must **not** be used as a preferred starting point for a working patch.
+- The retired [`spark_cut_chr0m3_method_VERIFIED_v38.asm`](archive/rejected/v38/README.md) and `PATCH_BYTES_v38.asm` remain at their original tracked paths solely to preserve rejected research history. Their **misleading filenames** and historical comments do not justify the initialization-path hook or cross-bank `JSR $C500` placement. Neither is in the supported build catalog, and neither may be used as a preferred starting point for a working patch. The retirement record overrides their old comments and claimed endorsements.
 - [`tools/apply_spark_cut_v38.py`](tools/apply_spark_cut_v38.py) is now a retired compatibility entry that always refuses without reading or writing a BIN. Its old implementation and the import-time writer test were preserved before replacement. See the [retirement record](archive/rejected/v38/README.md).
 - Other files named `VERIFIED`, `BANKFIX` or `PRODUCTION` are historical snapshots; none is promoted by this README.
 

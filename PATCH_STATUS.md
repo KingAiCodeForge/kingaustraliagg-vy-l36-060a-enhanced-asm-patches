@@ -4,7 +4,7 @@ Owner-approved BIN publication is permitted under PUBLIC_WIP_POLICY.md. Permissi
 
 | Family | Current evidence/state | Next required job |
 | --- | --- | --- |
-| v38 applier and two retired ASM files | RETIRED: cross-bank defect; old test wrote during import | Preserve history; do not repair by guessing another address |
+| v38 applier and two historical ASM files | RETIRED: cross-bank defect; old test wrote during import; exact public variants retained at original paths | Non-build research history only; do not repair by guessing another address |
 | v60 raw0208/rawzero | HOLD / diagnostic history: D may be reloaded from $019B rather than preserved | Re-derive caller-visible register/CCR and asynchronous-writer contract before a separately versioned replacement |
 | ghost-cam | Public hash-bound STATIC_CANDIDATE_DO_NOT_FLASH; A09 byte parity passed | Cadence, consumer/output and bench/recovery evidence |
 | est-shared-probe / v52 | Public hash-bound STATIC_WIP_PROBE_DO_NOT_FLASH | Qualify shared-command ownership, caller contracts, timing and measured response |
@@ -41,7 +41,7 @@ The output directory must be new and outside the candidate directories. The tool
 
 Hashes below identify the source bytes stored in Git, not a Windows CRLF checkout. Normalize checkout line endings to the Git form before comparing; the two curated manifests also pin normalized source identity.
 
-The table below is a source inventory, not a claim that each file has been fully reviewed. MANIFEST_BOUND_STATIC_HOLD refers only to the two public curated source manifests. All other retained implementations require individual review; a VERIFIED or PRODUCTION filename cannot override this status.
+The table below covers 61 non-retired WIP sources, not a claim that each file has been fully reviewed. The two additional v38 historical sources remain unchanged at their original paths and are separately identified in [the retirement record](archive/rejected/v38/README.md). MANIFEST_BOUND_STATIC_HOLD refers only to the two public curated source manifests. All other retained implementations require individual review; a VERIFIED or PRODUCTION filename cannot override this status.
 
 | Public ASM path | SHA-256 of Git-stored bytes | State |
 | --- | --- | --- |
