@@ -9,8 +9,10 @@ import argparse
 from dataclasses import dataclass
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 EXPECTED_SHA256 = "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd"
 IMAGE_SIZE = 0x20000
@@ -132,7 +134,29 @@ def overlaps(start: int, end: int, target_start: int, target_end: int) -> bool:
     return start < target_end and end > target_start
 
 
+def zero_run_inventory(image: bytes, minimum_size: int = 64) -> dict:
+    """Inventory maximal whole-file zero runs, independently of curated rows."""
+    runs=[]
+    start=None
+    for offset in range(len(image)+1):
+        if offset < len(image) and image[offset] == 0:
+            if start is None:
+                start=offset
+        elif start is not None:
+            if offset-start >= minimum_size:
+                runs.append({"file_start":f"0x{start:05X}",
+                             "file_end_exclusive":f"0x{offset:05X}",
+                             "size":offset-start})
+            start=None
+    return {"minimum_size":minimum_size,"count":len(runs),"runs":runs}
+
+
 def classify(image: bytes, expected_sha: str = EXPECTED_SHA256) -> dict:
+    """Admit only the pinned source by default; hash override is for fixtures.
+
+    A fixture hash does not qualify native signatures or executable storage.
+    The CLI intentionally does not expose this test-only hash override.
+    """
     if type(image) is not bytes or len(image) != IMAGE_SIZE:
         raise ValueError("requires a complete 131072-byte image")
     actual_sha = hashlib.sha256(image).hexdigest()
@@ -142,7 +166,8 @@ def classify(image: bytes, expected_sha: str = EXPECTED_SHA256) -> dict:
         raise ValueError("factory cutoff calibration unexpected")
     if image[NATIVE_PTR_FILE:NATIVE_PTR_FILE+3] != NATIVE_FUEL_POINTER:
         raise ValueError("factory cutoff pointer unexpected")
-    if expected_sha.lower() == EXPECTED_SHA256:
+    exact_source=expected_sha.lower() == EXPECTED_SHA256
+    if exact_source:
         for offset, signature in DIRECT_CAL_REF_SIGNATURES.items():
             if image[offset:offset+len(signature)] != signature:
                 raise ValueError(f"native CAL reader signature mismatch: 0x{offset:05X}")
@@ -170,10 +195,19 @@ def classify(image: bytes, expected_sha: str = EXPECTED_SHA256) -> dict:
         "zero_first_16": image[cpu_to_file(0xC500,bank):cpu_to_file(0xC500,bank)+16] == bytes(16),
     } for bank in ("BANK1", "BANK2", "BANK3")}
     return {
-        "schema": "kingai.vy060a.sc01b.space_negative_certificate.v1",
+        "schema": "kingai.vy060a.sc01b.space_negative_certificate.v2",
         "image_sha256": actual_sha,
-        "status": "ZERO_BYTES_VERIFIED_NO_EXECUTABLE_FREE_SITE_ADMITTED",
-        "known_native_pointers_preserved": True,
+        "status": ("ZERO_BYTES_VERIFIED_NO_EXECUTABLE_FREE_SITE_ADMITTED" if exact_source
+                   else "SYNTHETIC_FIXTURE_NO_NATIVE_SIGNATURE_OR_EXECUTABLE_QUALIFICATION"),
+        "known_native_pointers_preserved": True if exact_source else None,
+        "native_cal_reader_signatures": {
+            "total":len(DIRECT_CAL_REF_SIGNATURES),
+            "checked":len(DIRECT_CAL_REF_SIGNATURES) if exact_source else 0,
+            "skipped":0 if exact_source else len(DIRECT_CAL_REF_SIGNATURES),
+            "result":"PASS" if exact_source else "NOT_CHECKED_SYNTHETIC",
+        },
+        "curated_region_count":len(rows),
+        "zero_run_inventory":zero_run_inventory(image),
         "regions": rows, "cpu_0xC500_bank_aliases": alias,
         "approved_patch_spans": [],
         "holds": [
@@ -184,6 +218,47 @@ def classify(image: bytes, expected_sha: str = EXPECTED_SHA256) -> dict:
         ],
         "statement": "All-zero bytes are evidence of storage contents only; they are not permission to use that storage.",
     }
+
+
+def publish_json_exclusive(path: Path, data: str) -> str | None:
+    """Publish a complete report atomically, without replacing any destination.
+
+    A sibling temporary file keeps publication on one filesystem. Windows
+    rename refuses an existing destination; POSIX uses an exclusive hard link
+    because its rename may replace one. Both expose only the completed file.
+    Unsupported filesystems fail closed. This does not certify power-loss
+    durability of the containing directory.
+    Returns a cleanup warning if publication succeeds but its temporary link
+    cannot be removed; that failure does not undo the published report.
+    https://docs.python.org/3.13/library/os.html#os.rename
+    """
+    temporary=None
+    published=False
+    cleanup_warning=None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w",encoding="utf-8",newline="",
+                                         dir=path.parent,prefix=f".{path.name}.",
+                                         suffix=".tmp",delete=False) as dst:
+            temporary=Path(dst.name)
+            dst.write(data)
+            dst.flush()
+            os.fsync(dst.fileno())
+        if os.name == "nt":
+            os.rename(temporary,path)
+            temporary=None
+        else:
+            os.link(temporary,path)
+        published=True
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except OSError as exc:
+                if not published:
+                    raise
+                cleanup_warning=(f"report published to {path}; temporary cleanup failed "
+                                 f"for {temporary}: {exc}")
+    return cleanup_warning
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -200,8 +275,9 @@ def main(argv: list[str] | None = None) -> int:
         report=classify(args.image.read_bytes())
         data=json.dumps(report,indent=2,sort_keys=True)+"\n"
         if args.json_out:
-            with args.json_out.open("x",encoding="utf-8") as dst:
-                dst.write(data)
+            cleanup_warning=publish_json_exclusive(args.json_out,data)
+            if cleanup_warning:
+                print(f"WARNING: {cleanup_warning}",file=sys.stderr)
         print(data,end="")
     except (ValueError,OSError) as exc:
         print(f"REFUSED: {exc}",file=sys.stderr)

@@ -78,6 +78,21 @@ class PureValidationTests(unittest.TestCase):
         self.assertIn("assembler not rerun", report["assembly_evidence"])
         self.assertEqual(report["qualification"], verify.QUALIFICATION)
 
+    def test_current_disposition_cannot_claim_release_readiness(self):
+        expected = verify.current_disposition(sha256(self.binary).hexdigest())
+        self.assertEqual(expected["status"], "UNQUALIFIED_BENCH_WIP")
+        self.assertFalse(self.validate()["release_ready"])
+        self.manifest["current_disposition"] = expected
+        self.assertEqual(self.validate()["current_disposition"], expected)
+        for field, value in (("release_ready", True), ("release_ready", 0),
+                             ("status", "READY"), ("reason", "qualified"),
+                             ("evidence", "invented")):
+            manifest = deepcopy(self.manifest)
+            manifest["current_disposition"][field] = value
+            with self.subTest(field=field, value=value):
+                with self.assertRaises(verify.BundleValidationError):
+                    self.validate(manifest)
+
     def with_optional_metadata(self):
         manifest = deepcopy(self.manifest)
         manifest.update({"family": "SYNTHETIC", "profile": "control",

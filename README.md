@@ -4,6 +4,8 @@
 
 **Documented branch:** public `master`. **Reviewed tooling and bundle intake:** 20 October 2026.
 
+> **LEGACY SC01 ACTIVE AND DISABLED: DO NOT FLASH.** Native-data collisions at handler `$5D05` and parameters `$5EF0` affect both historical images. Their old filenames and publication labels are preserved for identity; use the [current quarantine record](bench_wip/README.md#historical-sc01-quarantine) and [qualification audit](docs/SC01_QUALIFICATION_REVIEW_20261024.md) before downloading.
+>
 > **STATUS: EXPERIMENTAL RESEARCH. Reviewed `bench_wip/` bundles are isolated-bench WIP with unqualified hardware behavior/recovery. No patch is vehicle-qualified. Legacy DO_NOT_FLASH and HOLD entries retain their restrictions.**
 >
 > Some legacy ASM files are known to have incorrect bank calls or inactive hook points, even when their filenames contain `VERIFIED` or `PRODUCTION`. Passing a Python test, source hash check, deterministic byte build or file checksum is **not** proof of physical spark behaviour, ECU recovery or engine safety.
@@ -12,11 +14,11 @@ This README describes what the **currently published `master` branch** actually 
 
 ## Public WIP intake and current status
 
-Improved scripts will be added after review, portability fixes and regression tests. Jason now authorizes his reviewed patched BINs, including SC01/SC02/SC03 and other families, with matching patch ASM as **WIP_BENCH_FLASH_ONLY** bundles. This is publication permission, not blanket flash approval or a claim of defect-free code. Existing DO_NOT_FLASH candidates remain held.
+Improved scripts will be added after review, portability fixes and regression tests. Owner permission allows reviewed patched BINs with matching patch ASM as **WIP_BENCH_FLASH_ONLY** bundles. The already-published legacy SC01 active and disabled files are now **HISTORICAL_DO_NOT_FLASH**, retained only as evidence. This is publication permission, not blanket flash approval or a claim of defect-free code. Existing DO_NOT_FLASH candidates remain held.
 
 See [publication requirements and contribution contacts](PUBLIC_WIP_POLICY.md), [per-family/per-file status](PATCH_STATUS.md), and the [ASM WIP front door](asm_wip/README.md). Send sanitized evidence to jasonking282@gmail.com or jason.king@kingai.com.au. Private VX source and conversations are not uploaded.
 
-The [reviewed BIN/ASM bundle index](bench_wip/README.md) contains per-profile images recovered from the sent v3.1 peer pack, with unchanged BIN hashes, independently assembled matching patch source, full preimage/change manifests and explicit remaining limits. The [read-only bundle verifier](tools/verify_bench_bundle.py) reverses each candidate in memory to the pinned parent and checks its checksum and declared source regions. The [intake ledger](bench_wip/intake_status.json) accounts for all 57 indexed rows, including duplicate references and entries still held outside the public executable set.
+The [BIN/ASM archive index](bench_wip/README.md) separates 27 unqualified bench-WIP profiles from two quarantined historical SC01 images recovered from the sent v3.1 peer pack, with unchanged BIN hashes, independently assembled matching patch source, full preimage/change manifests and explicit remaining limits. The [read-only bundle verifier](tools/verify_bench_bundle.py) reverses each candidate in memory to the pinned parent and checks its checksum and declared source regions. The [intake ledger](bench_wip/intake_status.json) preserves all 57 historical indexed rows and records the current SC01 quarantine separately. **No current bundle is release-ready.** The verifier reports static integrity separately and `--require-release-ready` refuses unqualified or quarantined bundles. The [20 October bench prerelease](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches/releases/tag/bench-wip-2026.10.20) is a historical snapshot containing SC01; its old labels do not override this warning.
 
 ## What is implemented and what remains unproved
 

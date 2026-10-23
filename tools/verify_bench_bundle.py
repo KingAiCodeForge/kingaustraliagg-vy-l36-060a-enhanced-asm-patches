@@ -3,6 +3,8 @@
 
 Assembly declarations are checked against bundled bytes; the assembler is not
 rerun. Passing these checks supplies no hardware, recovery or vehicle approval.
+Use --require-release-ready when a caller needs a release eligibility gate;
+current bench-WIP and historical quarantined bundles are not release-ready.
 """
 
 from __future__ import annotations
@@ -28,6 +30,30 @@ KNOWN_HOLD = frozenset((
     "4df9165b39f4e2aaf4a28106a5d4f42be3ab312ba32653f0e8503af2280354e5",
     "e0d1234553debd0318c910e26346a0154b67a17523adddb974e670a3a9a37481",
 ))
+# Exact payload identities survive renamed files and stripped legacy metadata.
+LEGACY_SC01 = frozenset((
+    "6e63865810f452c310b83a368a0f2ee9ab942f6a53d3e38af8d2215c302a662a",
+    "7670fcc475f7273f8a2e924466a10eb369499209e2ac90c8b098ba2dd41241a3",
+))
+SC01_DISPOSITION = {
+    "status": "HISTORICAL_DO_NOT_FLASH",
+    "release_ready": False,
+    "reason": "Native-data collisions at handler $5D05 and parameters $5EF0 affect active and disabled SC01; ignition and recovery remain unqualified.",
+    "evidence": "docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md",
+}
+
+
+def current_disposition(binary_hash: str) -> dict:
+    """Keep static integrity distinct from current distribution eligibility."""
+    if binary_hash in LEGACY_SC01:
+        return dict(SC01_DISPOSITION)
+    return {
+        "status": "UNQUALIFIED_BENCH_WIP",
+        "release_ready": False,
+        "reason": "Static bundle integrity is not hardware, ignition, recovery or vehicle qualification.",
+    }
+
+
 QUALIFICATION = {
     "independent_assembly": True,
     "hardware_execution": False,
@@ -105,7 +131,8 @@ def _validate_bytes(manifest: dict, binary: bytes, asm: bytes, *,
     """
     _keys(manifest, {"schema", "status", "source", "binary", "asm", "changes",
                      "assembly", "qualification", "known_limits"}, "manifest",
-          {"family", "profile", "purpose", "hooks", "checksum", "host_review"})
+          {"family", "profile", "purpose", "hooks", "checksum", "host_review",
+           "current_disposition"})
     for field in ("family", "profile", "purpose"):
         if field in manifest:
             _text(manifest[field], field)
@@ -130,6 +157,14 @@ def _validate_bytes(manifest: dict, binary: bytes, asm: bytes, *,
     _require(binary_hash not in KNOWN_HOLD, "known v60 HOLD payload is refused")
     _require(_digest(manifest["binary"]["sha256"], "binary.sha256") == binary_hash,
              "candidate SHA-256 mismatch")
+
+    disposition = current_disposition(binary_hash)
+    if "current_disposition" in manifest:
+        declared = manifest["current_disposition"]
+        _keys(declared, set(disposition), "current_disposition")
+        for field, expected in disposition.items():
+            _require(type(declared[field]) is type(expected) and declared[field] == expected,
+                     f"current_disposition.{field} disagrees with the current payload classification")
 
     _keys(manifest["asm"], {"path", "sha256"}, "asm")
     asm_name = _basename(manifest["asm"]["path"], ".asm")
@@ -258,7 +293,10 @@ def _validate_bytes(manifest: dict, binary: bytes, asm: bytes, *,
                  host["email_pack_member_manifest_checks"] >= 0,
                  "host_review.email_pack_member_manifest_checks must be a nonnegative integer")
     report = {
-        "status": STATUS, "static_checks": "PASS", "binary": binary_name,
+        "status": disposition["status"], "declared_status": manifest["status"],
+        "release_ready": disposition["release_ready"],
+        "current_disposition": disposition,
+        "static_checks": "PASS", "binary": binary_name,
         "binary_sha256": binary_hash, "asm": asm_name,
         "reconstructed_source_sha256": parent_hash,
         "change_spans": len(spans), "assembly_regions": len(assembly["regions"]),
@@ -338,11 +376,12 @@ class _JsonParser(argparse.ArgumentParser):
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _JsonParser(description=__doc__, add_help=False)
     parser.add_argument("--help", action="store_true")
+    parser.add_argument("--require-release-ready", action="store_true")
     parser.add_argument("manifests", nargs="*")
     try:
         args = parser.parse_args(argv)
         if args.help:
-            print(json.dumps({"usage": "verify_bench_bundle.py MANIFEST [MANIFEST ...]",
+            print(json.dumps({"usage": "verify_bench_bundle.py [--require-release-ready] MANIFEST [MANIFEST ...]",
                               "scope": __doc__}))
             return 0
         _require(bool(args.manifests), "provide one or more manifest paths")
@@ -353,10 +392,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     for manifest_path in args.manifests:
         try:
             report = validate_bundle(manifest_path)
-            results.append({"manifest": manifest_path, "ok": True, "report": report})
+            eligible = not args.require_release_ready or report.get("release_ready") is True
+            item = {"manifest": manifest_path, "ok": eligible, "report": report}
+            if not eligible:
+                item["error"] = "not release-ready: " + report["current_disposition"]["reason"]
+            results.append(item)
         except (OSError, ValueError) as error:
             results.append({"manifest": manifest_path, "ok": False, "error": str(error)})
-    print(json.dumps({"ok": all(item["ok"] for item in results), "results": results},
+    print(json.dumps({"ok": all(item["ok"] for item in results),
+                      "ok_scope": "release_eligibility" if args.require_release_ready else "static_integrity",
+                      "release_ready": all(item.get("report", {}).get("release_ready") is True
+                                           for item in results),
+                      "results": results},
                      indent=2, sort_keys=True))
     return 0 if all(item["ok"] for item in results) else 1
 

@@ -7,6 +7,9 @@
   "public_unique_images": 29,
   "covered_index_rows": 32,
   "hardware_qualified_images": 0,
+  "release_ready_images": 0,
+  "current_bench_wip_images": 27,
+  "historical_do_not_flash_images": 2,
   "entries": [
     {
       "family": "CHECKSUM_FIXED_REFERENCE",
@@ -118,14 +121,26 @@
       "sha256": "6e63865810f452c310b83a368a0f2ee9ab942f6a53d3e38af8d2215c302a662a",
       "decision": "PUBLISHED_BENCH_WIP",
       "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
-      "bundle": "sc01-3000-2900-active/manifest.json"
+      "bundle": "sc01-3000-2900-active/manifest.json",
+      "current_disposition": {
+        "status": "HISTORICAL_DO_NOT_FLASH",
+        "release_ready": false,
+        "reason": "Native-data collisions at handler $5D05 and parameters $5EF0 affect active and disabled SC01; ignition and recovery remain unqualified.",
+        "evidence": "docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md"
+      }
     },
     {
       "family": "SC01",
       "sha256": "7670fcc475f7273f8a2e924466a10eb369499209e2ac90c8b098ba2dd41241a3",
       "decision": "PUBLISHED_BENCH_WIP",
       "reason": "Exact reviewed image; matching per-profile ASM, full changes and independent assembly.",
-      "bundle": "sc01-3000-2900-control/manifest.json"
+      "bundle": "sc01-3000-2900-control/manifest.json",
+      "current_disposition": {
+        "status": "HISTORICAL_DO_NOT_FLASH",
+        "release_ready": false,
+        "reason": "Native-data collisions at handler $5D05 and parameters $5EF0 affect active and disabled SC01; ignition and recovery remain unqualified.",
+        "evidence": "docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md"
+      }
     },
     {
       "family": "EG1p1",
