@@ -1,6 +1,8 @@
 # Reviewed VY $060A bench-WIP images
 
-**Experimental isolated-bench WIP. No vehicle, measured ignition or recovery qualification.**
+**Experimental research archives — not approved for ECU flashing, engine or vehicle use.**
+
+**SC01-specific blocking finding (24 October 2026):** The existing SC01 active **and installed-disabled** images overwrite native F61AG/LPG data in the handler allocation and native VSR curves in the parameter allocation. The original SC01 also lacks independently proven missing-3X release and EST/DFI recovery. The historical `_WIP_BENCH_FLASH_ONLY` filename is not a statement of compatibility, readiness or safety. **Do not flash either SC01 image pending verified reallocation and full ignition-recovery review.** See [SC01B memory/owner investigation](../docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md).
 
 This intake recovered nine sent v3.1 ZIP parts and verified all 384 member-manifest hashes. The public set contains **29 distinct images**, covering **32 of the 57 indexed rows** after shared-reference deduplication. The [intake ledger](intake_status.json) records each remaining HOLD or rejection. Original BIN bytes were preserved.
 
