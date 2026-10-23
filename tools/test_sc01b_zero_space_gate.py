@@ -2,9 +2,16 @@
 from __future__ import annotations
 
 import importlib.util
+import contextlib
+import hashlib
+import io
+import json
+import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 SRC=Path(__file__).with_name("sc01b_zero_space_gate.py")
 spec=importlib.util.spec_from_file_location("sc01b_zero_space_gate",SRC)
@@ -14,6 +21,7 @@ a=importlib.util.module_from_spec(spec)
 import sys
 sys.modules[spec.name]=a
 spec.loader.exec_module(a)
+CLI=[sys.executable,*( ["-O"] if sys.flags.optimize else []),"-B",str(SRC)]
 
 
 class ZeroRomAdmissionTests(unittest.TestCase):
@@ -24,8 +32,42 @@ class ZeroRomAdmissionTests(unittest.TestCase):
         return bytes(b)
 
     def synthetic(self, image):
-        import hashlib
         return a.classify(image,expected_sha=hashlib.sha256(image).hexdigest())
+
+    def test_synthetic_report_does_not_claim_skipped_native_checks(self):
+        report=self.synthetic(self.fixture())
+        self.assertIsNone(report["known_native_pointers_preserved"])
+        self.assertEqual(report["native_cal_reader_signatures"], {
+            "total": 7, "checked": 0, "skipped": 7,
+            "result": "NOT_CHECKED_SYNTHETIC",
+        })
+        self.assertIn("SYNTHETIC", report["status"])
+
+    def test_curated_rows_are_separate_from_whole_image_zero_runs(self):
+        report=self.synthetic(self.fixture())
+        self.assertEqual(report["curated_region_count"],15)
+        inventory=report["zero_run_inventory"]
+        self.assertEqual(inventory["minimum_size"],64)
+        self.assertEqual(inventory["count"],len(inventory["runs"]))
+        self.assertEqual(inventory["count"],3)
+        self.assertNotEqual(inventory["count"],report["curated_region_count"])
+
+    def test_each_native_reader_signature_is_checked_for_exact_mode(self):
+        b=bytearray(self.fixture())
+        for offset, signature in a.DIRECT_CAL_REF_SIGNATURES.items():
+            b[offset:offset+len(signature)]=signature
+        # Isolate signature validation from hash admission using an in-memory
+        # test double. No altered firmware file or CLI override is produced.
+        digest=mock.Mock()
+        digest.hexdigest.return_value=a.EXPECTED_SHA256
+        with mock.patch.object(a.hashlib,"sha256",return_value=digest):
+            self.assertTrue(a.classify(bytes(b))["known_native_pointers_preserved"])
+            for offset in a.DIRECT_CAL_REF_SIGNATURES:
+                with self.subTest(offset=hex(offset)):
+                    changed=bytearray(b)
+                    changed[offset]^=1
+                    with self.assertRaisesRegex(ValueError,"native CAL reader signature"):
+                        a.classify(bytes(changed))
 
     def test_zeros_are_not_certified_executable(self):
         report=self.synthetic(self.fixture())
@@ -105,15 +147,148 @@ class ZeroRomAdmissionTests(unittest.TestCase):
         self.assertFalse(hasattr(a,"emit_bin"))
         self.assertFalse(hasattr(a,"create_trampoline"))
 
-    def test_output_path_does_not_exist_before_atomic_creation(self):
+
+class JsonPublicationTests(unittest.TestCase):
+    """Exercise the actual argument parser/main and publication failure paths.
+
+    Synthetic admission is injected at the classifier boundary; the public CLI
+    itself still has no way to admit synthetic or altered firmware inputs.
+    """
+
+    fixture=ZeroRomAdmissionTests.fixture
+
+    def invoke(self, image_path, output_path):
+        classify=a.classify
+        fixture_sha=hashlib.sha256(image_path.read_bytes()).hexdigest()
+        with mock.patch.object(a,"classify",side_effect=lambda image: classify(image,expected_sha=fixture_sha)):
+            out,err=io.StringIO(),io.StringIO()
+            with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):
+                code=a.main(["--image",str(image_path),"--json-out",str(output_path)])
+        return code,out.getvalue(),err.getvalue()
+
+    def test_cli_publishes_complete_matching_json_exclusively(self):
         with tempfile.TemporaryDirectory() as tmp:
-            p=Path(tmp)/"report.json"
-            self.assertFalse(p.exists())
-            with p.open("x",encoding="utf-8") as f:
-                f.write("KEEP")
-            with self.assertRaises(FileExistsError):
-                p.open("x",encoding="utf-8")
-            self.assertEqual(p.read_text(encoding="utf-8"),"KEEP")
+            source=Path(tmp)/"synthetic-input.dat"
+            source.write_bytes(self.fixture())
+            output=Path(tmp)/"report.json"
+            before=source.read_bytes()
+            code,stdout,stderr=self.invoke(source,output)
+            self.assertEqual((code,stderr),(0,""))
+            self.assertEqual(output.read_text(encoding="utf-8"),stdout)
+            self.assertEqual(json.loads(stdout)["approved_patch_spans"],[])
+            self.assertIsNone(json.loads(stdout)["known_native_pointers_preserved"])
+            self.assertEqual(source.read_bytes(),before)
+            self.assertEqual({p.name for p in Path(tmp).iterdir()},{source.name,output.name})
+            output.write_text("KEEP",encoding="utf-8")
+            code,stdout,stderr=self.invoke(source,output)
+            self.assertEqual(code,2)
+            self.assertEqual(stdout,"")
+            self.assertIn("REFUSED",stderr)
+            self.assertEqual(output.read_text(encoding="utf-8"),"KEEP")
+
+    def test_cli_never_publishes_partly_written_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"synthetic-input.dat"
+            source.write_bytes(self.fixture())
+            output=Path(tmp)/"report.json"
+            publication="rename" if os.name == "nt" else "link"
+            real_publish=getattr(os,publication)
+            def inspect_complete(source_path,destination_path):
+                self.assertFalse(output.exists())
+                report=json.loads(Path(source_path).read_text(encoding="utf-8"))
+                self.assertEqual(report["curated_region_count"],15)
+                return real_publish(source_path,destination_path)
+            with mock.patch.object(a.os,publication,side_effect=inspect_complete) as publish:
+                code,stdout,stderr=self.invoke(source,output)
+            self.assertEqual((code,stderr),(0,""))
+            publish.assert_called_once()
+            self.assertEqual(json.loads(output.read_text()),json.loads(stdout))
+
+    def test_cli_failed_sync_leaves_no_final_or_temporary_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"synthetic-input.dat"
+            source.write_bytes(self.fixture())
+            output=Path(tmp)/"report.json"
+            with mock.patch.object(a.os,"fsync",side_effect=OSError("injected sync failure")):
+                code,stdout,stderr=self.invoke(source,output)
+            self.assertEqual(code,2)
+            self.assertEqual(stdout,"")
+            self.assertIn("injected sync failure",stderr)
+            self.assertEqual(list(Path(tmp).iterdir()),[source])
+
+    def test_cli_concurrent_destination_creation_is_preserved(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"synthetic-input.dat"
+            source.write_bytes(self.fixture())
+            output=Path(tmp)/"report.json"
+            publication="rename" if os.name == "nt" else "link"
+            real_publish=getattr(os,publication)
+            def race(source_path,destination_path):
+                output.write_text("CONCURRENT",encoding="utf-8")
+                return real_publish(source_path,destination_path)
+            with mock.patch.object(a.os,publication,side_effect=race):
+                code,stdout,stderr=self.invoke(source,output)
+            self.assertEqual(code,2)
+            self.assertEqual(stdout,"")
+            self.assertIn("REFUSED",stderr)
+            self.assertEqual(output.read_text(),"CONCURRENT")
+            self.assertEqual({p.name for p in Path(tmp).iterdir()},{source.name,output.name})
+
+    def test_cli_refuses_output_that_aliases_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"synthetic-input.dat"
+            source.write_bytes(self.fixture())
+            before=source.read_bytes()
+            code,stdout,stderr=self.invoke(source,source)
+            self.assertEqual(code,2)
+            self.assertEqual(stdout,"")
+            self.assertIn("REFUSED",stderr)
+            self.assertEqual(source.read_bytes(),before)
+            self.assertEqual(list(Path(tmp).iterdir()),[source])
+
+    def test_actual_cli_refuses_synthetic_source_without_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"synthetic-input.dat"
+            source.write_bytes(self.fixture())
+            output=Path(tmp)/"report.json"
+            run=subprocess.run([*CLI,"--image",str(source),
+                                "--json-out",str(output)],capture_output=True,text=True)
+            self.assertEqual(run.returncode,2)
+            self.assertEqual(run.stdout,"")
+            self.assertIn("SHA-256 mismatch",run.stderr)
+            self.assertFalse(output.exists())
+
+
+class ExactSourceCliTests(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get("VY_V1_0A_BIN"),"optional exact-source checker input not supplied")
+    def test_actual_cli_exact_source_report_and_exclusive_output(self):
+        source=Path(os.environ["VY_V1_0A_BIN"])
+        before=hashlib.sha256(source.read_bytes()).hexdigest()
+        self.assertEqual(before,a.EXPECTED_SHA256)
+        with tempfile.TemporaryDirectory() as tmp:
+            output=Path(tmp)/"report.json"
+            command=[*CLI,"--image",str(source),"--json-out",str(output)]
+            run=subprocess.run(command,capture_output=True,text=True)
+            self.assertEqual(run.returncode,0,run.stderr)
+            self.assertEqual(run.stderr,"")
+            self.assertEqual(output.read_text(encoding="utf-8"),run.stdout)
+            report=json.loads(run.stdout)
+            self.assertTrue(report["known_native_pointers_preserved"])
+            self.assertEqual(report["native_cal_reader_signatures"], {
+                "total":7,"checked":7,"skipped":0,"result":"PASS",
+            })
+            self.assertEqual(report["curated_region_count"],15)
+            self.assertEqual(report["zero_run_inventory"]["count"],14)
+            self.assertEqual(report["approved_patch_spans"],[])
+            self.assertFalse(any(row["executably_free"] for row in report["regions"]))
+            saved=output.read_bytes()
+            repeat=subprocess.run(command,capture_output=True,text=True)
+            self.assertEqual(repeat.returncode,2)
+            self.assertEqual(repeat.stdout,"")
+            self.assertIn("REFUSED",repeat.stderr)
+            self.assertEqual(output.read_bytes(),saved)
+            self.assertEqual(list(Path(tmp).iterdir()),[output])
+        self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(),before)
 
 
 if __name__=="__main__":

@@ -1,6 +1,12 @@
 {
   "schema": "kingai.vy.bench-bundle.v1",
   "status": "WIP_BENCH_FLASH_ONLY",
+  "current_disposition": {
+    "status": "HISTORICAL_DO_NOT_FLASH",
+    "release_ready": false,
+    "reason": "Native-data collisions at handler $5D05 and parameters $5EF0 affect active and disabled SC01; ignition and recovery remain unqualified.",
+    "evidence": "docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md"
+  },
   "family": "SC01",
   "profile": "3000-2900-active",
   "purpose": "Phase-qualified event-hold experiment with real IRQ continuations; disabled and active are separate complete images.",

@@ -4,7 +4,7 @@
 
 **SC01-specific blocking finding (24 October 2026):** The existing SC01 active **and installed-disabled** images overwrite native F61AG/LPG data in the handler allocation and native VSR curves in the parameter allocation. The original SC01 also lacks independently proven missing-3X release and EST/DFI recovery. The historical `_WIP_BENCH_FLASH_ONLY` filename is not a statement of compatibility, readiness or safety. **Do not flash either SC01 image pending verified reallocation and full ignition-recovery review.** See [SC01B memory/owner investigation](../docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md).
 
-This intake recovered nine sent v3.1 ZIP parts and verified all 384 member-manifest hashes. The public set contains **29 distinct images**, covering **32 of the 57 indexed rows** after shared-reference deduplication. The [intake ledger](intake_status.json) records each remaining HOLD or rejection. Original BIN bytes were preserved.
+This intake recovered nine sent v3.1 ZIP parts and verified all 384 member-manifest hashes. The public set contains **29 distinct historical images**, now classified as **27 unqualified bench-WIP and two quarantined SC01 images**, covering **32 of the 57 indexed rows** after shared-reference deduplication. The [intake ledger](intake_status.json) records each remaining HOLD or rejection. Original BIN bytes were preserved.
 
 Each folder contains one BIN and matching ASM with the same `_WIP_BENCH_FLASH_ONLY` basename, plus `manifest.json` and `README.md`. Images are independent; do not stack them. Source compilation is addressed: never write assembler gap padding into a PCM.
 
@@ -12,7 +12,7 @@ The initial program installation requires a path that transfers the full program
 
 The exact parent is Enhanced v1.0a, SHA-256 `5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd`. The checksum-only control changes the downloaded parent word from `8E6F` to `9E9F`. No factory-reference, customer calibration, private full-source dump, correspondence or donor-source excerpt was added by this intake. Existing historical bank extracts remain elsewhere in the repository.
 
-## Bundle index
+## Unqualified bench-WIP index
 
 | Family | Profile | Files and exact limits |
 | --- | --- | --- |
@@ -33,8 +33,6 @@ The exact parent is Enhanced v1.0a, SHA-256 `5cb8bd1c61da37a3846b6c28600cdc21db3
 | R61 | 3000-2900-active | [Bundle](r61-3000-2900-active/README.md) / [manifest](r61-3000-2900-active/manifest.json) / [BIN](r61-3000-2900-active/R61_3000_2900_ACTIVE_WIP_BENCH_FLASH_ONLY.bin) / [ASM](r61-3000-2900-active/R61_3000_2900_ACTIVE_WIP_BENCH_FLASH_ONLY.asm) |
 | R61 | 3000-2900-control | [Bundle](r61-3000-2900-control/README.md) / [manifest](r61-3000-2900-control/manifest.json) / [BIN](r61-3000-2900-control/R61_3000_2900_CONTROL_WIP_BENCH_FLASH_ONLY.bin) / [ASM](r61-3000-2900-control/R61_3000_2900_CONTROL_WIP_BENCH_FLASH_ONLY.asm) |
 | REFERENCE | checksum-control | [Bundle](reference-checksum-control/README.md) / [manifest](reference-checksum-control/manifest.json) / [BIN](reference-checksum-control/REFERENCE_CHECKSUM_CONTROL_WIP_BENCH_FLASH_ONLY.bin) / [ASM](reference-checksum-control/REFERENCE_CHECKSUM_CONTROL_WIP_BENCH_FLASH_ONLY.asm) |
-| SC01 | 3000-2900-active | [Bundle](sc01-3000-2900-active/README.md) / [manifest](sc01-3000-2900-active/manifest.json) / [BIN](sc01-3000-2900-active/SC01_3000_2900_ACTIVE_WIP_BENCH_FLASH_ONLY.bin) / [ASM](sc01-3000-2900-active/SC01_3000_2900_ACTIVE_WIP_BENCH_FLASH_ONLY.asm) |
-| SC01 | 3000-2900-control | [Bundle](sc01-3000-2900-control/README.md) / [manifest](sc01-3000-2900-control/manifest.json) / [BIN](sc01-3000-2900-control/SC01_3000_2900_CONTROL_WIP_BENCH_FLASH_ONLY.bin) / [ASM](sc01-3000-2900-control/SC01_3000_2900_CONTROL_WIP_BENCH_FLASH_ONLY.asm) |
 | SC61_SC62 | 3000-2800-control | [Bundle](sc61-sc62-3000-2800-control/README.md) / [manifest](sc61-sc62-3000-2800-control/manifest.json) / [BIN](sc61-sc62-3000-2800-control/SC61_SC62_3000_2800_CONTROL_WIP_BENCH_FLASH_ONLY.bin) / [ASM](sc61-sc62-3000-2800-control/SC61_SC62_3000_2800_CONTROL_WIP_BENCH_FLASH_ONLY.asm) |
 | SC61_SC62 | 3000-2800-short6 | [Bundle](sc61-sc62-3000-2800-short6/README.md) / [manifest](sc61-sc62-3000-2800-short6/manifest.json) / [BIN](sc61-sc62-3000-2800-short6/SC61_SC62_3000_2800_SHORT6_WIP_BENCH_FLASH_ONLY.bin) / [ASM](sc61-sc62-3000-2800-short6/SC61_SC62_3000_2800_SHORT6_WIP_BENCH_FLASH_ONLY.asm) |
 | SC61_SC62 | 3000-2800-zero | [Bundle](sc61-sc62-3000-2800-zero/README.md) / [manifest](sc61-sc62-3000-2800-zero/manifest.json) / [BIN](sc61-sc62-3000-2800-zero/SC61_SC62_3000_2800_ZERO_WIP_BENCH_FLASH_ONLY.bin) / [ASM](sc61-sc62-3000-2800-zero/SC61_SC62_3000_2800_ZERO_WIP_BENCH_FLASH_ONLY.asm) |
@@ -46,11 +44,28 @@ The exact parent is Enhanced v1.0a, SHA-256 `5cb8bd1c61da37a3846b6c28600cdc21db3
 | V54 | reviewed-diagnostic | [Bundle](v54-reviewed-diagnostic/README.md) / [manifest](v54-reviewed-diagnostic/manifest.json) / [BIN](v54-reviewed-diagnostic/V54_REVIEWED_DIAGNOSTIC_WIP_BENCH_FLASH_ONLY.bin) / [ASM](v54-reviewed-diagnostic/V54_REVIEWED_DIAGNOSTIC_WIP_BENCH_FLASH_ONLY.asm) |
 | V58 | reviewed-diagnostic | [Bundle](v58-reviewed-diagnostic/README.md) / [manifest](v58-reviewed-diagnostic/manifest.json) / [BIN](v58-reviewed-diagnostic/V58_REVIEWED_DIAGNOSTIC_WIP_BENCH_FLASH_ONLY.bin) / [ASM](v58-reviewed-diagnostic/V58_REVIEWED_DIAGNOSTIC_WIP_BENCH_FLASH_ONLY.asm) |
 
+## Historical SC01 quarantine
+
+**Active and installed-disabled SC01 are HISTORICAL_DO_NOT_FLASH.** Their bytes, original basenames, historical manifest `status` and original intake decision are preserved for provenance. The added `current_disposition` fields override any recommendation inferred from those old labels. They are excluded from the unqualified bench-WIP index above; neither is release-ready.
+
+| Historical profile | Evidence and current warning |
+| --- | --- |
+| SC01 active | [Quarantined image notes](sc01-3000-2900-active/README.md) / [manifest](sc01-3000-2900-active/manifest.json) |
+| SC01 installed-disabled control | [Quarantined image notes](sc01-3000-2900-control/README.md) / [manifest](sc01-3000-2900-control/manifest.json) |
+
+The [bench-wip-2026.10.20 prerelease](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches/releases/tag/bench-wip-2026.10.20) and its existing ZIP include these historical SC01 files. That release/asset identity is unchanged; this current warning supersedes its older bench-WIP descriptions. Do not use the archive or repository source downloads as a release-ready firmware pack. Documentation and tool gates cannot prevent manual use of an old download.
+
 ## Verification
 
-The portable read-only verifier checks candidate/ASM hashes, all change preimages, exact parent reconstruction, checksum, bank-qualified hooks and declared assembly regions. It writes no firmware. It checks the recorded assembly evidence; it does not rerun A09 or prove physical behavior.
+The portable read-only verifier reports `static_checks: "PASS"` only for integrity, alongside `release_ready: false` and the current payload disposition. It checks candidate/ASM hashes, all change preimages, exact parent reconstruction, checksum, bank-qualified hooks and declared assembly regions. It writes no firmware. It checks the recorded assembly evidence; it does not rerun A09 or prove physical behavior.
 
 `python tools/verify_bench_bundle.py bench_wip/cp1-3000-control/manifest.json`
+
+For automation that must reject release-ineligible artifacts:
+
+`python tools/verify_bench_bundle.py --require-release-ready bench_wip/sc01-3000-2900-active/manifest.json`
+
+This read-only command returns exit 1 while retaining its static integrity report. All 29 current bundles fail release eligibility; no release-ready firmware allowlist is established here.
 
 Run the repository regression suite with `python -m unittest discover -s tools -p "test_*.py" -v`. Published-bundle checks need no private reference. Separate curated-catalog integration and assembler tests use optional local fixtures and may skip when absent.
 
@@ -68,4 +83,4 @@ Independent source-package checks passed for CP1 (15 tests), R61 (40), SC61/62 (
 
 - Combined fuel+ignition profiles are later comparisons: fuel cut can conceal failure of the ignition mechanism.
 
-The corrected queue begins with reference/control comparisons, CP1, R61, SC61/62, EG1p1 and SCZ2. FDC1/SC01 now have an additional independent bank/control-flow review, recorded with each bundle. v60 remains HOLD and v38 remains retired. All controls require the same recovery and load-isolation preparation as their active partner.
+The corrected queue begins with reference/control comparisons, CP1, R61, SC61/62, EG1p1 and SCZ2. FDC1 has additional independent bank/control-flow review, recorded with each bundle. Both SC01 images are removed from that queue and retained only in the historical quarantine above. v60 remains HOLD and v38 remains retired. All controls require the same recovery and load-isolation preparation as their active partner.

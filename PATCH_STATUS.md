@@ -9,7 +9,8 @@ Owner-approved BIN publication is permitted under PUBLIC_WIP_POLICY.md. Permissi
 | ghost-cam | Public hash-bound STATIC_CANDIDATE_DO_NOT_FLASH; A09 byte parity passed | Cadence, consumer/output and bench/recovery evidence |
 | est-shared-probe / v52 | Public hash-bound STATIC_WIP_PROBE_DO_NOT_FLASH | Qualify shared-command ownership, caller contracts, timing and measured response |
 | Named V52/V53/V54/V58 diagnostic bundles | Fresh exact-image rebuild, independent A09 assembly and bounded caller/entry-model review support separate experimental bench-WIP copies | Old catalog/source classifications are unchanged; IRQ/timing/peripheral and physical output behavior remain unproved |
-| SC01 / FDC1 | Reviewed rebuilt images and matching per-profile ASM are in bench_wip; queue hashes, caller/bank contracts, reversal and independent A09 parity checked | Shared-state/IRQ/stack ownership, physical suppression, safe re-arm and recovery remain unproved |
+| **Legacy SC01 active and disabled** | **HISTORICAL_DO_NOT_FLASH**: exact original bytes retained. Native-data collisions at handler `$5D05` and parameters `$5EF0` affect both images; static integrity PASS does not clear this disposition. | Retain for evidence only; do not flash. Any separately developed successor requires its own allocation and ignition/recovery proof. |
+| FDC1 | Reviewed rebuilt images and matching per-profile ASM are in bench_wip; queue hashes, caller/bank contracts, reversal and independent A09 parity checked | Shared-state/IRQ/stack ownership, physical suppression, safe re-arm and recovery remain unproved |
 | **SC01B proposed** | **DESIGN_ONLY / NO BIN**. The existing SC01 handler overlays native F61AG data and its disabled/active parameters overwrite native VSR curves; candidate zero-ROM areas have unclosed/known data readers. See [SC01B review](docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md). | Prove non-overlapping code+configuration+RAM allocation and correct 3X/18X, M42/EST and Power-gated release before constructing any research firmware. Preserve stock fuel limiter. |
 | SC02 / SC03 | No executable implementation qualified by this public intake | Recover actual implementation evidence or retain analysis-only status; do not manufacture a binary from a family label |
 | CP1 / R61 / SC61 / SC62 / SCZ2 / EG1p1 | Reviewed experimental bundles include disabled/reference controls; exact source rebuild, independent A09 addressed-byte parity and bounded model checks | Whole-ECU asynchronous ownership, physical efficacy and recovery remain unproved; control side effects are documented individually |
@@ -64,6 +65,8 @@ correspondence. The later reviewed bench-bundle intake is accounted for below.
 - VY_060A_Enhanced_v1.0a_MainESTStore_RPM3000_RawZero_BENCH_SCOPE_ONLY_v60.bin: e0d1234553debd0318c910e26346a0154b67a17523adddb974e670a3a9a37481
 
 ## Offline verification - 20 October 2026
+
+Current disposition: **27 unqualified bench-WIP images, two historical SC01 DO NOT FLASH images, zero release-ready images**. Historical intake counts and release identities below remain as recorded; they are not a current recommendation. See the [quarantine record](bench_wip/README.md#historical-sc01-quarantine).
 
 The sent-pack intake recovered all nine ZIP parts and matched all **384** listed member hashes. The reviewed public set has **29 distinct BINs** with matching per-profile patch ASM, covering **32/57 indexed rows** after shared-reference deduplication. The remaining **25 rows** retain explicit HOLD/rejection decisions in [the intake ledger](bench_wip/intake_status.json). No private full-source dump, correspondence or donor-source excerpt was copied into these bundles.
 

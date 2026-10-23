@@ -1,4 +1,4 @@
-# SC01 3000-2900-active - experimental bench WIP
+# SC01 3000-2900-active - historical DO NOT FLASH archive
 
 **HOLD — do not flash this existing SC01 image to any PCM. Research/provenance only.**
 
@@ -11,16 +11,20 @@ Exact source SHA-256: `5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6
 
 The BIN bytes are unchanged from the recovered v3.1 peer pack. The matching ASM is a comment-cleaned, per-profile source assembled independently with A09 V1.62. The manifest supplies hook replacements and checksum changes separately from addressed source sections. Never apply assembler gap padding as firmware.
 
+The manifest preserves the original `WIP_BENCH_FLASH_ONLY` status for historical identity and adds the overriding `current_disposition: HISTORICAL_DO_NOT_FLASH`. The original basename and [historical bench prerelease](https://github.com/KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches/releases/tag/bench-wip-2026.10.20) are not current recommendations.
+
 The manifest records every changed byte and its original preimage. The read-only verifier checks hashes, checksum and reversal to the exact parent; it does not authorize a flash.
 
 Run from the repository root:
 
 `python tools/verify_bench_bundle.py bench_wip/sc01-3000-2900-active/manifest.json`
 
+A static integrity PASS retains `release_ready: false`. Adding `--require-release-ready` to that command returns exit 1. This gate does not prevent manual flashing of downloaded bytes.
+
 Limits:
 
 - No measured ignition/EST/DFI/coil, bench readback, interrupted-write recovery or vehicle qualification is claimed.
-- Full logical 128 KiB program image. An initial CAL-only write does not install program changes.
+- Historical full logical 128 KiB image identity only; no installation is recommended.
 - Use the exact declared program parent. Do not stack with other cave/hook/RAM users or logger/RBCP/OneROM additions.
 - ASM-to-BIN parity and instruction-subset models do not prove whole-ECU IRQ, timing, stack or shared-state ownership.
 - This is a logical PCM image, not a transformed OneROM carrier file.

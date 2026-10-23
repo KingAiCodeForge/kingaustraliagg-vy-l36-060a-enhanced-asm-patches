@@ -4,7 +4,7 @@ Updated 20 October 2026 by owner request.
 
 ## What may be published
 
-Jason authorizes publication of his reviewed patched BINs, including SC01, SC02, SC03 and other families, with matching patch ASM. This is not limited to three names and is not permission to upload an unreviewed directory. Publication permission is not evidence of correct code or safe ECU behavior.
+Jason authorizes publication of his reviewed patched BINs, across individually reviewed families, with matching patch ASM. This is not limited to three names and is not permission to upload an unreviewed directory. Publication permission is not evidence of correct code or safe ECU behavior.
 
 Improved scripts will be added to the public repositories after review, portability fixes and relevant regression tests. Keep exact-target patches, experimental probes and reusable tooling separate. Preserve variants before retiring an active implementation; never overwrite a different payload merely because its name matches.
 
@@ -16,7 +16,7 @@ Each bundle must record exact source/output/ASM SHA-256, source size and firmwar
 
 Known code defects block the executable upload. Unknown or missing assembly/control-flow evidence stays HOLD. Bench-readback, interrupted-write recovery, signal behavior and vehicle qualification are separate evidence fields; do not fabricate them or require completed road testing just to document an appropriately qualified bench-only WIP. The label limits intended use; it is not a guarantee that flashing is safe. Existing DO_NOT_FLASH manifest statuses remain in force until their own evidence justifies a change.
 
-**SC01-specific exception, 24 October 2026:** The already-published historical SC01 active and disabled binaries have confirmed native CAL/table allocation overlaps and unproven missing-reference recovery. They remain downloadable for provenance only; their `_WIP_BENCH_FLASH_ONLY` names do not authorize **any PCM flash**. The explicit current HOLD in [PATCH_STATUS](PATCH_STATUS.md), the [SC01B allocation review](docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md) and the per-bundle READMEs supersedes any more permissive interpretation of the filenames. Publication permission does not waive engineering defects.
+**SC01-specific exception, 24 October 2026:** The already-published historical SC01 active and disabled binaries have confirmed native CAL/table allocation overlaps and unproven missing-reference recovery. They remain downloadable for provenance only; their `_WIP_BENCH_FLASH_ONLY` names do not authorize **any PCM flash**. The explicit current **HISTORICAL_DO_NOT_FLASH** disposition in both manifests, the intake ledger, [PATCH_STATUS](PATCH_STATUS.md), the [SC01B allocation review](docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md) and the per-bundle READMEs supersedes any more permissive interpretation of the filenames. Publication permission does not waive engineering defects. The verifier identifies these payloads by SHA-256 even if renamed or supplied with an old manifest, and reports their historical status separately from current disposition. Use `--require-release-ready` for a release eligibility check; all currently published bundles are unqualified and fail that gate. This does not prevent somebody manually flashing a downloaded historical file. Do not republish the historical bench ZIP as a recommended or release-ready output.
 
 Never blindly stack SC01, SC02, SC03, SCZ2, ghost-cam or other families. Check hook, ROM, RAM, IRQ, timer and state ownership and qualify a separately rebuilt combined image.
 
