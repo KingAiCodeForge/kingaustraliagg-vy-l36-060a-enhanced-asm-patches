@@ -16,6 +16,8 @@ Each bundle must record exact source/output/ASM SHA-256, source size and firmwar
 
 Known code defects block the executable upload. Unknown or missing assembly/control-flow evidence stays HOLD. Bench-readback, interrupted-write recovery, signal behavior and vehicle qualification are separate evidence fields; do not fabricate them or require completed road testing just to document an appropriately qualified bench-only WIP. The label limits intended use; it is not a guarantee that flashing is safe. Existing DO_NOT_FLASH manifest statuses remain in force until their own evidence justifies a change.
 
+**SC01-specific exception, 24 October 2026:** The already-published historical SC01 active and disabled binaries have confirmed native CAL/table allocation overlaps and unproven missing-reference recovery. They remain downloadable for provenance only; their `_WIP_BENCH_FLASH_ONLY` names do not authorize **any PCM flash**. The explicit current HOLD in [PATCH_STATUS](PATCH_STATUS.md), the [SC01B allocation review](docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md) and the per-bundle READMEs supersedes any more permissive interpretation of the filenames. Publication permission does not waive engineering defects.
+
 Never blindly stack SC01, SC02, SC03, SCZ2, ghost-cam or other families. Check hook, ROM, RAM, IRQ, timer and state ownership and qualify a separately rebuilt combined image.
 
 ## Private material

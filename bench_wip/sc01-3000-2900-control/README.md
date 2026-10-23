@@ -1,6 +1,8 @@
 # SC01 3000-2900-control - experimental bench WIP
 
-**WIP_BENCH_FLASH_ONLY. No vehicle or measured ignition qualification.**
+**HOLD — do not flash this existing SC01 image to any PCM. Research/provenance only.**
+
+**Reproduced native allocation collisions (24 October 2026):** SC01's 333-byte handler at `$5D05..$5E51` overlaps native F61AG/LPG data, and its five-byte cut/return/enable parameters at `$5EF0..$5EF4` replace portions of native VSR curves. In the active build the conditional native lookup at `$5EF3` changes from `$0000` to `$54A5`; in the disabled control it still changes to `$5400`. The latter therefore is **not** an unchanged factory-function control. Missing-3X HELD release and physical EST/DFI/M42 recovery remain unproved. This supersedes any implication of flash readiness in the historical filename. See [SC01B allocation/recovery review](../../docs/SC01B_ROM_ALLOCATION_AND_HOOK_REVIEW_20261024.md).
 
 Phase-qualified event-hold experiment with real IRQ continuations; disabled and active are separate complete images.
 
