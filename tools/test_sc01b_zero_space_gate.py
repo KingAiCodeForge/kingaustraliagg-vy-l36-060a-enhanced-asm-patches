@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -245,6 +246,64 @@ class JsonPublicationTests(unittest.TestCase):
             self.assertIn("REFUSED",stderr)
             self.assertEqual(source.read_bytes(),before)
             self.assertEqual(list(Path(tmp).iterdir()),[source])
+
+    def test_cli_reports_published_when_posix_temporary_cleanup_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"synthetic-input.dat"
+            source.write_bytes(self.fixture())
+            before=source.read_bytes()
+            output=Path(tmp)/"report.json"
+            def completed_link(source_path,destination_path):
+                # Model successful exclusive link publication on Windows too;
+                # actual filesystem hard-link atomicity is not tested here.
+                with Path(destination_path).open("xb") as dst:
+                    dst.write(Path(source_path).read_bytes())
+            posix=SimpleNamespace(name="posix",fsync=os.fsync,
+                                  link=mock.Mock(side_effect=completed_link))
+            with mock.patch.object(a,"os",posix),mock.patch.object(
+                    Path,"unlink",side_effect=PermissionError("injected cleanup failure")):
+                code,stdout,stderr=self.invoke(source,output)
+            self.assertEqual(code,0,stderr)
+            self.assertEqual(json.loads(stdout),json.loads(output.read_text()))
+            self.assertIn("WARNING: report published",stderr)
+            self.assertIn("injected cleanup failure",stderr)
+            self.assertNotIn("REFUSED",stderr)
+            posix.link.assert_called_once()
+            leftovers=list(Path(tmp).glob(".report.json.*.tmp"))
+            self.assertEqual(len(leftovers),1)
+            self.assertIn(str(leftovers[0]),stderr)
+            self.assertEqual(leftovers[0].read_bytes(),output.read_bytes())
+            self.assertEqual(source.read_bytes(),before)
+
+    def test_cli_refuses_posix_publication_failure_without_overwriting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"synthetic-input.dat"
+            source.write_bytes(self.fixture())
+            before=source.read_bytes()
+            output=Path(tmp)/"report.json"
+            posix=SimpleNamespace(name="posix",fsync=os.fsync,
+                                  link=mock.Mock(side_effect=OSError("injected link failure")))
+            with mock.patch.object(a,"os",posix):
+                code,stdout,stderr=self.invoke(source,output)
+            self.assertEqual(code,2)
+            self.assertEqual(stdout,"")
+            self.assertIn("REFUSED: injected link failure",stderr)
+            self.assertNotIn("report published",stderr)
+            self.assertFalse(output.exists())
+            self.assertEqual(list(Path(tmp).iterdir()),[source])
+            output.write_text("KEEP",encoding="utf-8")
+            def exclusive_link(source_path,destination_path):
+                with Path(destination_path).open("xb") as dst:
+                    dst.write(Path(source_path).read_bytes())
+            posix.link.side_effect=exclusive_link
+            with mock.patch.object(a,"os",posix):
+                code,stdout,stderr=self.invoke(source,output)
+            self.assertEqual(code,2)
+            self.assertEqual(stdout,"")
+            self.assertIn("REFUSED",stderr)
+            self.assertEqual(output.read_text(),"KEEP")
+            self.assertEqual(source.read_bytes(),before)
+            self.assertEqual({p.name for p in Path(tmp).iterdir()},{source.name,output.name})
 
     def test_actual_cli_refuses_synthetic_source_without_output(self):
         with tempfile.TemporaryDirectory() as tmp:

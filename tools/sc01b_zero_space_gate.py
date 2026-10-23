@@ -220,7 +220,7 @@ def classify(image: bytes, expected_sha: str = EXPECTED_SHA256) -> dict:
     }
 
 
-def publish_json_exclusive(path: Path, data: str) -> None:
+def publish_json_exclusive(path: Path, data: str) -> str | None:
     """Publish a complete report atomically, without replacing any destination.
 
     A sibling temporary file keeps publication on one filesystem. Windows
@@ -228,9 +228,13 @@ def publish_json_exclusive(path: Path, data: str) -> None:
     because its rename may replace one. Both expose only the completed file.
     Unsupported filesystems fail closed. This does not certify power-loss
     durability of the containing directory.
+    Returns a cleanup warning if publication succeeds but its temporary link
+    cannot be removed; that failure does not undo the published report.
     https://docs.python.org/3.13/library/os.html#os.rename
     """
     temporary=None
+    published=False
+    cleanup_warning=None
     try:
         with tempfile.NamedTemporaryFile(mode="w",encoding="utf-8",newline="",
                                          dir=path.parent,prefix=f".{path.name}.",
@@ -244,9 +248,17 @@ def publish_json_exclusive(path: Path, data: str) -> None:
             temporary=None
         else:
             os.link(temporary,path)
+        published=True
     finally:
         if temporary is not None:
-            temporary.unlink()
+            try:
+                temporary.unlink()
+            except OSError as exc:
+                if not published:
+                    raise
+                cleanup_warning=(f"report published to {path}; temporary cleanup failed "
+                                 f"for {temporary}: {exc}")
+    return cleanup_warning
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -263,7 +275,9 @@ def main(argv: list[str] | None = None) -> int:
         report=classify(args.image.read_bytes())
         data=json.dumps(report,indent=2,sort_keys=True)+"\n"
         if args.json_out:
-            publish_json_exclusive(args.json_out,data)
+            cleanup_warning=publish_json_exclusive(args.json_out,data)
+            if cleanup_warning:
+                print(f"WARNING: {cleanup_warning}",file=sys.stderr)
         print(data,end="")
     except (ValueError,OSError) as exc:
         print(f"REFUSED: {exc}",file=sys.stderr)
