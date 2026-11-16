@@ -525,7 +525,7 @@ case 0x1023: return "TFLG1";           // Timer Interrupt Flag 1
 ## ⚠️ Note on dis68hc11 Bugs
 
 The dis68hc11 `Opcodes.h` contains **swapped IMM/DIR modes** for ADCA and ADCB.
-See `68HC11_Opcodes_Reference.md` for corrected values.
+See [the complete instruction master](68HC11_COMPLETE_INSTRUCTION_REFERENCE.md), including its consolidated legacy `Opcodes.h` table and correction ledger, for the historically corrected values; confirm against the target CPU documentation before toolchain use.
 
 ---
 
