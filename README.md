@@ -75,7 +75,7 @@ The published splitter treats the 128 KiB image as these ranges:
 
 A proposed trampoline via the `$5D05` common region remains **research**: the bank selection, instruction displacement, interrupt state, return sequence, stack/cycle margin, area ownership and actual signal effect must all be independently validated. A zero-filled ROM region is not automatically safe to execute from or rewrite.
 
-Read [bank and ISR research](BANK_SWITCHING_AND_ISR_ANALYSIS.md), [TIC3 analysis](TIC3_ISR_ANALYSIS.md) and [bank source information](bank_split_output/README.md) before discussing any patch location.
+Read [bank switching and ISR research, including the complete preserved historical TIC3 analysis and its correction ledger](BANK_SWITCHING_AND_ISR_ANALYSIS.md), and [bank source information](bank_split_output/README.md) before discussing any patch location.
 
 ## Important: do not follow the legacy v38 instructions
 
