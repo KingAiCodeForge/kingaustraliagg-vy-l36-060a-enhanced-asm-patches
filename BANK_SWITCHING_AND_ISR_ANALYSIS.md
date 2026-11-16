@@ -636,10 +636,10 @@ The original analysis (November 2025) found `STD $017B` at offset `0x101E1` and 
 ## 📊 Meticulous Free Space Analysis (VERIFIED 2026-02-10, CORRECTED 2026-02-12)
 
 > **⚠️ CORRECTION 2026-02-12:** Previous version did not account for cross-bank JSR/JMP references or XDF table overlap.  
-> **See [`FREE_SPACE_ANALYSIS_DEFINITIVE.md`](FREE_SPACE_ANALYSIS_DEFINITIVE.md) for the triple-checked definitive analysis.**  
+> **Historic evidence gap / false-confidence correction (2026-11-16):** An older version called `FREE_SPACE_ANALYSIS_DEFINITIVE.md` "triple-checked" and linked to it, but that file is excluded by `.gitignore` and **is not present in the tracked public repository**. Its full method, byte ownership and version-specific tests cannot be independently audited here. This former public link was broken and is not a verification citation. The figures below are **historical scan results, not qualified writable/executable free space**.  
 > Key corrections: Bank3 `$9B0B-$BFFF` has 182 JSR refs + Bank1 has 96% code there — NOT truly free.  
 > Common area `$5117-$5248` has 14 XDF torque tables — NOT free (zero-valued cal data ≠ unused space).  
-> Safest always-visible free space: **~1,370 bytes** at `$3E87`, `$5C31`, `$5D05`, `$6559` only.
+> Historically proposed always-visible candidate regions: **~1,370 bytes total** around `$3E87`, `$5C31`, `$5D05`, `$6559`. **NOT qualified safe or free** without whole-image source identification, all-bank reachability and ownership proof.
 
 > **Method:** Every byte of VY_V6_Enhanced.bin (131,072 bytes) analyzed via PowerShell.
 > Zero bytes (0x00) and FF bytes (0xFF) mapped. Contiguous runs identified.
