@@ -7,9 +7,11 @@
 > 
 ---
 
-## Cross-Reference Verification Status ✅
+## Historical cross-reference findings and source defects
 
-All opcodes verified against **7 independent sources** on January 20, 2026:
+**2026-11-16 evidence correction:** The January 20, 2026 source notes claimed that **all opcode entries had been verified against seven independent sources**. This is a **historical cross-reference claim**, not a test rerun during this documentation merge. The list below mixes opcode implementations with register-reference material; the related [cross-reference report](68HC11_CrossReference_Verification.md) itself records a wrong BNE encoding in `m68hc11x` and the ADCA/ADCB mode swaps in `dis68hc11`. Neither defective source is an independent clean pass. Preserve those faults as useful validation counterexamples, not as unqualified successes.
+
+**Original historical source list (January 20, 2026):**
 
 | Source | File Path | Status |
 |--------|-----------|--------|
@@ -18,8 +20,8 @@ All opcodes verified against **7 independent sources** on January 20, 2026:
 | gendasm | `gendasm/src/gendasm/cpu/m6811/m6811gdc.cpp` | ✅ Matches |
 | PySim11 | `EVBU_Simulator/PySim11/ops.py` | ✅ Matches |
 | techedge DISASM11 | `techedge_tools/DISASM11/DISASM11.OPC` | ✅ Matches |
-| m68hc11x Assembler | `m68hc11x/assembler.h` | ✅ Matches |
-| BASIC11 Registers | `BASIC11/exp-f1.inc` | ✅ Matches |
+| m68hc11x Assembler | `m68hc11x/assembler.h` | ⚠️ Historical BNE bug (`0x2B` entered instead of `0x26`), **not** a clean pass |
+| BASIC11 Registers | `BASIC11/exp-f1.inc` | Register-definition reference, **not** an independent full opcode-table check |
 | dis68hc11 | `dis68hc11/Opcodes.h` | ⚠️ **BUGGY** (ADCA/ADCB swapped) |
 
 ### ⚠️ Known Bug in dis68hc11
@@ -30,7 +32,7 @@ The `dis68hc11` disassembler has **IMM/DIR modes swapped** for ADCA and ADCB:
 - `OP_ADCB_DIR = 0xC9` ❌ WRONG (should be IMM)
 - `OP_ADCB_IMM = 0xD9` ❌ WRONG (should be DIR)
 
-**This document uses CORRECT opcodes verified against Motorola specifications.**
+**The reference tables include reported historical corrections against Motorola specifications.** This document does not itself establish a complete, independently reproduced all-opcode test pass as of 2026-11-16.
 
 ---
 
@@ -45,6 +47,9 @@ The `dis68hc11` disassembler has **IMM/DIR modes swapped** for ADCA and ADCB:
 8. [Register Map ($1000-$103F)](#register-map)
 9. [Condition Codes Register (CCR)](#condition-codes)
 10. [Cycle Counting Notes](#cycle-counting)
+11. [Legacy dis68hc11 mnemonic lookup (historical)](#legacy-hc11-mnemonics)
+12. [Legacy dis68hc11 instruction descriptions (historical)](#legacy-hc11-descriptions)
+13. [Legacy dis68hc11 opcode tables (historical)](#legacy-hc11-opcodes)
 
 ---
 
@@ -134,6 +139,7 @@ The `dis68hc11` disassembler has **IMM/DIR modes swapped** for ADCA and ADCB:
 | **ASRA** | Shift A Right | INH | — | 47 | — | 1 | 2 | |
 | **ASRB** | Shift B Right | INH | — | 57 | — | 1 | 2 | |
 
+<a id="branch-instructions"></a>
 ### B - Branch Instructions
 
 | Mnemonic | Condition | Opcode | Bytes | Cycles |
@@ -516,6 +522,7 @@ Ex  SBB CMB SCB ADD AND BIT LDB STB EOR ADC ORB ADB LDD STD LDX STX
 Fx  SBB CMB SCB ADD AND BIT LDB STB EOR ADC ORB ADB LDD STD LDX STX
 ```
 
+<a id="prebyte-instructions"></a>
 ### Y-Register Instructions (Prebyte $18)
 Most X-indexed instructions become Y-indexed with $18 prefix.
 Key opcodes: INY($08), DEY($09), TSY($30), TYS($35), PSHY($3C), PULY($38), XGDY($8F)
@@ -556,6 +563,7 @@ Used for LDX/STX with Y-indexing and some CPX variants.
 
 ---
 
+<a id="register-map"></a>
 ## Register Map ($1000-$103F)
 
 | Offset | Register | Description |
@@ -614,6 +622,7 @@ Used for LDX/STX with Y-indexing and some CPX variants.
 
 ---
 
+<a id="condition-codes"></a>
 ## Condition Codes Register (CCR)
 
 ```
@@ -636,6 +645,7 @@ Used for LDX/STX with Y-indexing and some CPX variants.
 
 ---
 
+<a id="cycle-counting"></a>
 ## Cycle Counting Notes
 
 - **Y-indexed instructions** add 1 cycle over X-indexed equivalents
@@ -1222,6 +1232,7 @@ OP_ADCA_IMM = 0x99,  // Should be DIR!
 
 ---
 
+<a id="legacy-hc11-mnemonics"></a>
 ## Legacy dis68hc11 mnemonic lookup reference — consolidated 2026-11-16
 
 The source-specific `Mnenomic.cpp` / `Mnenomic.h` lookup material, including page-0/page-1 tables, C++ signatures and VY mnemonic patterns, formerly lived in `68HC11_Mnemonics_Reference.md` (Git blob `cbc0d8b29b29ed5ec4769b354bd62b2847bad4d8`). It is preserved below, with only heading depth changed. These tables overlap the primary ISA reference; retain the primary tables above as the navigation source.
@@ -1728,6 +1739,7 @@ JSR → ... → RTS
 
 ---
 
+<a id="legacy-hc11-descriptions"></a>
 ## Legacy dis68hc11 instruction-description reference — consolidated 2026-11-16
 
 The old `68HC11_Descriptions_Reference.md` documents `Description(uint8_t op)`, source file `Description.cpp`/`Description.h`, a fuller English-description lookup, and VY-specific example patterns. It was a distinct C++ API companion to the main ISA table and is preserved **in full** below. Original Git blob: `8e000650442121b10fbc5cbf830d363dfef5f7cb`. Headings alone were nested two levels deeper to suit this master.
@@ -2419,6 +2431,7 @@ See `68HC11_Opcodes_Reference.md` for full details of the bug.
 
 ---
 
+<a id="legacy-hc11-opcodes"></a>
 ## Legacy dis68hc11 opcode tables — consolidated 2026-11-16
 
 The complete original source-specific `Opcodes.h` reference, including opcode-by-mode tables, page-1 prefix cases, the hex lookup matrix, VY examples, original correction notes and cited source names, was previously `68HC11_Opcodes_Reference.md`. Its Git blob is `341ca9ae7c0a5793eb12d6202971fdb31ec08501`; headings were nested two levels deeper, all other source text preserved.
