@@ -663,9 +663,9 @@ INJECTOR_PW_RAM     EQU $0153       ; 🔬 THEORETICAL Jan 27 2026 - UNTESTED!
 
 **Reality Check:** These are pattern-matched guesses. Could be temporary calculations, could be unrelated to injectors entirely. Binary patterns ≠ confirmed functionality.
 
-### TIC3 ISR RAM Variables (From TIC3_ISR_ANALYSIS.md) ⚠️ ENHANCED ONLY
+### TIC3 ISR RAM variables (historical Enhanced-only hypotheses)
 
-**Source:** ISR code at 0x35FF (Enhanced v1.0a - **NOT CONFIRMED in stock 92118883**)
+**Source and correction history:** [BANK_SWITCHING_AND_ISR_ANALYSIS.md](BANK_SWITCHING_AND_ISR_ANALYSIS.md), including the complete imported former `TIC3_ISR_ANALYSIS.md` and its 2026-11-16 evidence ledger. The historical `$35FF` opcode stream conflicts with a second listing in that master (`LDAA #$01` versus `MUL`). No exact-image SHA and byte trace reconciles them here. The following addresses, roles and XDF suggestions are retained as **unqualified, variant-specific historical findings**, not live RAM proof or stock 92118883 validation.
 
 | Address | Purpose | Evidence | XDF Status |
 |---------|---------|----------|------------|
@@ -674,7 +674,7 @@ INJECTOR_PW_RAM     EQU $0153       ; 🔬 THEORETICAL Jan 27 2026 - UNTESTED!
 | $016D | Cylinder index counter | LDAB $016D in TIC3 ISR | ❌ Not in XDF |
 | $01B3 | Previous TIC3 capture value | LDD $01B3 in TIC3 ISR | ❌ Not in XDF |
 
-**⚠️ VERIFICATION STATUS:** These addresses extracted from Enhanced v1.0a ISR disassembly. The ISR code at 0x35FF is **NOT FOUND** in stock 92118883 binary. May be Enhanced-specific modifications. Requires stock binary verification.
+**Verification status (corrected 2026-11-16):** Historical Enhanced v1.0a snippets suggested these accesses, while the historical stock 92118883 comparison did not find the same ISR. Two legacy `$35FF` disassembly listings disagree; **neither was reverified against a hashed original BIN in this documentation merge**. Any XDF entries require exact variant, CPU/file-offset separation, semantics, accesses and bench confirmation.
 
 ### Mode Flag Bytes (TIC3 ISR References)
 
