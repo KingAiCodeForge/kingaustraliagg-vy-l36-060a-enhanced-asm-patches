@@ -2,13 +2,23 @@
 
 > **Generated:** January 20, 2026 | **Updated:** February 9, 2026
 > **Purpose:** Document verification of 68HC11 opcode tables against multiple authoritative sources + converted PDF cross-references
-> **Result:** ✅ All kingai documentation verified correct | 17 PDFs converted to MD (374,999 words)
+> **Historical result claim (2026-02-09; not revalidated):** all KingAI reference documentation was "verified correct"; 17 PDFs were reported converted to Markdown (374,999 words).
+
+---
+
+## Evidence and historical false-success qualification (2026-11-16)
+
+This is a preserved **January–February 2026 comparison report**, not an independently repeated opcode verification, simulator execution, or firmware proof. The original absolute statements "all documentation verified correct" and "8 independent sources" are retained as **historical claims** below but are not adopted as verified conclusions. The report itself records a BNE opcode error in `m68hc11x` and swapped ADCA/ADCB immediate/direct labels in `dis68hc11`.
+
+The complete instruction tables and the fully preserved older mnemonic/description/opcode sources have been consolidated into [68HC11_COMPLETE_INSTRUCTION_REFERENCE.md](68HC11_COMPLETE_INSTRUCTION_REFERENCE.md). The original standalone references were removed only after round-trip content checks; Git history retains the exact originals.
+
+**Needed for a current qualified result:** versioned raw source copies, a pinned comparison harness, independent assembler/disassembler round-trips for all valid encodings (including prebytes and illegal opcodes), reproducible test outputs and target-derivative-specific review. This edit does not claim those tests were run.
 
 ---
 
 ## Summary
 
-All opcodes in the kingai_68hc11_resources documentation have been verified against **8 independent sources** in the `68HC11_Reference` folder. One source (`dis68hc11`) contains bugs 
+The historical report **claimed** an eight-source opcode cross-check. Its own list includes at least two known faulty implementations: `m68hc11x` (BNE reported as `0x2B`) and `dis68hc11` (ADCA/ADCB immediate/direct modes swapped). **Eight examined sources does not mean eight independently passing implementations.** The counts and pass claims below were not rerun during the 2026-11-16 documentation consolidation.
 
 ---
 
@@ -412,7 +422,7 @@ All PDFs in the 68HC11_Reference folder have been batch-converted to Markdown us
 
 ## Conclusion
 
-✅ **All kingai_68hc11_resources documentation is VERIFIED CORRECT**
+**Historical conclusion, NOT current universal proof:** the February 2026 report stated "All kingai_68hc11_resources documentation is VERIFIED CORRECT". That blanket claim is overbroad relative to the two documented source bugs and the absence of a complete reproducible validation run in this edit. Treat the entries below as the original test scope claims, not a present certification.
 
 **Verification scope (as of February 9, 2026):**
 - All 256 Page 0 opcodes verified across 8+ independent sources
