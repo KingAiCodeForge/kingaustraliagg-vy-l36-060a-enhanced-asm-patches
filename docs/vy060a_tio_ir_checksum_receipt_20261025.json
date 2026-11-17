@@ -1,0 +1,77 @@
+{
+  "GitHub_bank3_listing_classification": {
+    "false_linear_instruction_rows": 1603,
+    "input_listing_git_blob_sha1": "c32fd674db8f3ef289baab9f33e3c007ac7ae155",
+    "not_executable_claim": true,
+    "pseudo_hc11_control_transfer_rows": 86,
+    "row_counts_by_section": {
+      "tio_index": 32,
+      "tio_microcode": 1508,
+      "tio_register_initialisation": 10,
+      "tio_requests": 2,
+      "tio_translation": 51
+    }
+  },
+  "code_data_boundaries": {
+    "bank3_cpu_end_exclusive": "0xCC37",
+    "bank3_cpu_start": "0xC3AF",
+    "end_exclusive_file": 117815,
+    "start_file": 115631
+  },
+  "exact_images": {
+    "Enhanced_v1.0a_exact.bin": {
+      "bytes": 131072,
+      "calculated_by_public_window": "0x9E9F",
+      "file_original_stored_checksum": "0x8E6F",
+      "matches": false,
+      "sha256": "5cb8bd1c61da37a3846b6c28600cdc21db3ceef0c764232d0cd7ec8d6e836abd",
+      "tio_2184_sha256": "a179b1b980023e0c07a03df2db3075c925653a003ddc5a68445ffd63f763457a"
+    },
+    "Enhanced_v1.1a_exact.bin": {
+      "bytes": 131072,
+      "calculated_by_public_window": "0xB0F1",
+      "file_original_stored_checksum": "0x8E6F",
+      "matches": false,
+      "sha256": "d36a3e5e17d233b9f4b72f6b58c9f604f7ac6e1bfa57f7b408dcdf0998dc787d",
+      "tio_2184_sha256": "a179b1b980023e0c07a03df2db3075c925653a003ddc5a68445ffd63f763457a"
+    },
+    "stock_92118883.bin": {
+      "bytes": 131072,
+      "calculated_by_public_window": "0x8D36",
+      "file_original_stored_checksum": "0x8E6F",
+      "matches": false,
+      "sha256": "750750d9a1250904b134af10e0d86d84daaa2a146f2946914f72ab8f0dcd2232",
+      "tio_2184_sha256": "a179b1b980023e0c07a03df2db3075c925653a003ddc5a68445ffd63f763457a"
+    }
+  },
+  "interpretation": "Known TIO DATA must be excluded before IR edge/stack/ROM ownership graph. Stored checksum does not match documented full-image calculation in each original; mismatch is not evidence of corruption or flash readiness.",
+  "no_flash": true,
+  "no_new_bin": true,
+  "no_safety_certificate": true,
+  "prepared_at": "2026-10-25T16:36:32+10:30",
+  "provenance": "ChatGPTz idea - new read-only analysis, no firmware build",
+  "remaining": [
+    "full listing local replay",
+    "full CFG invalidation/regeneration",
+    "ROM/RAM owners outside TIO",
+    "TIO silicon/ISA physics",
+    "checksum flash write-mode acceptance",
+    "3X/18X/M42 hardware"
+  ],
+  "schema": "kingai.vy060a.tio_ir_correction_checksum.v1",
+  "source_git": {
+    "bank3_listing_path": "bank_split_output/Enhanced_v1.0a_bank3.asm",
+    "blob_git_sha1": "c32fd674db8f3ef289baab9f33e3c007ac7ae155",
+    "branch": "master",
+    "repository": "KingAiCodeForge/kingaustraliagg-vy-l36-060a-enhanced-asm-patches",
+    "review_mode": "GitHub connector text parsing; full listing not locally mounted"
+  },
+  "test_results": {
+    "failures": 0,
+    "full_capstone_listing_replay_locally": false,
+    "image_inputs_present_locally": true,
+    "physical_tests": false,
+    "tests_optimized": 11,
+    "tests_standard": 11
+  }
+}
